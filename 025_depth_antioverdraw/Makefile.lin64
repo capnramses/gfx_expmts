@@ -1,0 +1,12 @@
+BIN = demo
+CC = clang
+FLAGS = -Wall -pedantic -std=c99 -m64
+I = -I ../common/include
+L = ../common/lin64
+STA_LIBS = ${L}/libGLEW.a ${L}/libglfw3.a
+DYN_LIBS = -lGL -lX11 -lXxf86vm -lXrandr -lpthread -lXi -lXinerama -lXcursor \
+-ldl -lrt -lm
+SRC = main.c apg_gl.c obj_parser.c
+
+all:
+	${CC} ${FLAGS} -o ${BIN} ${SRC} ${I} ${STA_LIBS} ${DYN_LIBS}

@@ -1,0 +1,12 @@
+BIN = test
+CC = clang
+FLAGS = -DAPPLE -Wall -pedantic -mmacosx-version-min=10.5 -arch x86_64 -fmessage-length=0 -UGLFW_CDECL -fprofile-arcs -ftest-coverage
+INC = -I ../common/include -I/sw/include -I/usr/local/include
+L = ../common/osx/
+LOC_LIB = $(L)libGLEW.a $(L)libglfw3.a
+FRAMEWORKS = -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo
+SRC = main.cpp maths_funcs.cpp
+
+all:
+	${CC} ${FLAGS} ${FRAMEWORKS} -o ${BIN} ${SRC} ${INC} ${LOC_LIB}
+

@@ -1,0 +1,21 @@
+# note: i use `:=` notation here instead of just `=` because make got confused
+# by the `=` in -std=c99
+
+CC := clang
+FLAGS := -std=c99
+INC := -I ./
+STATIC := GL/glew.c lib/osx/libglfw3.a
+DYNAMIC := -lm -lpthread
+FRAMEWORKS = -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo
+OBJS := main.o bsp.o gl_utils.o
+
+all: $(OBJS)
+	$(CC) $(FLAGS) $(FRAMEWORKS) -o demo $(OBJS) $(STATIC) $(DYNAMIC) $(INC)
+
+clean:
+	rm -f *.o demo
+	
+%.o: %.c
+	@echo '~~~~~~~~~~~~~~~~ building file $< ~~~~~~~~~~~~~~~~~~~~'
+	$(CC) $(FLAGS) -c -o"$@" "$<" $(INC)
+

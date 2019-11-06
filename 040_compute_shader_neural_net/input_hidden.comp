@@ -1,0 +1,53 @@
+// compute shader for input to neural network
+// Dr Anton Gerdelan - 10 May 2017
+// GLSL
+#version 450 core
+
+#define RES 512.0
+
+// this is a 2d local wg layout.
+// global wg layout was 800x800 units, and subdivided so that each cs processes
+// a 1x1 'local wg' unit of this
+layout (local_size_x = 1, local_size_y = 1) in;
+layout (rgba32f, binding = 0) uniform image2D img_output;
+
+uniform float time;
+
+void main () {
+	// get position in global work group 800x800
+	ivec2 p = ivec2 (gl_GlobalInvocationID.xy);
+	// NB this also gives us the texture coords
+	
+	vec4 texel = vec4 (0.0, 0.0, 0.0, 1.0);
+	
+	// sample or work-out ray origin and direction
+	//float max_x = 5.0;
+	//float max_y = 5.0;
+	//float x = (float(p.x * 2 - RES) / RES);
+	//float y = (float(p.y * 2 - RES) / RES);
+	//vec3 ray_o = vec3 (x * max_x, y * max_y, 0.0);
+	//vec3 ray_d = vec3 (0.0, 0.0, -1.0); // ortho
+	
+	// do intersection test
+	
+	// store result in image
+	imageStore (img_output, p, texel);
+}
+
+/* built-in variables
+
+uvec3 gl_LocalInvocationID - index of shader invocation within local work grp
+.xyz from 0 to gl_WorkGroupSize-1
+unused dimensions are index 0
+
+uvec3 gl_WorkGroupSize - local work grp size
+.xyz - unused dimensions are size 1
+
+
+
+
+
+uvec3 gl_NumWorkGroups - num of wg in global set (set by glDispatchCompute() )
+uvec3 gl_WorkGroupID - index of current wg in global set - range 0 to gl_NumWorkGroups-1
+
+*/

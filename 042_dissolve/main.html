@@ -1,0 +1,333 @@
+<html>
+
+<head>
+    <title>Dissolve Effect - Anton Gerdelan</title>
+</head>
+
+<body>
+    <canvas id="the_canvas"></canvas>
+    <p>
+        <a href="http://antongerdelan.net/">Anton Gerdelan</a> - 4 Sep 2017
+    </p>
+</body>
+
+</html>
+
+<script id="basic.vert" type="text/glsl">
+    attribute vec3 vp;
+    attribute vec2 vt;
+    attribute vec3 vn;
+
+    uniform mat4 PV, M;
+
+    varying vec2 st;
+    varying vec3 n;
+
+    void main() {
+        st = vt;
+        n = vec3(PV * M * vec4 (vn, 0.0));
+        gl_Position = PV * M * vec4(vp, 1.0);
+    }
+</script>
+
+<script id="basic.frag" type="text/glsl">
+    precision mediump float;
+    
+    varying vec2 st;
+    varying vec3 n;
+
+    uniform sampler2D diffuse_map, height_map;
+    uniform float time;
+    
+    void main() {
+        float stime = sin(time) * 0.5 + 0.5;
+        vec4 diffuse_texel = texture2D(diffuse_map, st);
+        vec4 height_texel = texture2D(height_map, st);
+        vec3 nn = normalize(n);
+        vec3 fwd = normalize(vec3 (0.0, 0.0, -1.0));
+        gl_FragColor = diffuse_texel;
+        
+        gl_FragColor.rgb = gl_FragColor.rgb * dot(nn, fwd) * 0.7 + 0.3 * gl_FragColor.rgb;
+        float difference = height_texel.r - stime;
+        if (difference < 0.1) {
+            float fac = (0.1 - difference) * 10.0;
+            gl_FragColor.b = fac * 0.5;
+            gl_FragColor.g = fac * 0.75;
+            gl_FragColor.r = fac;
+        }
+        if (difference < 0.01) {
+            discard;
+        }
+    }
+</script>
+
+<script src="apg_maths.js"></script>
+<script>
+    console.log("starting WebGL");
+
+    var canvas = document.getElementById("the_canvas");
+    canvas.width = 800;
+    canvas.height = 512;
+    var gl = canvas.getContext("webgl");
+
+    { // ********************** INITIAL GL STATES ***************************
+        gl.clearColor(0.9, 0.85, 0.8, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        // set some GL states that I want to use for rendering
+        gl.cullFace(gl.BACK);
+        gl.frontFace(gl.CCW);
+        gl.enable(gl.CULL_FACE);
+        gl.enable(gl.DEPTH_TEST);
+    }
+
+    function load_texture(url) {
+        var texture = gl.createTexture();
+        texture.is_loaded = false;
+        var image = new Image();
+        image.onload = function () {
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
+                image);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            texture.is_loaded = true;
+            console.log("texture loaded from " + url);
+        }
+        image.src = url;
+        return texture;
+    }
+
+    var checker_texture = load_texture("textures/checkerboard.png");
+    var cloud_texture = load_texture("textures/clouds.png");
+
+    var basic_sp = gl.createProgram();
+    basic_sp.linked = false;
+    { // ********************** SHADERS ***************************
+        var el = document.getElementById("basic.vert");
+        var vs_str = el.innerHTML;
+        el = document.getElementById("basic.frag");
+        var fs_str = el.innerHTML;
+
+        var vs = gl.createShader(gl.VERTEX_SHADER);
+        var fs = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(vs, vs_str);
+        gl.shaderSource(fs, fs_str);
+        gl.compileShader(vs);
+        if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+            console.error("ERROR compiling vert shader. log: " +
+                gl.getShaderInfoLog(vs));
+        }
+        gl.compileShader(fs);
+        if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+            console.error("ERROR compiling frag shader. log: " +
+                gl.getShaderInfoLog(fs));
+        }
+
+        gl.attachShader(basic_sp, vs);
+        gl.attachShader(basic_sp, fs);
+        gl.bindAttribLocation(basic_sp, 0, "vp");
+        gl.bindAttribLocation(basic_sp, 1, "vt");
+        gl.bindAttribLocation(basic_sp, 2, "vn");
+        gl.linkProgram(basic_sp);
+        if (!gl.getProgramParameter(basic_sp, gl.LINK_STATUS)) {
+            console.error("ERROR linking program. log: " + gl.getProgramInfoLog(basic_sp));
+        }
+        basic_sp.linked = true;
+    }
+    var basic_PV_loc = gl.getUniformLocation(basic_sp, "PV");
+    var basic_M_loc = gl.getUniformLocation(basic_sp, "M");
+    var basic_diffuse_map_loc = gl.getUniformLocation(basic_sp, "diffuse_map");
+    var basic_height_map_loc = gl.getUniformLocation(basic_sp, "height_map");
+    var basic_time_loc = gl.getUniformLocation(basic_sp, "time");
+
+    function start_loading_obj(url) {
+        // first create an empty VAO
+        var mesh = new Object(); //vao_ext.createVertexArrayOES();
+        // inject an is_loaded boolean
+        mesh.is_loaded = false;
+        // inject point count into VAO (yeah...)
+        mesh.pc = 0;
+
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.open("GET", url, true);
+        xmlhttp.onload = function (e) {
+
+            var str = xmlhttp.responseText;
+            var lines = str.split('\n');
+            console.log("loaded " + lines.length + " lines from " + url);
+
+            var unsorted_vp = new Array();
+            var unsorted_vt = new Array();
+            var unsorted_vn = new Array();
+            var sorted_vp = new Array();
+            var sorted_vt = new Array();
+            var sorted_vn = new Array();
+
+            for (var i = 0; i < lines.length; i++) {
+                var line_tokens = lines[i].split(' ');
+                if (lines[i][0] == 'v' && lines[i][1] == ' ') {
+                    unsorted_vp.push(parseFloat(line_tokens[1]));
+                    unsorted_vp.push(parseFloat(line_tokens[2]));
+                    unsorted_vp.push(parseFloat(line_tokens[3]));
+                } else if (lines[i][0] == 'v' && lines[i][1] == 't') {
+                    unsorted_vt.push(parseFloat(line_tokens[1]));
+                    unsorted_vt.push(parseFloat(line_tokens[2]));
+                } else if (lines[i][0] == 'v' && lines[i][1] == 'n') {
+                    unsorted_vn.push(parseFloat(line_tokens[1]));
+                    unsorted_vn.push(parseFloat(line_tokens[2]));
+                    unsorted_vn.push(parseFloat(line_tokens[3]));
+                } else if (lines[i][0] == 'f' && lines[i][1] == ' ') {
+                    var p0 = line_tokens[1].split('/');
+                    var p1 = line_tokens[2].split('/');
+                    var p2 = line_tokens[3].split('/');
+                    var vp0_i = 3 * (parseInt(p0[0]) - 1);
+                    var vp1_i = 3 * (parseInt(p1[0]) - 1);
+                    var vp2_i = 3 * (parseInt(p2[0]) - 1);
+                    sorted_vp.push(unsorted_vp[vp0_i]);
+                    sorted_vp.push(unsorted_vp[vp0_i + 1]);
+                    sorted_vp.push(unsorted_vp[vp0_i + 2]);
+                    sorted_vp.push(unsorted_vp[vp1_i]);
+                    sorted_vp.push(unsorted_vp[vp1_i + 1]);
+                    sorted_vp.push(unsorted_vp[vp1_i + 2]);
+                    sorted_vp.push(unsorted_vp[vp2_i]);
+                    sorted_vp.push(unsorted_vp[vp2_i + 1]);
+                    sorted_vp.push(unsorted_vp[vp2_i + 2]);
+                    var vt0_i = 2 * (parseInt(p0[1]) - 1);
+                    var vt1_i = 2 * (parseInt(p1[1]) - 1);
+                    var vt2_i = 2 * (parseInt(p2[1]) - 1);
+                    sorted_vt.push(unsorted_vt[vt0_i]);
+                    sorted_vt.push(unsorted_vt[vt0_i + 1]);
+                    sorted_vt.push(unsorted_vt[vt1_i]);
+                    sorted_vt.push(unsorted_vt[vt1_i + 1]);
+                    sorted_vt.push(unsorted_vt[vt2_i]);
+                    sorted_vt.push(unsorted_vt[vt2_i + 1]);
+                    var vn0_i = 3 * (parseInt(p0[2]) - 1);
+                    var vn1_i = 3 * (parseInt(p1[2]) - 1);
+                    var vn2_i = 3 * (parseInt(p2[2]) - 1);
+                    sorted_vn.push(unsorted_vn[vn0_i]);
+                    sorted_vn.push(unsorted_vn[vn0_i + 1]);
+                    sorted_vn.push(unsorted_vn[vn0_i + 2]);
+                    sorted_vn.push(unsorted_vn[vn1_i]);
+                    sorted_vn.push(unsorted_vn[vn1_i + 1]);
+                    sorted_vn.push(unsorted_vn[vn1_i + 2]);
+                    sorted_vn.push(unsorted_vn[vn2_i]);
+                    sorted_vn.push(unsorted_vn[vn2_i + 1]);
+                    sorted_vn.push(unsorted_vn[vn2_i + 2]);
+                }
+            }
+
+            // store loaded state and point count in VAO
+            mesh.pc = sorted_vp.length / 3;
+            mesh.is_loaded = true;
+
+            pc = sorted_vp.length / 3;
+            mesh.vbo_vp = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vbo_vp);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sorted_vp),
+                gl.STATIC_DRAW);
+
+            mesh.vbo_vt = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vbo_vt);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sorted_vt),
+                gl.STATIC_DRAW);
+
+            mesh.vbo_vn = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vbo_vn);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sorted_vn),
+                gl.STATIC_DRAW);
+        }
+
+
+        // start loading
+        xmlhttp.send();
+        // return the empty VAO
+        return mesh;
+    }
+
+    var cube_mesh = start_loading_obj("meshes/cube.obj");
+
+    // ********************** CAMERA ****************************
+    var cam_dirty = true;
+
+    var V = translate_mat4(identity_mat4(), [0.0, 0.0, -5.0]);
+
+    // var V = look_at([0.0, 0.4, 1.0], [0.0, 0.4, 0.0],
+    //     normalise_vec3([0.0, 1.0, 0.0]));
+    var aspect = canvas.clientWidth / canvas.clientHeight;
+    var P = perspective(67.0, aspect, 0.1, 100.0);
+    var PV = mult_mat4_mat4(P, V);
+
+    // ********************* SET UP LOOPING *********************
+    window.requestAnimFrame = (function () {
+        return window.requestAnimationFrame ||
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.oRequestAnimationFrame ||
+            window.msRequestAnimationFrame ||
+            function (callback, element) {
+                return window.setTimeout(callback, 1000 / 60);
+            };
+    })();
+
+    var previous_millis;
+
+
+
+
+    function main_loop() {
+        // update timers
+        var current_millis = performance.now();
+        var elapsed_millis = current_millis - previous_millis;
+        previous_millis = current_millis;
+        var elapsed_s = elapsed_millis / 1000.0;
+
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        { // draw frame
+            if (checker_texture.is_loaded) {
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, checker_texture);
+            }
+            if (cloud_texture.is_loaded) {
+                gl.activeTexture(gl.TEXTURE1);
+                gl.bindTexture(gl.TEXTURE_2D, cloud_texture);
+            }
+            if (basic_sp.linked) {
+                gl.useProgram(basic_sp);
+                if (cam_dirty) {
+                    gl.uniformMatrix4fv(basic_PV_loc, gl.FALSE, new Float32Array(PV));
+                    cam_dirty = false;
+                }
+                var R = rotate_y_deg(identity_mat4(), current_millis * 0.075);
+                gl.uniformMatrix4fv(basic_M_loc, gl.FALSE, new Float32Array(R));
+                gl.uniform1i(basic_diffuse_map_loc, 0);
+                gl.uniform1i(basic_height_map_loc, 1);
+                gl.uniform1f(basic_time_loc, current_millis / 1000.0);
+            }
+            if (cube_mesh.is_loaded) {
+                gl.bindBuffer(gl.ARRAY_BUFFER, cube_mesh.vbo_vp);
+                gl.enableVertexAttribArray(0);
+                gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, cube_mesh.vbo_vt);
+                gl.enableVertexAttribArray(1);
+                gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, cube_mesh.vbo_vn);
+                gl.enableVertexAttribArray(2);
+                gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 0, 0);
+
+                gl.drawArrays(gl.TRIANGLES, 0, cube_mesh.pc);
+            }
+        }
+        // "automatically re-call this function please"
+        window.requestAnimFrame(main_loop, canvas);
+    }
+
+    previous_millis = performance.now();
+    main_loop();
+
+</script>

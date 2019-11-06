@@ -1,0 +1,11 @@
+BIN = test.exe
+CC = gcc
+FLAGS = -Wall -pedantic -fmessage-length=78 -std=c99
+INC = -I ../common/include
+L = ../common/win32/
+STA_LIB = $(L)libglew32.dll.a $(L)glfw3dll.a $(L)SDL2main.lib
+DYN_LIB = -lopengl32 -L$(L) -lSDL2
+SRC = main.c
+
+all: main.c
+	${CC} ${FLAGS} ${FRAMEWORKS} -o ${BIN} ${SRC} ${STA_LIB} -g ${INC} ${DYN_LIB}

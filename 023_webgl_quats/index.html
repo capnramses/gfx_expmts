@@ -1,0 +1,257 @@
+<!-- Quaternion Demo
+Anton Gerdelan first v. 9 Dec 2015
+antongerdelan.net -->
+
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Quaternion Rotation Demo</title>
+<style>
+.main_column {
+	position: absolute;
+	width: 1024px;
+	z-index: 15;
+	margin :0px 0 0 10px;
+	background: lightgrey;
+}
+td {
+    padding: 15px;
+    text-align: left;
+}
+.remarks_column {
+	width: 500px;
+	z-index: 15;
+	margin :0px 0 0 25px;
+}
+</style>
+</head>
+
+<body onload="main()" style="font-family:monospace;">
+
+<div class="main_column">
+
+<center>
+<h2>Quaternion Rotation Demo</h2>
+</center>
+
+<table><tr><td>
+<canvas id="canvas" width=512 height=512></canvas>
+</td><td>
+<p>
+axis of rotation:
+x<input onkeydown="axis_cb();" type="text" size="1" value="0.0" id="quat_x_axis_input" />
+y<input onkeydown="axis_cb();" type="text" size="1" value="1.0" id="quat_y_axis_input" />
+z<input onkeydown="axis_cb();" type="text" size="1" value="0.0" id="quat_z_axis_input" />
+<br />
+angle:
+<input type="text" size="1" value="0.0" id="quat_angle" />(degrees)
+<input onclick="update_cb();" type="button" value="rotate" />
+<br />
+<input onclick="checkbox_cb();" type="checkbox" id="auto_rotate" checked />auto rotate
+</p>
+<p id ="normd">
+normalise(axis) = [0.0, 1.0, 0.0]
+</p>
+<hr />
+<p id="versor">
+versor = [<br />
+&nbsp;&nbsp;cos (angle),<br />
+&nbsp;&nbsp;x * sin (0.5 * angle),<br />
+&nbsp;&nbsp;y * sin (0.5 * angle),<br />
+&nbsp;&nbsp;z * sin (0.5 * angle)<br />
+]<br />
+= [w, x, y, z]
+</p>
+<hr />
+<p id="qtoM">
+R = quaternion_to_matrix(versor)
+</p>
+<hr />
+<p id="local_axes">
+rgt = R * [-1.0, 0.0, 0.0, 0.0]<br />
+up = R * [0.0, 1.0, 0.0, 0.0]<br />
+fwd = up X rgt<br />
+</p>
+</td></tr></table>
+
+<div class="remarks_column">
+<h3>Remarks</h3>
+
+<p>
+We can create a quaternion from an arbitrary 3d axis, and an angle to rotate
+around this axis. It's important to normalise this axis. We convert the angle
+to radians for use with most maths functions. Rotation uses the
+right-hand-rule. That is, if you close the fingers of your right hand and
+point the thumb in the positive direction of the axis, then the rotation will
+follow the fingers. Try negating the axis to test this.
+</p>
+
+<hr />
+
+<p>
+A unit quaternion, called a <b>versor</b>, may be used to express a rotation
+between <u>any</u> two poses in 3d. This has the form of a 4-component vector,
+and is very easy to construct from the angle and the axis.
+</p>
+
+<hr />
+
+<p>
+We often prefer to convert our quaternions to 4x4 matrices for use with our
+linear algebra transformation pipeline. The matrix displayed is in column-major
+format, and the quaternion_to_matrix function is:
+</p>
+
+<p>
+function quaternion_to_matrix (q) {<br />
+&nbsp;&nbsp;var w = q[0];<br />
+&nbsp;&nbsp;var x = q[1];<br />
+&nbsp;&nbsp;var y = q[2];<br />
+&nbsp;&nbsp;var z = q[3];<br />
+&nbsp;&nbsp;var m = new Array ();<br />
+&nbsp;&nbsp;m[0] = 1.0 - 2.0 * y * y - 2.0 * z * z;<br />
+&nbsp;&nbsp;m[1] = 2.0 * x * y + 2.0 * w * z;<br />
+&nbsp;&nbsp;m[2] = 2.0 * x * z - 2.0 * w * y;<br />
+&nbsp;&nbsp;m[3] = 0.0;<br />
+&nbsp;&nbsp;m[4] = 2.0 * x * y - 2.0 * w * z;<br />
+&nbsp;&nbsp;m[5] = 1.0 - 2.0 * x * x - 2.0 * z * z;<br />
+&nbsp;&nbsp;m[6] = 2.0 * y * z + 2.0 * w * x;<br />
+&nbsp;&nbsp;m[7] = 0.0;<br />
+&nbsp;&nbsp;m[8] = 2.0 * x * z + 2.0 * w * y;<br />
+&nbsp;&nbsp;m[9] = 2.0 * y * z - 2.0 * w * x;<br />
+&nbsp;&nbsp;m[10] = 1.0 - 2.0 * x * x - 2.0 * y * y;<br />
+&nbsp;&nbsp;m[11] = 0.0;<br />
+&nbsp;&nbsp;m[12] = 0.0;<br />
+&nbsp;&nbsp;m[13] = 0.0;<br />
+&nbsp;&nbsp;m[14] = 0.0;<br />
+&nbsp;&nbsp;m[15] = 1.0;<br />
+&nbsp;&nbsp;return m;<br />
+}<br />
+</p>
+
+<p>
+Where the matrix, m, is expressed as a 1d array in column order, starting in
+the top-left. Note that w, x, y, z here are components of the versor, and not
+the basic axis and angle inputs which we used to construct the versor.
+</p>
+
+<hr />
+
+<p>
+The final section calculates local right, up, and forward vectors, using the
+versor rotation from base vectors, and a vector cross product, respectively.
+It's useful to store and re-calculate these vectors for a variety of 3d
+mathematics, but especially if we wish to <b>calculate local pitch, yaw, and roll
+rotations</b> (from the point of view of the object being rotated), which are quite
+tricky to calculate with other methods. We simply <b>take one of these vectors to
+use as the axis of rotation</b> for a quaternion; right for pitching upwards, up
+for yawing left, and forwards for rolling to the right. If we are to combine a
+series of local rotations then we re-calculate these basis vectors between
+rotations. Note that axis values printed in this page are truncated to 2
+decimal points, so slight discrepancies might happen when copy-pasting values.
+</p>
+</div>
+
+<p>
+<small><a href="http://antongerdelan.net">Anton Gerdelan</a>,
+Trinity College Dublin, Ireland, 10 Dec 2015</small>
+</p>
+</div>
+
+</body>
+</html>
+
+
+<script src="js/main.js"></script>
+<script src="js/obj_parser.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/webgl-utils.js"></script>
+<script src="js/apg_maths.js"></script>
+
+<script id="basic.vert" type="text/glsl">
+//
+// basic texturing shader
+// Anton Gerdelan 23 Dec 2014
+// antongerdelan.net
+//
+
+attribute vec3 vp; // points
+attribute vec2 vt; // tex coords
+attribute vec3 vn; // normals
+
+uniform mat4 M, V, P;
+
+varying vec2 st;
+varying vec3 n, p;
+
+void main () {
+	st = vt;
+	n = vec3 (V * M * vec4 (vn, 0.0));
+	p = vec3 (V * M * vec4 (vp, 1.0));
+	gl_Position = P * V * M * vec4 (vp, 1.0);
+}
+</script>
+
+<script id="basic.frag" type="text/glsl">
+//
+// basic texturing shader
+// Anton Gerdelan 23 Dec 2014
+// antongerdelan.net
+//
+
+precision mediump float;
+
+varying vec2 st;
+varying vec3 n, p;
+//uniform sampler2D dm;
+
+void main () {
+	//
+	// shading darker based on angle to eye
+	vec3 n_eye = normalize (n);
+	vec3 p_to_eye = normalize (-p);
+	float dp = dot (n_eye, p_to_eye);
+	
+	//vec4 texel = texture2D (dm, st);
+	
+	//gl_FragColor = vec4 (texel.rgb * dp, 1.0);
+	gl_FragColor = vec4 (vec3 (0.7, 0.7, 0.0) * clamp (dp, 0.25, 1.0), 1.0);
+}
+</script>
+
+<script id="axis.vert" type="text/glsl">
+//
+// axis line shader
+// Anton Gerdelan 9 Dec 2015
+// antongerdelan.net
+//
+
+attribute vec3 vp; // points
+attribute vec3 vc; // colours
+
+uniform mat4 M, V, P;
+
+varying vec3 c;
+
+void main () {
+	gl_Position = P * V * vec4 (vp, 1.0);
+	c = vc;
+}
+</script>
+
+<script id="axis.frag" type="text/glsl">
+//
+// axis line shader
+// Anton Gerdelan 9 Dec 2015
+// antongerdelan.net
+//
+
+precision mediump float;
+
+varying vec3 c;
+
+void main () {
+	gl_FragColor = vec4 (c, 1.0);
+}
+</script>

@@ -1,0 +1,272 @@
+/* compute shader for making rays
+Anton Gerdelan
+First version 4 Sep 2014
+ */
+#version 430
+#define RES 512.0
+#define FLT_MIN -99999.0
+
+// this is a 2d local wg layout.
+// global wg layout was 800x800 units, and subdivided so that each cs processes
+// a 1x1 'local wg' unit of this
+layout (local_size_x = 1, local_size_y = 1) in;
+layout (rgba32f, binding = 0) uniform image2D img_output;
+
+	vec3 light_pos = vec3 (5.0, 2.0, 0.0);
+	vec3 light_spec = vec3 (0.5, 0.5, 0.5);
+	vec3 light_diff = vec3 (0.5, 0.5, 0.5);
+	vec3 light_amb = vec3 (0.1, 0.1, 0.1);
+	
+	vec3 sphere_kd = vec3 (0.2, 0.2, 0.9);
+	vec3 sphere_ka = vec3 (0.2, 0.2, 0.9);
+	vec3 sphere_ks = vec3 (1.0, 1.0, 1.0);
+	float spec_exp = 100.0;
+	
+
+
+uniform float time;
+
+//  line_a           b
+//  a-------------   |   ----->b
+//      .            |
+//         w  .      a
+//                 line_b
+//
+// note: to get cyl normal - is sc the factor along the first line seg? if so we have the 3d point of
+// intersection (if it intersects) with point = ray_o + ray_d * sc
+float dist_line_line( in vec3 line_a_point_a, in vec3 line_a_point_b,
+											in vec3 line_b_point_a, in vec3 line_b_point_b,
+											out float s, out float t ) {
+	vec3 u = line_a_point_b - line_a_point_a; // this is just ray_d
+	vec3 v = line_b_point_b - line_b_point_a; // this is cylinder inner central line
+	vec3 w = line_a_point_a - line_b_point_a; // 'w' in diagram from lb_b to la_a
+	float a = dot( u, u );
+	float b = dot( u, v );
+	float c = dot( v, v );
+	float d = dot( u, w );
+	float e = dot( v, w );
+	float D = a * c - b * b; // determinant manually created i believe
+	float sc, tc; // closest points i believe
+
+	// comp line params of 2 closest points
+	if (D < 0.0000001) { // almost parallel lines
+		sc = 0.0;
+		tc = b > c ? d / b : e / c;	// use largest demoninator
+	} else {
+		sc = ( b * e - c * d ) / D;
+		tc = ( a * e - b * d ) / D;
+	}
+	// distance between two closest points
+	vec3 dist3d = w + (sc * u) - (tc * v);
+
+	s = sc; // distance 0-1 along first line seg from a->b
+	t = tc; // and along second
+	// i used it to cut off the ends.
+	return length(dist3d);
+}
+
+/* this function based on Foundations didnt work. dunno what i missed
+float dist_line_line( in vec3 point_a, in vec3 dir_a, in vec3 point_b, in vec3 dir_b ) {
+	// note: dot() of a vector with itself is square of that vector's magnitude
+
+	vec3 dist3d = point_b - point_a;
+
+	// TODO review this
+	float len_a_sq = dot(dir_a, dir_a);
+	float len_b_sq = dot(dir_b, dir_b);
+	float dprod = dot(dir_a, dir_b);
+	float det = dprod * dprod - len_a_sq * len_b_sq;
+
+	if (det == 0.0) { // TODO check this
+		det = 1.0 / det;
+		float dpv1 = dot(dist3d, point_a);
+		float dpv2 = dot(dist3d, point_b);
+		float t1 = (dprod * dpv2 - len_b_sq * dpv1) * det;
+		float t2 = (len_a_sq * dpv2 - dprod * dpv1) * det;
+		return length( dist3d + dir_b * point_b - dir_a * point_a );
+	}
+	// lines are nearly parallel
+	vec3 a = cross( dist3d, point_a );
+	return sqrt( dot( a, a) / len_a_sq );
+}
+*/
+
+float ray_sphere( in vec3 ray_o, in vec3 ray_d, in vec3 sphere_c, in float sphere_r, inout vec4 texel) {
+	// t = -b +- sqrt (b*b - c)
+	vec3 omc = ray_o - sphere_c;
+	float b = dot (ray_d, omc);
+	float c = dot (omc, omc) - sphere_r * sphere_r;
+	float bsqmc = b * b - c;
+	float t = 10000.0;
+	// hit one or both sides
+	if (bsqmc >= 0.0) {
+		float srbsqmc = sqrt (bsqmc);
+		float pos_t = -b + srbsqmc;
+		float neg_t = -b - srbsqmc;
+		
+		// one or more sides behind viewer (pos means `in direction of ray`)
+		if (pos_t > 0.0 && neg_t > 0.0) {
+			t = neg_t;
+			// lesser is closer, even along -z direction
+			if (pos_t < neg_t) {
+				t = pos_t;
+			}
+			// colour sphere on pixel
+			/* AMBIENT */
+			texel.rgb = light_amb * sphere_ka;
+			
+			/* LAMBERT */
+			// normal to a sphere is normalize (P - C);
+			vec3 p = ray_o + ray_d * t;
+			vec3 n = normalize (p - sphere_c);
+			
+			vec3 light_dir = normalize (p - light_pos);
+			float diff_dp = dot (n, -light_dir);
+			diff_dp = max (diff_dp, 0.0);
+			
+			//float max_range = 7.0f;
+			//texel.g = 1.0 * (1.0 - t / max_range) + 0.5;
+			texel.rgb += light_diff * sphere_kd * diff_dp;
+			
+			/* (not BLINN) PHONG */
+			vec3 reflection = reflect (light_dir, n);
+			vec3 surface_to_viewer = normalize (-p); // viewer is 0,0,0 so no need v-p
+			float spec_dp = dot (reflection, surface_to_viewer);
+			spec_dp = max (spec_dp, 0.0);
+			float spec_fac = pow (spec_dp, spec_exp);
+			texel.rgb += light_spec * sphere_ks * spec_fac;
+		}
+	}
+	return t;
+}
+
+// capsule  ( a|----|b )
+float ray_capsule( in vec3 ray_o, in vec3 ray_d, in vec3 point_a, in vec3 point_b, in float cap_r, inout vec4 texel ) {
+	// do sphere-ray calcs for ends
+	float t_a = ray_sphere( ray_o, ray_d, point_a, cap_r, texel );
+	float t_b = ray_sphere( ray_o, ray_d, point_b, cap_r, texel );
+
+	// ss and tt are the factors 0<->1 along each segment of nearest point
+	float ss = 0.0, tt = 0.0;
+	float dist = dist_line_line( ray_o, ray_o + ray_d * 100.0, point_a, point_b,
+		ss, tt );
+	
+	if (dist < cap_r && tt >= 0.0 && tt <= 1.0 ){
+		vec3 t_vec = point_b - point_a;
+		vec3 point_on_cyl_medial_axis = point_a + t_vec * tt;
+		float mid_t = ray_sphere( ray_o, ray_d, point_on_cyl_medial_axis, cap_r, texel );
+		return mid_t;
+	}
+	return min( t_a, t_b );
+}
+
+void main () {
+	vec4 texel = vec4 (0.0, 0.0, 0.0, 1.0);
+
+	// get position in global work group 800x800
+	ivec2 p = ivec2 (gl_GlobalInvocationID.xy);
+	// NB this also gives us the texture coords
+	
+	// sample or work-out ray origin and direction
+	float max_x = 5.0;
+	float max_y = 5.0;
+	float x = (float(p.x * 2 - RES) / RES);
+	float y = (float(p.y * 2 - RES) / RES);
+	vec3 ray_o = vec3 (x * max_x, y * max_y, 0.0);
+	vec3 ray_d = vec3 (0.0, 0.0, -1.0); // ortho
+
+	// do intersection test
+	
+	/* SPHERE */
+	vec3 sphere_c = vec3 (sin(time) * 4.0, cos(time) * 4.0, -10.0);
+	sphere_kd.r = sphere_kd.r * abs(sin(time * 3.0));
+	sphere_kd.g = sphere_kd.g * abs(cos(time * 4.0));
+	sphere_kd.b = sphere_kd.b * abs(cos(time * 5.0));
+	float sphere_r = 1.0 + 0.2 * sin(time);
+	float t  = ray_sphere( ray_o, ray_d, sphere_c, sphere_r, texel );
+	
+	/* CAPSULE */
+	// NOTE: to make capsule cast a shadow, later for the plane do a light ray v
+	// capsule and see if the cylinder OR the sphere is closer than view ray->plane t value
+	float cap_length = 1.0 * abs(sin(time*2.0)) + 0.5;
+	float wacky = 0.25 * sin(time * 5.0);
+	float verywacky = 0.25 * cos(time * 15.0);
+	vec3 capsule_a = vec3( sin(-time) * cap_length + wacky, cos(-time) * cap_length + verywacky, -10.0 );
+	vec3 capsule_b = vec3( sin(-time) * -cap_length + wacky, cos(-time) * -cap_length + wacky, -10.0 );
+	float cap_r = 1.0;
+	vec3 cyl_kd = vec3( 0.5, 0.02, 0.02 );
+	sphere_kd = cyl_kd;
+	float cap_t = ray_capsule( ray_o, ray_d, capsule_a, capsule_b, cap_r, texel );
+	t = min( t, cap_t );
+
+	/* PLANE */
+	vec3 plane_n = normalize (vec3 (0.0, 0.0, 1.0));
+	float plane_d = 11.0;
+	vec3 plane_kd = vec3 (0.5, 0.5, 0.0);
+	vec3 plane_ks = vec3 (1.0, 1.0, 1.0);
+	vec3 plane_ka = vec3 (0.5, 0.5, 0.0);
+	float plane_t = -((dot (ray_o, plane_n) + plane_d) / dot (ray_d, plane_n));
+	if (plane_t > 0.0 && plane_t < t) { // can now check if sphere_t is closer
+		vec3 p = ray_o + ray_d * plane_t;
+		vec3 light_dir = normalize (p - light_pos);
+
+		float plane_light_t = -((dot (light_pos, plane_n) + plane_d) / dot(light_dir, plane_n));
+		
+		/* check if there is a shadow */
+		bool shadow = false;
+		
+		vec3 omc = p - sphere_c;
+		float b = dot (normalize (light_pos - p), omc);
+		float c = dot (omc, omc) - sphere_r * sphere_r;
+		float bsqmc = b * b - c;
+		// hit one or both sides
+		if (bsqmc >= 0.0) {
+			shadow = true;
+		}
+
+		vec4 fake = vec4( 0.0 );
+		float cap_light_t = ray_capsule( light_pos, light_dir, capsule_a, capsule_b, cap_r, fake );
+		if (cap_light_t < plane_light_t) {
+			shadow = true;
+		}
+
+		texel.rgb = light_amb * plane_ka;
+		if (!shadow) {
+		
+			float diff_dp = dot (plane_n, -light_dir);
+			diff_dp = max (diff_dp, 0.0);
+			texel.rgb += light_diff * plane_kd * diff_dp;
+		
+			vec3 reflection = reflect (light_dir, plane_n);
+			vec3 surface_to_viewer = normalize (-p); // viewer is 0,0,0 so no need v-p
+			float spec_dp = dot (reflection, surface_to_viewer);
+			spec_dp = max (spec_dp, 0.0);
+			float spec_fac = pow (spec_dp, spec_exp);
+			texel.rgb += light_spec * plane_ks * spec_fac;
+		}
+	}
+	
+	/* gamma correction */
+	texel.rgb = pow (texel.rgb, vec3 (1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2));
+	
+	// store result in image
+	imageStore (img_output, p, texel);
+}
+
+/* built-in variables
+
+uvec3 gl_LocalInvocationID - index of shader invocation within local work grp
+.xyz from 0 to gl_WorkGroupSize-1
+unused dimensions are index 0
+
+uvec3 gl_WorkGroupSize - local work grp size
+.xyz - unused dimensions are size 1
+
+
+
+
+
+uvec3 gl_NumWorkGroups - num of wg in global set (set by glDispatchCompute() )
+uvec3 gl_WorkGroupID - index of current wg in global set - range 0 to gl_NumWorkGroups-1
+
+*/

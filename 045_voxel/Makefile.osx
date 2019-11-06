@@ -1,0 +1,27 @@
+CC = clang
+CPP = clang++
+
+FLAGS = -g -O0 -m64 -Wfatal-errors -pedantic -Wextra -DGLEW_STATIC -DDEBUG_GL \
+# -DDEBUG_GL --- this was crashing on windows. wrong callback format??
+-fmessage-length=78 \
+#-fsanitize=address \
+# same as =leak
+#-fsanitize=thread \ # not compat with `address`
+#-fsanitize=leak \
+# was throwing leaks in video driver even in empty program
+#-fsanitize=undefined \
+#-fcheck-pointer-bounds
+
+L = ../common/osx
+
+SRC = \
+gfx.c \
+main.c \
+../common/src/GL/glew.c
+
+I = -I ./ -I ../common/include/
+INCLUDES = $(wildcard src/*.h)
+STA_LIBS =
+DYN_LIBS = -framework IOKit -framework CoreVideo -framework OpenGL -framework Cocoa -L${L} -lglfw3
+all: ${OBJS} $(INCLUDES)
+	${CC} ${FLAGS} -o vox ${SRC} ${I} ${STA_LIBS} ${DYN_LIBS}

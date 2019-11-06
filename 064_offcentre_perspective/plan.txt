@@ -1,0 +1,15 @@
+1. render normal pass to default buffer using built-in MSAA
+2. render a second pass
+   - viewport size 3x3 around mouse cursor
+   - clear colour buffer but
+   - use the depth buffer from the previous pass
+   - use a shader that renders theIDs as colours
+   - glreadpixels any of the 3x3 pixel values and retrieve the colour
+3. retain the ID of the colour under the cursor for use in the next frame ( ~1 frame latency)
+
+16 million colours
+
+16*16*256 =  65,536 per-chunk voxels ( requires exactly 2 bytes )
+1 byte could be a uniform sent on on chunk render that identifies the chunk with an unique ID
+-> this doesnt have to cover all chunks in the world, just an index from the ones currently being rendered. can change per-frame.
+1 byte could be 0-6 for the face index

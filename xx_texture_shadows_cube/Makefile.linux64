@@ -1,0 +1,12 @@
+BIN = shads
+CC = g++
+FLAGS = -Wall -pedantic
+INC = -I ../common/include
+L = ../common/lin64
+STA_LIBS = ${L}/libGLEW.a ${L}/libglfw3.a
+DYN_LIBS = -lGL -lX11 -lXxf86vm -lXrandr -lpthread -lXi -lXinerama -lXcursor \
+-ldl -lrt -lm
+SRC = main.cpp gl_utils.cpp obj_parser.cpp maths_funcs.cpp
+
+all:
+	${CC} ${FLAGS} -o ${BIN} ${SRC} ${INC} ${STA_LIBS} ${DYN_LIBS}

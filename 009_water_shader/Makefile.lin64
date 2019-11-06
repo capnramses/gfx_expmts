@@ -1,0 +1,12 @@
+BIN = test
+CC = clang++
+FLAGS = -Wall -pedantic -fmessage-length=78 -m64
+I = -I ../common/include
+L = ../common/lin64
+STAL = ${L}/libGLEW.a ${L}/libglfw3.a
+DYNL = -lGL -lX11 -lXxf86vm -lXrandr -lpthread -lXi -lXinerama -lXcursor \
+-ldl -lrt -lm
+SRC = main.cpp maths_funcs.cpp obj_parser.cpp stb_image.c stb_image_write.cpp
+
+all:
+	${CC} ${FLAGS} -o ${BIN} ${SRC} ${I} ${STAL} ${DYNL}

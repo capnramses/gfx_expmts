@@ -1,0 +1,12 @@
+BIN = test
+CC = clang
+FLAGS = -DAPPLE -Wall -pedantic -mmacosx-version-min=10.5 -arch x86_64 \
+-fmessage-length=78 -fprofile-arcs -ftest-coverage -std=c99
+INC = -I ../common/include -I/sw/include -I/usr/local/include
+L = ../common/osx/
+LOC_LIB = $(L)libGLEW.a
+FRAMEWORKS = -framework Cocoa -framework OpenGL -framework IOKit -framework SDL2
+SRC = main.c
+
+all:
+	${CC} ${FLAGS} ${FRAMEWORKS} -o ${BIN} ${SRC} -g ${INC} ${LOC_LIB}

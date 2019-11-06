@@ -1,0 +1,25 @@
+CC = gcc
+CPP = g++
+
+FLAGS = -g -O0 -m64 -Wfatal-errors -pedantic -Wextra -DGLEW_STATIC -DDEBUG_GL \
+-fmessage-length=78 \
+#-fsanitize=address
+#-fsanitize=thread \ # not compat with `address`
+#-fsanitize=leak -fcheck-pointer-bounds -fsanitize=undefined
+# was throwing leaks in video driver even in empty program
+# -DDEBUG_GL --- this was crashing on windows. wrong callback format??
+
+L = ../common/win64_gcc
+
+SRC = \
+gfx.c \
+main.c \
+../common/src/GL/glew.c
+
+I = -I ./ -I ../common/include/
+INCLUDES = $(wildcard src/*.h)
+STA_LIBS = ${L}/libglfw3.a
+DYN_LIBS = -L${L} -lopengl32 -lgdi32 -lws2_32 
+
+all: ${OBJS} $(INCLUDES)
+	${CC} ${FLAGS} -o vox ${SRC} ${I} ${STA_LIBS} ${DYN_LIBS}

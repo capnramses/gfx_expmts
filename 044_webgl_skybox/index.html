@@ -1,0 +1,44 @@
+<!-- Skybox Demo
+Copright Anton Gerdelan <antonofnote _at_ gmail _dot_ com> first v. 15 April 2018
+antongerdelan.net -->
+
+<!DOCTYPE HTML>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>Skybox Demo</title>
+
+	<body>
+		<canvas id="canvas"></canvas>
+	</body>
+</head>
+
+<script id="skybox.vert" type="text/glsl">	
+	attribute vec3 a_point;
+
+	varying vec3 v_texcoords;
+	
+	void main () {
+		v_texcoords = a_point;
+		gl_Position = vec4( a_point, 1.0 );
+	}
+</script>
+
+<script id="skybox.frag" type="text/glsl">
+	precision mediump float;
+
+	varying vec3 v_texcoords;
+
+	uniform samplerCube cube_texture;
+	uniform mat4 R;
+
+	void main () {
+		vec3 texcoord = vec3(R * vec4(v_texcoords, 0.0));
+		gl_FragColor = textureCube(cube_texture, normalize(texcoord));
+	}
+</script>
+
+<script src="js/webgl-utils.js"></script>
+<script src="js/apg_maths.js"></script>
+<script src="js/main.js"></script>

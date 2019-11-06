@@ -1,0 +1,11 @@
+BIN = pano2cube.exe
+CC = gcc
+FLAGS = -g -O0 -m64 -Wfatal-errors -pedantic -Wextra -DGLEW_STATIC
+INC = -I ../common/src
+LOC_LIB = ../common/src/GL/glew.c ../common/win64_gcc/libglfw3.a
+SYS_LIB = -lm -lopengl32 -lgdi32 -lws2_32 
+SRC = main.c obj_parser.c
+
+all:
+	${CC} ${FLAGS} -o ${BIN} ${SRC} ${INC} ${LOC_LIB} ${SYS_LIB}
+
