@@ -55,11 +55,11 @@ void fill_triangle( vertex_t a, vertex_t b, vertex_t c, uint8_t* image_ptr, floa
     for ( int x = min_x; x <= max_x; x++ ) {
       vec3 p = ( vec3 ){ .x = x, .y = y };
 
-      // TODO try barycentric instead of edge test
+      // try barycentric instead of edge test for rasterising triangles. code for this function is in apg_maths.h
       vec3 bary = barycentric(
         ( vec2 ){ .x = x, .y = y }, ( vec2 ){ .x = a.pos.x, .y = a.pos.y }, ( vec2 ){ .x = b.pos.x, .y = b.pos.y }, ( vec2 ){ .x = c.pos.x, .y = c.pos.y } );
-
       // bool inside = edge_function( a.pos, b.pos, p ) && edge_function( b.pos, c.pos, p ) && edge_function( c.pos, a.pos, p );
+      
       bool inside = true;
       if ( bary.x < 0 || bary.x >= 1 || bary.y < 0 || bary.y >= 1 || bary.z < 0 || bary.z >= 1 ) { inside = false; }
       if ( inside ) {
