@@ -55,11 +55,11 @@ void fill_triangle( vertex_t a, vertex_t b, vertex_t c, uint8_t* image_ptr, floa
     for ( int x = min_x; x <= max_x; x++ ) {
       vec3 p = ( vec3 ){ .x = x, .y = y };
 
-      // TODO try barycentric instead of edge test
+      // try barycentric instead of edge test for rasterising triangles. code for this function is in apg_maths.h
       vec3 bary = barycentric(
         ( vec2 ){ .x = x, .y = y }, ( vec2 ){ .x = a.pos.x, .y = a.pos.y }, ( vec2 ){ .x = b.pos.x, .y = b.pos.y }, ( vec2 ){ .x = c.pos.x, .y = c.pos.y } );
-
       // bool inside = edge_function( a.pos, b.pos, p ) && edge_function( b.pos, c.pos, p ) && edge_function( c.pos, a.pos, p );
+      
       bool inside = true;
       if ( bary.x < 0 || bary.x >= 1 || bary.y < 0 || bary.y >= 1 || bary.z < 0 || bary.z >= 1 ) { inside = false; }
       if ( inside ) {
@@ -82,6 +82,7 @@ void fill_triangle( vertex_t a, vertex_t b, vertex_t c, uint8_t* image_ptr, floa
   }
 }
 
+// function to write out a PPM image file
 bool write_ppm( const char* filename, const uint8_t* image_ptr, int w, int h ) {
   assert( filename );
   assert( image_ptr );
@@ -95,6 +96,7 @@ bool write_ppm( const char* filename, const uint8_t* image_ptr, int w, int h ) {
   return true;
 }
 
+// function loads a .ply mesh file given as an argument on the command line. eg drag a .ply onto the .exe in Explorer
 int main( int argc, char** argv ) {
   if ( argc < 2 ) {
     printf( "usage: %s YOUR_MESH.ply\n", argv[0] );
@@ -116,6 +118,8 @@ int main( int argc, char** argv ) {
   const float nearc = 0.01f;
   const float farc  = 100.0f;
 
+  // set up transformation matrices (P is camera perpsective, V is camera orientation and position, M is 'position the model in the world'
+  // PVM is a combination of all three so that i can do v' = PVM * v instead of v' = P * V * M * v
   mat4 P   = perspective( 66.6f, width / (float)height, nearc, farc );
   mat4 V   = look_at( ( vec3 ){ .x = 0, .y = 0, .z = 25 }, ( vec3 ){ .x = 0, .y = 0 }, ( vec3 ){ .y = 1.0f } );
   mat4 M   = mult_mat4_mat4( rot_y_deg_mat4( 45.0f ), scale_mat4( ( vec3 ){ 1, 1, 1 } ) );
@@ -126,6 +130,7 @@ int main( int argc, char** argv ) {
   for ( int i = 0; i < ply.n_vertices; i += 3 ) {
     vec4 vertex[3];
     vec3 colourf[3] = { ( vec3 ){ .x = 1 }, ( vec3 ){ .y = 1 }, ( vec3 ){ .z = 1 } };
+    // every 3 vertices is 1 triangle's worth
     for ( int v = 0; v < 3; v++ ) {
       memcpy( &vertex[v].x, &ply.positions_ptr[( i + v ) * ply.n_positions_comps], sizeof( float ) * ply.n_positions_comps );
       if ( ply.colours_ptr ) { memcpy( &colourf[v].x, &ply.colours_ptr[( i + v ) * ply.n_colours_comps], sizeof( float ) * ply.n_colours_comps ); }
@@ -159,11 +164,13 @@ int main( int argc, char** argv ) {
     fill_triangle( a, b, c, image_data_ptr, depth_buffer_ptr, width, height, n_channels );
   }
 
+  // write out result to an image file
   if ( !write_ppm( "out.ppm", image_data_ptr, width, height ) ) {
     fprintf( stderr, "ERROR: could not write ppm file\n" );
     return 1;
   }
 
+  // delete allocated memory
   free( image_data_ptr );
 
   printf( "Program done\n" );
