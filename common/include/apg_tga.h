@@ -9,7 +9,7 @@ Instructions:
 3.
 int w,h,n;
 uint8_t* img_ptr = apg_tga_read_file("my_file.tga", &w, &h, &n, 0);
-// usage the BGR or BGRA (when n == 4) image memory here
+...use the BGR or BGRA (when n == 4) image memory here
 free( img_ptr );
 
 Limitations:
@@ -84,7 +84,7 @@ unsigned char* apg_tga_read_file( const char* filename, int* w, int* h, int* n, 
     if ( !fptr ) { return NULL; }
     fseek( fptr, 0L, SEEK_END );
     record.sz   = (size_t)ftell( fptr );
-    record.data = malloc( record.sz );
+    record.data = (uint8_t*)malloc( record.sz );
     if ( !record.data ) {
       fclose( fptr );
       return NULL;
@@ -129,7 +129,7 @@ unsigned char* apg_tga_read_file( const char* filename, int* w, int* h, int* n, 
     }
   }
   {
-    img_ptr = malloc( img_data_sz );
+    img_ptr = (uint8_t*)malloc( img_data_sz );
     if ( !img_ptr ) {
       free( record.data );
       return NULL;
@@ -159,11 +159,11 @@ unsigned int apg_tga_write_file( const char* filename, unsigned char* bgr_img_pt
   {
     memset( &hdr, 0, sizeof( struct tga_header_t ) );
     hdr.image_type     = 2;
-    hdr.w              = w;
-    hdr.h              = h;
-    hdr.y_origin       = h;
-    hdr.bpp            = 8 * n;
-    hdr.img_descriptor = 0x20; // tell image loader to flip vertically
+    hdr.w              = (uint16_t)w;
+    hdr.h              = (uint16_t)h;
+    hdr.y_origin       = (uint16_t)h;
+    hdr.bpp            = (uint8_t)(8 * n);
+    hdr.img_descriptor = 0x20; /* tell image loader to flip vertically */
   }
   {
     size_t nw     = 0;
