@@ -86,6 +86,7 @@ projects, and volatile software. Mostly OpenGL but some other graphics-related s
 | 076     | `sw_rasteriser`             | Software rasteriser for drawing a 3D mesh.                                 | working            |
 | 077     | `apg_ply`                   | Rewrite of my PLY mesh reader/writer.                                      | working            |
 | 078     | `sw_diffuse`                | Diffuse lighting for software rasteriser.                                  | working            |
+| xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed           |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                            | proposed           |
 | xxx     | `geo_mipmap   `             | heightmap terrain sampled in vertex shader, scrolling camera mesh          | proposed           |
 | xxx     | `fresnel_prism`             | refraction/reflection colour split as in nvidia cg_tutorial_chapter07      | proposed           |
