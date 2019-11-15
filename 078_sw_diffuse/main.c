@@ -83,17 +83,20 @@ void fill_triangle( vertex_t a, vertex_t b, vertex_t c, uint8_t* image_ptr, floa
         frag_colour.y = ( a.colour.y * bary.x + b.colour.y * bary.y + c.colour.y * bary.z );
         frag_colour.z = ( a.colour.z * bary.x + b.colour.z * bary.y + c.colour.z * bary.z );
 
-        // lighting
+        // diffuse lighting
         vec3 interpolated_pos = add_vec3_vec3( add_vec3_vec3( mult_vec3_f( a.pos_wor, bary.x ), mult_vec3_f( b.pos_wor, bary.y ) ), mult_vec3_f( c.pos_wor, bary.z ) );
         vec3 dir_to_light   = sub_vec3_vec3( g_light_pos, interpolated_pos );
         vec3 dtl_n          = normalise_vec3( dir_to_light );
         vec3 interpolated_n = add_vec3_vec3( add_vec3_vec3( mult_vec3_f( a.n_wor, bary.x ), mult_vec3_f( b.n_wor, bary.y ) ), mult_vec3_f( c.n_wor, bary.z ) );
         interpolated_n      = normalise_vec3( interpolated_n );
         float l_dot_n       = CLAMP( dot_vec3( dtl_n, interpolated_n ), 0, 1 );
-        frag_colour         = mult_vec3_f( frag_colour, l_dot_n );
+        vec3 diffuse_l      = mult_vec3_f( g_light_colour, l_dot_n );
+        frag_colour         = mult_vec3_vec3( frag_colour, diffuse_l );
+        // add ambient lighting
+        frag_colour = add_vec3_vec3( frag_colour, ( vec3 ){ 0.15, 0.15, 0.15 } );
 
         // convert colour from 0.0 to 1.0 range to 0-255 byte. and colour the pixel
-        rgb_byte_t rgb = ( rgb_byte_t ){ .r = frag_colour.x * 255.0, .g = frag_colour.y * 255.0, .b = frag_colour.z * 255.0 };
+        rgb_byte_t rgb = ( rgb_byte_t ){ .r = CLAMP( 0, 1, frag_colour.x ) * 255.0, .g = CLAMP( 0, 1, frag_colour.y ) * 255.0, .b = CLAMP( 0, 1, frag_colour.z ) * 255.0 };
         set_pixel( image_ptr, width, n_channels, x, width - y - 1, rgb );
       }
     }
