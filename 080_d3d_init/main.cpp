@@ -1,4 +1,4 @@
-/* Direct3D11 starter code
+/* Direct3D11 basic start reference code
  *  Anton Gerdelan
  */
 
@@ -60,24 +60,35 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSho
     swap_chain_descr.BufferDesc.RefreshRate.Denominator = 1; // draw as fast as possible. can enable vsync here
     swap_chain_descr.BufferDesc.ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
     swap_chain_descr.BufferDesc.Scaling                 = DXGI_MODE_SCALING_UNSPECIFIED;
-    swap_chain_descr.BufferDesc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;      // regular 32-bit colour output RGBA
+    swap_chain_descr.BufferDesc.Format                  = DXGI_FORMAT_B8G8R8A8_UNORM;      // can also use DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
     swap_chain_descr.SampleDesc.Count                   = 1;                               // NOTE(Anton) various options here for multisampling
     swap_chain_descr.SampleDesc.Quality                 = 0;                               // NOTE(Anton) various options here for multisampling
     swap_chain_descr.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT; // Use the surface or resource as an output render target.
-    swap_chain_descr.BufferCount                        = 1;                               // use 1 back buffer in addition to front buffer
+    swap_chain_descr.BufferCount                        = 1;                               // NOTE(Anton) not sure if should be 1 or 2 here for double-buffering
     swap_chain_descr.OutputWindow                       = hwnd;                            // link output to our win32 window
     swap_chain_descr.Windowed                           = true; // MS reccs start window and allow user to FS via IDXGISwapChain::SetFullscreenState()
     swap_chain_descr.SwapEffect                         = DXGI_SWAP_EFFECT_DISCARD; // Discard the back buffer contents after presenting.
     HRESULT hr = D3D11CreateDeviceAndSwapChain( NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, NULL, 0, D3D11_SDK_VERSION, &swap_chain_descr, &swap_chain_ptr,
       &device_ptr, &feature_level, &device_context_ptr );
     assert( S_OK == hr && swap_chain_ptr && device_ptr && device_context_ptr );
+
+    /****** COLOUR BUFFER *******/
     ID3D11Texture2D* framebuffer;
     hr = swap_chain_ptr->GetBuffer( 0, __uuidof( ID3D11Texture2D ), (void**)&framebuffer );
     assert( SUCCEEDED( hr ) );
-
     hr = device_ptr->CreateRenderTargetView( framebuffer, 0, &render_target_view_ptr );
     assert( SUCCEEDED( hr ) );
     framebuffer->Release();
+
+    /****** DEPTH BUFFER *******/
+    D3D11_TEXTURE2D_DESC depthBufferDesc;
+    framebuffer->GetDesc( &depthBufferDesc ); // base on framebuffer properties
+    depthBufferDesc.Format    = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    ID3D11Texture2D* depthBuffer;
+    device_ptr->CreateTexture2D( &depthBufferDesc, nullptr, &depthBuffer );
+    ID3D11DepthStencilView* depthBufferView;
+    device_ptr->CreateDepthStencilView( depthBuffer, nullptr, &depthBufferView );
   }
 
   MSG msg           = {};
