@@ -32,6 +32,7 @@ id:*
 Debug/
 vs2017/
 build/
+tmp/
 036_pano2cubemap/pano2cube
 036_pano2cubemap/guinness_kegs
 036_pano2cubemap/adapt_room
