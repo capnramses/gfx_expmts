@@ -8,6 +8,7 @@
 #define UNICODE
 #endif
 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #pragma comment( lib, "user32" ) // link against the win32 library
