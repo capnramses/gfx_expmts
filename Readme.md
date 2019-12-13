@@ -86,6 +86,9 @@ projects, and volatile software. Mostly OpenGL but some other graphics-related s
 | 076     | `sw_rasteriser`             | Software rasteriser for drawing a 3D mesh.                                 | working            |
 | 077     | `apg_ply`                   | Rewrite of my PLY mesh reader/writer.                                      | working            |
 | 078     | `sw_diffuse`                | Diffuse lighting for software rasteriser.                                  | working            |
+| 079     | `win32`                     | Open a Win32 window.                                                       | working            |
+| 080     | `d3d_init`                  | Initialise Direct3D 11.                                                    | working            |
+| 081     | `gfx_platform`              | "Hello Cube" project starter using a graphics platform wrapper I wrote.    | working            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed           |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                            | proposed           |
 | xxx     | `geo_mipmap   `             | heightmap terrain sampled in vertex shader, scrolling camera mesh          | proposed           |
