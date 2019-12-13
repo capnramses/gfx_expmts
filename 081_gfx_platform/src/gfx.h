@@ -24,8 +24,8 @@ typedef struct gfx_framestats_t {
   uint32_t n_posts;
 } gfx_framestats_t;
 
-typedef enum gfx_polygon_t { TRIANGLES, TRIANGLE_STRIP } gfx_polygon_t;
-typedef enum gfx_draw_mode_t { STREAM_DRAW, STATIC_DRAW, DYNAMIC_DRAW } gfx_draw_mode_t;
+typedef enum gfx_polygon_t { GFX_TRIANGLES, GFX_TRIANGLE_STRIP } gfx_polygon_t;
+typedef enum gfx_draw_mode_t { GFX_STREAM_DRAW, GFX_STATIC_DRAW, GFX_DYNAMIC_DRAW } gfx_draw_mode_t;
 
 // 3d geometry descriptor struct
 typedef struct gfx_mesh_t {
@@ -214,10 +214,10 @@ void gfx_uniform_4fv( gfx_shader_t shader, int loc, int count, float* v );
 
 #define MAX_MANAGED_TEXTURES 1024
 
-extern uint8_t g_fallback_pixels[16];
-extern gfx_texture_t g_fallback_texture;
-extern gfx_texture_t g_managed_textures[GFX_MAX_MANAGED_SHADERS];
-extern int g_n_managed_textures;
+extern uint8_t gfx_fallback_pixels[16];
+extern gfx_texture_t gfx_fallback_texture;
+extern gfx_texture_t gfx_managed_textures[GFX_MAX_MANAGED_SHADERS];
+extern int gfx_n_managed_textures;
 
 // if a texture is already loaded from filename then function returns its index. otherwise -1
 int gfx_managed_texture_find_index( const char* filename );

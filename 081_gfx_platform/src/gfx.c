@@ -17,14 +17,14 @@
 #include <stdint.h>
 #include <time.h>
 
-#define A_POS_LOCATION 0
-#define A_ST_LOCATION 1
-#define A_NORM_LOCATION 2
-#define A_COLOUR_LOCATION 3
-#define A_PICKINDEX_LOCATION 4
-#define A_HTAG_LOCATION 5
-#define A_K_LOCATION 6
-#define A_EXPLORED_FACTOR 7
+#define GFX_A_POS_LOCATION 0
+#define GFX_A_ST_LOCATION 1
+#define GFX_A_NORM_LOCATION 2
+#define GFX_A_COLOUR_LOCATION 3
+#define GFX_A_PICKINDEX_LOCATION 4
+#define GFX_A_HTAG_LOCATION 5
+#define GFX_A_K_LOCATION 6
+#define GFX_A_EXPLORED_FACTOR 7
 
 // =================================================================================================
 //                                  Externally Visible Globals ( more in sections below )
@@ -40,7 +40,7 @@ bool gfx_fb_resized;
 float gfx_framebuffer_scale = 1.0f;
 
 gfx_framestats_t gfx_framestats;
-uint8_t g_fallback_pixels[16] = { 255, 0, 255, 255, 64, 0, 64, 255, 64, 0, 64, 255, 255, 0, 255, 255 };
+uint8_t gfx_fallback_pixels[16] = { 255, 0, 255, 255, 64, 0, 64, 255, 64, 0, 64, 255, 255, 0, 255, 255 };
 
 // =================================================================================================
 //                                      Internal Globals ( more in sections below )
@@ -145,7 +145,7 @@ static void _init_ss_quad() {
      1.0, -1.0  // br
   };
   // clang-format on
-  gfx_ss_quad_mesh = gfx_create_mesh( ss_quad_pos, sizeof( ss_quad_pos ), GFX_MEM_POS, 4, STATIC_DRAW, TRIANGLE_STRIP );
+  gfx_ss_quad_mesh = gfx_create_mesh( ss_quad_pos, sizeof( ss_quad_pos ), GFX_MEM_POS, 4, GFX_STATIC_DRAW, GFX_TRIANGLE_STRIP );
 }
 
 static void _init_unit_cube() {
@@ -167,7 +167,7 @@ static void _init_unit_cube() {
      1.0,  1.0, -1.0,  0,  0, -1,  1.0, -1.0, -1.0,  0,  0, -1, -1.0,  1.0, -1.0,  0,  0, -1  // back 2
   };
   // clang-format on
-  gfx_unit_cube_mesh = gfx_create_mesh( unit_cube_pos, sizeof( unit_cube_pos ), GFX_MEM_POS_NOR, 36, STATIC_DRAW, TRIANGLES );
+  gfx_unit_cube_mesh = gfx_create_mesh( unit_cube_pos, sizeof( unit_cube_pos ), GFX_MEM_POS_NOR, 36, GFX_STATIC_DRAW, GFX_TRIANGLES );
 }
 
 int gfx_managed_mesh_find_index( const char* filename ) {
@@ -214,13 +214,13 @@ gfx_mesh_t gfx_create_mesh( const void* data, size_t sz, gfx_geom_mem_layout_t l
 
   GLenum gl_draw_mode = 0;
   switch ( mesh.draw_mode ) {
-  case STATIC_DRAW: {
+  case GFX_STATIC_DRAW: {
     gl_draw_mode = GL_STATIC_DRAW;
   } break;
-  case DYNAMIC_DRAW: {
+  case GFX_DYNAMIC_DRAW: {
     gl_draw_mode = GL_DYNAMIC_DRAW;
   } break;
-  case STREAM_DRAW: {
+  case GFX_STREAM_DRAW: {
     gl_draw_mode = GL_STREAM_DRAW;
   } break;
   }
@@ -239,27 +239,27 @@ gfx_mesh_t gfx_create_mesh( const void* data, size_t sz, gfx_geom_mem_layout_t l
       GLsizei vertex_stride = sizeof( float ) * ncomps;
       assert( vertex_stride * n_verts == sz );
       glVertexAttribPointer( 0, ncomps, GL_FLOAT, GL_FALSE, 0, NULL ); // XYZ so 3
-      glEnableVertexAttribArray( A_POS_LOCATION );
+      glEnableVertexAttribArray( GFX_A_POS_LOCATION );
     } break;
     case GFX_MEM_POS_ST: {
       GLsizei vertex_stride = sizeof( float ) * 5;
       assert( vertex_stride * n_verts == sz );
       GLintptr vertex_position_offset = 0 * sizeof( float );
       GLintptr vertex_texcoord_offset = 3 * sizeof( float );
-      glVertexAttribPointer( A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
-      glVertexAttribPointer( A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
-      glEnableVertexAttribArray( A_POS_LOCATION );
-      glEnableVertexAttribArray( A_ST_LOCATION );
+      glVertexAttribPointer( GFX_A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
+      glVertexAttribPointer( GFX_A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
+      glEnableVertexAttribArray( GFX_A_POS_LOCATION );
+      glEnableVertexAttribArray( GFX_A_ST_LOCATION );
     } break;
     case GFX_MEM_POS_NOR: {
       GLsizei vertex_stride = sizeof( float ) * 6;
       assert( vertex_stride * n_verts == sz );
       GLintptr vertex_position_offset = 0 * sizeof( float );
       GLintptr vertex_normal_offset   = 3 * sizeof( float );
-      glVertexAttribPointer( A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
-      glVertexAttribPointer( A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
-      glEnableVertexAttribArray( A_POS_LOCATION );
-      glEnableVertexAttribArray( A_NORM_LOCATION );
+      glVertexAttribPointer( GFX_A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
+      glVertexAttribPointer( GFX_A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
+      glEnableVertexAttribArray( GFX_A_POS_LOCATION );
+      glEnableVertexAttribArray( GFX_A_NORM_LOCATION );
     } break;
     case GFX_MEM_POS_NOR_RGB: {
       GLsizei vertex_stride = sizeof( float ) * 9;
@@ -267,12 +267,12 @@ gfx_mesh_t gfx_create_mesh( const void* data, size_t sz, gfx_geom_mem_layout_t l
       GLintptr vertex_position_offset = 0 * sizeof( float );
       GLintptr vertex_normal_offset   = 3 * sizeof( float );
       GLintptr vertex_colour_offset   = 6 * sizeof( float );
-      glVertexAttribPointer( A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
-      glVertexAttribPointer( A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
-      glVertexAttribPointer( A_COLOUR_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_colour_offset );
-      glEnableVertexAttribArray( A_POS_LOCATION );
-      glEnableVertexAttribArray( A_NORM_LOCATION );
-      glEnableVertexAttribArray( A_COLOUR_LOCATION );
+      glVertexAttribPointer( GFX_A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
+      glVertexAttribPointer( GFX_A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
+      glVertexAttribPointer( GFX_A_COLOUR_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_colour_offset );
+      glEnableVertexAttribArray( GFX_A_POS_LOCATION );
+      glEnableVertexAttribArray( GFX_A_NORM_LOCATION );
+      glEnableVertexAttribArray( GFX_A_COLOUR_LOCATION );
     } break;
     case GFX_MEM_POS_NOR_ST_RGB: {
       GLsizei vertex_stride = sizeof( float ) * 11;
@@ -281,14 +281,14 @@ gfx_mesh_t gfx_create_mesh( const void* data, size_t sz, gfx_geom_mem_layout_t l
       GLintptr vertex_normal_offset   = 3 * sizeof( float );
       GLintptr vertex_texcoord_offset = 6 * sizeof( float );
       GLintptr vertex_colour_offset   = 8 * sizeof( float );
-      glVertexAttribPointer( A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
-      glVertexAttribPointer( A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
-      glVertexAttribPointer( A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
-      glVertexAttribPointer( A_COLOUR_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_colour_offset );
-      glEnableVertexAttribArray( A_POS_LOCATION );
-      glEnableVertexAttribArray( A_NORM_LOCATION );
-      glEnableVertexAttribArray( A_ST_LOCATION );
-      glEnableVertexAttribArray( A_COLOUR_LOCATION );
+      glVertexAttribPointer( GFX_A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
+      glVertexAttribPointer( GFX_A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
+      glVertexAttribPointer( GFX_A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
+      glVertexAttribPointer( GFX_A_COLOUR_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_colour_offset );
+      glEnableVertexAttribArray( GFX_A_POS_LOCATION );
+      glEnableVertexAttribArray( GFX_A_NORM_LOCATION );
+      glEnableVertexAttribArray( GFX_A_ST_LOCATION );
+      glEnableVertexAttribArray( GFX_A_COLOUR_LOCATION );
     } break;
     case GFX_MEM_POS_ST_RG: {
       GLsizei vertex_stride = sizeof( float ) * 7;
@@ -296,12 +296,12 @@ gfx_mesh_t gfx_create_mesh( const void* data, size_t sz, gfx_geom_mem_layout_t l
       GLintptr vertex_position_offset = 0 * sizeof( float );
       GLintptr vertex_texcoord_offset = 3 * sizeof( float );
       GLintptr vertex_redgreen_offset = 5 * sizeof( float );
-      glVertexAttribPointer( A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
-      glVertexAttribPointer( A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
-      glVertexAttribPointer( A_COLOUR_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_redgreen_offset );
-      glEnableVertexAttribArray( A_POS_LOCATION );
-      glEnableVertexAttribArray( A_ST_LOCATION );
-      glEnableVertexAttribArray( A_COLOUR_LOCATION );
+      glVertexAttribPointer( GFX_A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
+      glVertexAttribPointer( GFX_A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
+      glVertexAttribPointer( GFX_A_COLOUR_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_redgreen_offset );
+      glEnableVertexAttribArray( GFX_A_POS_LOCATION );
+      glEnableVertexAttribArray( GFX_A_ST_LOCATION );
+      glEnableVertexAttribArray( GFX_A_COLOUR_LOCATION );
     } break;
     case GFX_MEM_POS_ST_NOR: {
       GLsizei vertex_stride = sizeof( float ) * 8;
@@ -309,12 +309,12 @@ gfx_mesh_t gfx_create_mesh( const void* data, size_t sz, gfx_geom_mem_layout_t l
       GLintptr vertex_position_offset = 0 * sizeof( float );
       GLintptr vertex_texcoord_offset = 3 * sizeof( float );
       GLintptr vertex_normal_offset   = 5 * sizeof( float );
-      glVertexAttribPointer( A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
-      glVertexAttribPointer( A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
-      glVertexAttribPointer( A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
-      glEnableVertexAttribArray( A_POS_LOCATION );
-      glEnableVertexAttribArray( A_ST_LOCATION );
-      glEnableVertexAttribArray( A_NORM_LOCATION );
+      glVertexAttribPointer( GFX_A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
+      glVertexAttribPointer( GFX_A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
+      glVertexAttribPointer( GFX_A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
+      glEnableVertexAttribArray( GFX_A_POS_LOCATION );
+      glEnableVertexAttribArray( GFX_A_ST_LOCATION );
+      glEnableVertexAttribArray( GFX_A_NORM_LOCATION );
     } break;
     case GFX_MEM_POS_ST_NOR_RGB: {
       GLsizei vertex_stride = sizeof( float ) * 11;
@@ -323,14 +323,14 @@ gfx_mesh_t gfx_create_mesh( const void* data, size_t sz, gfx_geom_mem_layout_t l
       GLintptr vertex_texcoord_offset = 3 * sizeof( float );
       GLintptr vertex_normal_offset   = 5 * sizeof( float );
       GLintptr vertex_rgb_offset      = 8 * sizeof( float );
-      glVertexAttribPointer( A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
-      glVertexAttribPointer( A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
-      glVertexAttribPointer( A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
-      glVertexAttribPointer( A_PICKINDEX_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_rgb_offset );
-      glEnableVertexAttribArray( A_POS_LOCATION );
-      glEnableVertexAttribArray( A_ST_LOCATION );
-      glEnableVertexAttribArray( A_NORM_LOCATION );
-      glEnableVertexAttribArray( A_PICKINDEX_LOCATION );
+      glVertexAttribPointer( GFX_A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
+      glVertexAttribPointer( GFX_A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
+      glVertexAttribPointer( GFX_A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
+      glVertexAttribPointer( GFX_A_PICKINDEX_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_rgb_offset );
+      glEnableVertexAttribArray( GFX_A_POS_LOCATION );
+      glEnableVertexAttribArray( GFX_A_ST_LOCATION );
+      glEnableVertexAttribArray( GFX_A_NORM_LOCATION );
+      glEnableVertexAttribArray( GFX_A_PICKINDEX_LOCATION );
     } break;
 
     case GFX_MEM_POS_ST_NOR_RGB_H_K_E: {
@@ -343,20 +343,20 @@ gfx_mesh_t gfx_create_mesh( const void* data, size_t sz, gfx_geom_mem_layout_t l
       GLintptr vertex_h_offset        = 11 * sizeof( float );
       GLintptr vertex_k_offset        = 12 * sizeof( float );
       GLintptr vertex_e_offset        = 13 * sizeof( float );
-      glVertexAttribPointer( A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
-      glVertexAttribPointer( A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
-      glVertexAttribPointer( A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
-      glVertexAttribPointer( A_PICKINDEX_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_rgb_offset );
-      glVertexAttribPointer( A_HTAG_LOCATION, 1, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_h_offset );
-      glVertexAttribPointer( A_K_LOCATION, 1, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_k_offset );
-      glVertexAttribPointer( A_EXPLORED_FACTOR, 1, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_e_offset );
-      glEnableVertexAttribArray( A_POS_LOCATION );
-      glEnableVertexAttribArray( A_ST_LOCATION );
-      glEnableVertexAttribArray( A_NORM_LOCATION );
-      glEnableVertexAttribArray( A_PICKINDEX_LOCATION );
-      glEnableVertexAttribArray( A_HTAG_LOCATION );
-      glEnableVertexAttribArray( A_K_LOCATION );
-      glEnableVertexAttribArray( A_EXPLORED_FACTOR );
+      glVertexAttribPointer( GFX_A_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_position_offset );
+      glVertexAttribPointer( GFX_A_ST_LOCATION, 2, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_texcoord_offset );
+      glVertexAttribPointer( GFX_A_NORM_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_normal_offset );
+      glVertexAttribPointer( GFX_A_PICKINDEX_LOCATION, 3, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_rgb_offset );
+      glVertexAttribPointer( GFX_A_HTAG_LOCATION, 1, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_h_offset );
+      glVertexAttribPointer( GFX_A_K_LOCATION, 1, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_k_offset );
+      glVertexAttribPointer( GFX_A_EXPLORED_FACTOR, 1, GL_FLOAT, GL_FALSE, vertex_stride, (GLvoid*)vertex_e_offset );
+      glEnableVertexAttribArray( GFX_A_POS_LOCATION );
+      glEnableVertexAttribArray( GFX_A_ST_LOCATION );
+      glEnableVertexAttribArray( GFX_A_NORM_LOCATION );
+      glEnableVertexAttribArray( GFX_A_PICKINDEX_LOCATION );
+      glEnableVertexAttribArray( GFX_A_HTAG_LOCATION );
+      glEnableVertexAttribArray( GFX_A_K_LOCATION );
+      glEnableVertexAttribArray( GFX_A_EXPLORED_FACTOR );
     } break;
     default: { glog_err( "ERROR: unhandled vertex format!\n" ); } break;
     } // endswitch
@@ -496,7 +496,7 @@ gfx_mesh_t gfx_create_mesh_from_ply( const char* filename ) {
       int nvert_element_idxs = 0, idx_a = 0, idx_b = 0, idx_c = 0, idx_d = 0;
       int nscanned = sscanf( line, "%i %i %i %i %i", &nvert_element_idxs, &idx_a, &idx_b, &idx_c, &idx_d );
 
-      // triangles in
+      // GFX_TRIANGLES in
       if ( 3 == nvert_element_idxs ) {
         if ( nscanned != 4 ) {
           glog_err( "ERROR: triangle face in mesh `%s` has missing tokens (%i/4) for face #%i\n", filename, nscanned, i );
@@ -554,7 +554,7 @@ gfx_mesh_t gfx_create_mesh_from_ply( const char* filename ) {
   fclose( fin );
 
   size_t vbo_data_used_sz = sizeof( float ) * pcount * nproperties;
-  gfx_mesh_t mesh         = gfx_create_mesh( vbo_data, vbo_data_used_sz, layout, pcount, STATIC_DRAW, TRIANGLES );
+  gfx_mesh_t mesh         = gfx_create_mesh( vbo_data, vbo_data_used_sz, layout, pcount, GFX_STATIC_DRAW, GFX_TRIANGLES );
   strncat( mesh.filename, filename, GFX_MAX_MESH_FILENAME - 1 );
 
   return mesh;
@@ -566,13 +566,13 @@ void gfx_update_mesh( gfx_mesh_t* mesh, const void* data, size_t sz, size_t n_ve
 
   GLenum gl_draw_mode = 0;
   switch ( mesh->draw_mode ) {
-  case STATIC_DRAW: {
+  case GFX_STATIC_DRAW: {
     gl_draw_mode = GL_STATIC_DRAW;
   } break;
-  case DYNAMIC_DRAW: {
+  case GFX_DYNAMIC_DRAW: {
     gl_draw_mode = GL_DYNAMIC_DRAW;
   } break;
-  case STREAM_DRAW: {
+  case GFX_STREAM_DRAW: {
     gl_draw_mode = GL_STREAM_DRAW;
   } break;
   }
@@ -665,14 +665,14 @@ static bool _create_shader_from_strings( const char* vs_str, const char* fs_str,
   glAttachShader( shader.program, shader.vertex_shader );
   glAttachShader( shader.program, shader.fragment_shader );
 
-  glBindAttribLocation( shader.program, A_POS_LOCATION, "a_pos" );
-  glBindAttribLocation( shader.program, A_ST_LOCATION, "a_st" );
-  glBindAttribLocation( shader.program, A_NORM_LOCATION, "a_norm" );
-  glBindAttribLocation( shader.program, A_COLOUR_LOCATION, "a_colour" );
-  glBindAttribLocation( shader.program, A_PICKINDEX_LOCATION, "a_pickindex" );
-  glBindAttribLocation( shader.program, A_HTAG_LOCATION, "a_htag" );
-  glBindAttribLocation( shader.program, A_K_LOCATION, "a_k" );
-  glBindAttribLocation( shader.program, A_EXPLORED_FACTOR, "a_explored_factor" );
+  glBindAttribLocation( shader.program, GFX_A_POS_LOCATION, "a_pos" );
+  glBindAttribLocation( shader.program, GFX_A_ST_LOCATION, "a_st" );
+  glBindAttribLocation( shader.program, GFX_A_NORM_LOCATION, "a_norm" );
+  glBindAttribLocation( shader.program, GFX_A_COLOUR_LOCATION, "a_colour" );
+  glBindAttribLocation( shader.program, GFX_A_PICKINDEX_LOCATION, "a_pickindex" );
+  glBindAttribLocation( shader.program, GFX_A_HTAG_LOCATION, "a_htag" );
+  glBindAttribLocation( shader.program, GFX_A_K_LOCATION, "a_k" );
+  glBindAttribLocation( shader.program, GFX_A_EXPLORED_FACTOR, "GFX_A_EXPLORED_FACTOR" );
   glBindFragDataLocation( shader.program, 0, "o_frag_colour" );
   glBindFragDataLocation( shader.program, 1, "o_second_output_colour" );
   glBindFragDataLocation( shader.program, 2, "o_third_output_colour" );
@@ -921,19 +921,19 @@ void gfx_delete_all_managed_shaders() {
 // =================================================================================================
 //                                           Textures
 // =================================================================================================
-gfx_texture_t g_fallback_texture;
-gfx_texture_t g_managed_textures[MAX_MANAGED_TEXTURES];
-int g_n_managed_textures;
+gfx_texture_t gfx_fallback_texture;
+gfx_texture_t gfx_managed_textures[MAX_MANAGED_TEXTURES];
+int gfx_n_managed_textures;
 
 int gfx_managed_texture_find_index( const char* filename ) {
-  for ( int i = 0; i < g_n_managed_textures; i++ ) {
-    if ( 0 == strncmp( filename, g_managed_textures[i].filename, GFX_MAX_TEXTURE_FILENAME ) ) { return i; }
+  for ( int i = 0; i < gfx_n_managed_textures; i++ ) {
+    if ( 0 == strncmp( filename, gfx_managed_textures[i].filename, GFX_MAX_TEXTURE_FILENAME ) ) { return i; }
   }
   return -1;
 }
 
 int gfx_create_managed_texture_from_file( const char* filename, bool clamp, bool mag_linear, bool min_linear, bool mipmaps, bool srgb ) {
-  assert( g_n_managed_textures < MAX_MANAGED_TEXTURES );
+  assert( gfx_n_managed_textures < MAX_MANAGED_TEXTURES );
   assert( filename );
 
   int idx = gfx_managed_texture_find_index( filename );
@@ -942,31 +942,31 @@ int gfx_create_managed_texture_from_file( const char* filename, bool clamp, bool
     return idx;
   }
 
-  //  load_image_file_to_gfx_texture_threaded( filename, clamp, mag_linear, min_linear, mipmaps, srgb, &g_managed_textures[g_n_managed_textures] );
-  g_managed_textures[g_n_managed_textures] = gfx_load_image_file_to_texture_serial( filename, clamp, mag_linear, min_linear, mipmaps, srgb );
+  //  load_image_file_to_gfx_texture_threaded( filename, clamp, mag_linear, min_linear, mipmaps, srgb, &gfx_managed_textures[gfx_n_managed_textures] );
+  gfx_managed_textures[gfx_n_managed_textures] = gfx_load_image_file_to_texture_serial( filename, clamp, mag_linear, min_linear, mipmaps, srgb );
 
-  return g_n_managed_textures++;
+  return gfx_n_managed_textures++;
 }
 
 int gfx_create_managed_texture_from_image_mem( const unsigned char* pixels, int w, int h, int n_chans, bool clamp, bool mag_linear, bool min_linear, bool mipmaps, bool srgb ) {
-  assert( g_n_managed_textures < MAX_MANAGED_TEXTURES );
+  assert( gfx_n_managed_textures < MAX_MANAGED_TEXTURES );
   assert( pixels );
 
-  g_managed_textures[g_n_managed_textures] = gfx_load_image_mem_to_texture( pixels, w, h, n_chans, clamp, mag_linear, min_linear, mipmaps, srgb );
-  return g_n_managed_textures++;
+  gfx_managed_textures[gfx_n_managed_textures] = gfx_load_image_mem_to_texture( pixels, w, h, n_chans, clamp, mag_linear, min_linear, mipmaps, srgb );
+  return gfx_n_managed_textures++;
 }
 
 void gfx_reload_all_managed_textures() {
-  for ( int i = 0; i < g_n_managed_textures; i++ ) { gfx_reload_texture( &g_managed_textures[i] ); }
+  for ( int i = 0; i < gfx_n_managed_textures; i++ ) { gfx_reload_texture( &gfx_managed_textures[i] ); }
 }
 
 void gfx_delete_all_managed_textures() {
-  for ( int i = 0; i < g_n_managed_textures; i++ ) {
+  for ( int i = 0; i < gfx_n_managed_textures; i++ ) {
     // avoid continuously deleting the same fallback if set several times
-    if ( g_fallback_texture.handle == g_managed_textures[i].handle ) { continue; }
-    gfx_delete_texture( &g_managed_textures[i] );
+    if ( gfx_fallback_texture.handle == gfx_managed_textures[i].handle ) { continue; }
+    gfx_delete_texture( &gfx_managed_textures[i] );
   }
-  g_n_managed_textures = 0;
+  gfx_n_managed_textures = 0;
 }
 
 void gfx_reload_texture( gfx_texture_t* texture ) {
@@ -977,7 +977,7 @@ void gfx_reload_texture( gfx_texture_t* texture ) {
   gfx_texture_t tmp = *texture;
 
   // delete but don't delete the fallback texture by accident
-  if ( g_fallback_texture.handle != texture->handle ) { gfx_delete_texture( texture ); }
+  if ( gfx_fallback_texture.handle != texture->handle ) { gfx_delete_texture( texture ); }
 
   // load_image_file_to_gfx_texture_threaded( tmp.filename, tmp.clamp, tmp.mag_linear, tmp.min_linear, tmp.mipmaps, tmp.srgb, texture );
   *texture = gfx_load_image_file_to_texture_serial( tmp.filename, tmp.clamp, tmp.mag_linear, tmp.min_linear, tmp.mipmaps, tmp.srgb );
@@ -1010,7 +1010,7 @@ void gfx_update_texture( gfx_texture_t* texture, const unsigned char* pixels ) {
   default: {
     glog_err( "WARNING: unhandled texture channel number: %i\n", texture->n_chans );
     gfx_delete_texture( texture );
-    *texture = g_fallback_texture;
+    *texture = gfx_fallback_texture;
     return;
   } break;
   } // endswitch
@@ -1066,7 +1066,7 @@ gfx_texture_t gfx_load_image_file_to_texture_serial( const char* filename, bool 
   stbi__vertical_flip( pixels, width, height, comps );
   if ( !pixels ) {
     glog_err( "ERROR: loading image from file `%s`\n", filename );
-    return g_fallback_texture;
+    return gfx_fallback_texture;
   }
   {
     texture = gfx_load_image_mem_to_texture( pixels, width, height, comps, clamp, mag_linear, min_linear, mipmaps, srgb );
@@ -1094,7 +1094,7 @@ static void _load_texture_finished_cb( const char* name, void* args ) {
     glog_err( "WARNING: image failed to load from file `%s`\n", texture_ptr->filename );
     gfx_delete_texture( texture_ptr );
     // TODO(Anton) replace internals? to use default texture
-    // *texture = g_fallback_texture;
+    // *texture = gfx_fallback_texture;
     return;
   }
 
@@ -1123,7 +1123,7 @@ static void _load_texture_finished_cb( const char* name, void* args ) {
     glog_err( "WARNING: unhandled texture channel number: %i\n", texture_ptr->n_chans );
     gfx_delete_texture( texture_ptr );
     // TODO(Anton) replace internals? to use default texture
-    // *texture = g_fallback_texture;
+    // *texture = gfx_fallback_texture;
     return;
   } break;
   } // endswitch
@@ -1200,7 +1200,7 @@ void gfx_delete_texture( gfx_texture_t* texture ) {
 // =================================================================================================
 void gfx_draw_mesh( gfx_mesh_t mesh, gfx_shader_t shader ) {
   GLenum mode = GL_TRIANGLES;
-  if ( TRIANGLE_STRIP == mesh.polygon_type ) { mode = GL_TRIANGLE_STRIP; }
+  if ( GFX_TRIANGLE_STRIP == mesh.polygon_type ) { mode = GL_TRIANGLE_STRIP; }
   glUseProgram( shader.program );
   {
     glBindVertexArray( mesh.vao );
@@ -1216,7 +1216,7 @@ void gfx_draw_gfx_mesh_texturedv( gfx_mesh_t mesh, gfx_shader_t shader, gfx_text
   assert( textures );
 
   GLenum mode = GL_TRIANGLES;
-  if ( TRIANGLE_STRIP == mesh.polygon_type ) { mode = GL_TRIANGLE_STRIP; }
+  if ( GFX_TRIANGLE_STRIP == mesh.polygon_type ) { mode = GL_TRIANGLE_STRIP; }
 
   glUseProgram( shader.program );
   for ( int i = 0; i < ntextures; i++ ) {
@@ -1737,7 +1737,7 @@ bool gfx_start( int win_w, int win_h, bool msaa, const char* window_title, const
 
   bool mag_linear    = false;
   bool min_linear    = false;
-  g_fallback_texture = gfx_load_image_mem_to_texture( g_fallback_pixels, 2, 2, 4, false, mag_linear, min_linear, false, false );
+  gfx_fallback_texture = gfx_load_image_mem_to_texture( gfx_fallback_pixels, 2, 2, 4, false, mag_linear, min_linear, false, false );
 
   _init_fallback_shader();
   _init_ss_quad();
@@ -1757,7 +1757,7 @@ void gfx_stop() {
   gfx_delete_mesh( &gfx_unit_cube_mesh );
   gfx_delete_mesh( &gfx_ss_quad_mesh );
   gfx_delete_all_managed_textures();
-  gfx_delete_texture( &g_fallback_texture );
+  gfx_delete_texture( &gfx_fallback_texture );
   gfx_delete_all_managed_shaders();
   gfx_delete_shader( &gfx_fallback_shader );
   glfwTerminate();
