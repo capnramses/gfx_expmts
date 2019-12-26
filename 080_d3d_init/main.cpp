@@ -70,8 +70,6 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSho
     DXGI_SWAP_CHAIN_DESC swap_chain_descr               = { 0 };
     swap_chain_descr.BufferDesc.RefreshRate.Numerator   = 0; // draw as fast as possible. can enable vsync here
     swap_chain_descr.BufferDesc.RefreshRate.Denominator = 1; // draw as fast as possible. can enable vsync here
-    swap_chain_descr.BufferDesc.ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-    swap_chain_descr.BufferDesc.Scaling                 = DXGI_MODE_SCALING_UNSPECIFIED;
     swap_chain_descr.BufferDesc.Format                  = DXGI_FORMAT_B8G8R8A8_UNORM;      // can also use DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
     swap_chain_descr.SampleDesc.Count                   = 1;                               // NOTE(Anton) various options here for multisampling
     swap_chain_descr.SampleDesc.Quality                 = 0;                               // NOTE(Anton) various options here for multisampling
@@ -79,7 +77,6 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSho
     swap_chain_descr.BufferCount                        = 1;                               // NOTE(Anton) not sure if should be 1 or 2 here for double-buffering
     swap_chain_descr.OutputWindow                       = hwnd;                            // link output to our win32 window
     swap_chain_descr.Windowed                           = true; // MS reccs start window and allow user to FS via IDXGISwapChain::SetFullscreenState()
-    swap_chain_descr.SwapEffect                         = DXGI_SWAP_EFFECT_DISCARD; // Discard the back buffer contents after presenting.
     HRESULT hr = D3D11CreateDeviceAndSwapChain( NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, NULL, 0, D3D11_SDK_VERSION, &swap_chain_descr, &swap_chain_ptr,
       &device_ptr, &feature_level, &device_context_ptr );
     assert( S_OK == hr && swap_chain_ptr && device_ptr && device_context_ptr );
@@ -202,7 +199,7 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSho
       device_context_ptr->RSSetState( rasterizer_state_ptr );
 
       /**** Output Merger *****/
-      device_context_ptr->OMSetRenderTargets( 1, &render_target_view_ptr, nullptr );
+      device_context_ptr->OMSetRenderTargets( 1, &render_target_view_ptr, NULL );
       device_context_ptr->OMSetDepthStencilState( depth_stencil_state_ptr, 0 );
 
       /***** Input Assembler (map how the vertex shader inputs should be read from vertex buffer) ******/
