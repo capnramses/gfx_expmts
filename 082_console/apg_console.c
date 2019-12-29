@@ -1,4 +1,12 @@
-#include "console.h"
+/*==============================================================
+Quake-style Console mini-library
+Language: C99
+Author:   Anton Gerdelan - @capnramses
+Contact:  <antongdl@protonmail.com>
+Website:  https://github.com/capnramses/apg - http://antongerdelan.net/
+Licence:  See bottom of header file.
+==============================================================*/
+#include "apg_console.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -78,13 +86,13 @@ bool c_get_var( const char* str, float* val ) {
   return true;
 }
 
-bool c_autocomplete( const char* str, char* completed ) {
-  assert( str );
-  size_t len = strlen( str );
+bool c_autocomplete( const char* substr, char* completed ) {
+  assert( substr );
+  size_t len = strlen( substr );
   assert( len < C_STR_MAX );
 
   for ( int i = 0; i < n_cvars; i++ ) {
-    char* res = strstr( cvars[i].str, str );
+    char* res = strstr( cvars[i].str, substr );
     if ( cvars[i].str == res ) {
       strncpy( completed, cvars[i].str, C_STR_MAX );
       return true;
