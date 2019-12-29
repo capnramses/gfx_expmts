@@ -16,19 +16,35 @@ extern "C" {
 
 #define APG_C_STR_MAX 128
 
+// creates a console variable with name `str` and initial value `val`.
+// RETURNS false if value with name `str` already exists and does not set the value.
 bool apg_c_create_var( const char* str, float val );
 
+// changes the value of an existing console variable.
+// RETURNS false if a variable with name `str` does not already exist.
 bool apg_c_set_var( const char* str, float val );
 
+// fetches the value of a console variable with name `str`.
+// sets the float pointed to by `val` to the value of the variable.
+// RETURNS false if the variable does not exist.
 bool apg_c_get_var( const char* str, float* val );
 
-// completed requires a buffer of at least APG_C_STR_MAX bytes
-bool apg_c_autocomplete( const char* substr, char* completed );
+// RETURNS number of potential console variables that could complete `substr` found
+//   - no matches - returns 0.
+//   - exactly 1 match - match is copied into buffer pointed to by `completed`. 
+//     `completed` requires a buffer of at least APG_C_STR_MAX bytes
+//   - more than 1 match - prints all matches to the console.
+// NOTE if being called on a string such as `set mypartialvarname` substr should be set to `mypartialvarname`
+// to find matching variables.
+int apg_c_autocomplete_var( const char* substr, char* completed );
+
+// TODO(Anton) make `apg_c_autocomplete_cmd()`
 
 // appends str as an output line to the scrolling output
 void apg_c_print( const char* str );
 
-void apg_c_dump_to_stdio();
+// printf everything in console to stdout stream
+void apg_c_dump_to_stdout();
 
 #ifdef __cplusplus
 }
