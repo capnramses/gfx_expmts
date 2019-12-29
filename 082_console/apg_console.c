@@ -15,13 +15,13 @@ Licence:  See bottom of header file.
 #define APG_C_VARS_MAX 128
 #define APG_C_HIST_MAX 32
 
-typedef struct cvar_t {
+typedef struct c_var_t {
   char str[APG_C_STR_MAX];
   float val;
-} cvar_t;
+} c_var_t;
 
-static cvar_t cvars[APG_C_VARS_MAX];
-static uint32_t n_cvars;
+static c_var_t c_vars[APG_C_VARS_MAX];
+static uint32_t n_c_vars;
 
 static char c_hist[APG_C_HIST_MAX][APG_C_STR_MAX];
 static int c_hist_oldest = -1, c_hist_newest = -1;
@@ -31,8 +31,8 @@ static int c_hist_oldest = -1, c_hist_newest = -1;
 static int _console_find( const char* str ) {
   assert( str );
 
-  for ( int i = 0; i < n_cvars; i++ ) {
-    if ( strncmp( str, cvars[i].str, APG_C_STR_MAX ) == 0 ) { return i; }
+  for ( int i = 0; i < n_c_vars; i++ ) {
+    if ( strncmp( str, c_vars[i].str, APG_C_STR_MAX ) == 0 ) { return i; }
   }
   return -1;
 }
@@ -59,12 +59,12 @@ void apg_c_dump_to_stdout() {
 bool apg_c_create_var( const char* str, float val ) {
   assert( str );
 
-  if ( n_cvars >= APG_C_VARS_MAX ) { return false; }
+  if ( n_c_vars >= APG_C_VARS_MAX ) { return false; }
   int idx = _console_find( str );
   if ( idx >= 0 ) { return false; }
-  idx = n_cvars++;
-  strncpy( cvars[idx].str, str, APG_C_STR_MAX - 1 );
-  cvars[idx].val = val;
+  idx = n_c_vars++;
+  strncpy( c_vars[idx].str, str, APG_C_STR_MAX - 1 );
+  c_vars[idx].val = val;
   return true;
 }
 
@@ -73,7 +73,7 @@ bool apg_c_set_var( const char* str, float val ) {
 
   int idx = _console_find( str );
   if ( idx < 0 ) { return false; }
-  cvars[idx].val = val;
+  c_vars[idx].val = val;
   return true;
 }
 
@@ -82,7 +82,7 @@ bool apg_c_get_var( const char* str, float* val ) {
 
   int idx = _console_find( str );
   if ( idx < 0 ) { return false; }
-  *val = cvars[idx].val;
+  *val = c_vars[idx].val;
   return true;
 }
 
@@ -94,14 +94,14 @@ int apg_c_autocomplete_var( const char* substr, char* completed ) {
   // check variables
   int n_matching        = 0;
   int last_matching_idx = -1;
-  for ( int i = 0; i < n_cvars; i++ ) {
-    char* res = strstr( cvars[i].str, substr );
-    if ( cvars[i].str == res ) {
+  for ( int i = 0; i < n_c_vars; i++ ) {
+    char* res = strstr( c_vars[i].str, substr );
+    if ( c_vars[i].str == res ) {
       n_matching++;
       last_matching_idx = i;
-      apg_c_print( cvars[i].str );
+      apg_c_print( c_vars[i].str );
     }
   }
-  if ( 1 == n_matching ) { strncpy( completed, cvars[last_matching_idx].str, APG_C_STR_MAX ); }
+  if ( 1 == n_matching ) { strncpy( completed, c_vars[last_matching_idx].str, APG_C_STR_MAX ); }
   return n_matching;
 }

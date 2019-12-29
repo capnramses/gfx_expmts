@@ -38,7 +38,7 @@ bool apg_c_get_var( const char* str, float* val );
 // to find matching variables.
 int apg_c_autocomplete_var( const char* substr, char* completed );
 
-// TODO(Anton) make `apg_c_autocomplete_cmd()`
+// TODO(Anton) make `apg_c_autocomplete_cmd()` or a combined one that only looks for variables after `set `
 
 // appends str as an output line to the scrolling output
 void apg_c_print( const char* str );
