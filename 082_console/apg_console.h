@@ -14,15 +14,21 @@ extern "C" {
 
 #include <stdbool.h>
 
-#define C_STR_MAX 128
+#define APG_C_STR_MAX 128
 
-bool c_create_var( const char* str, float val );
-bool c_set_var( const char* str, float val );
-bool c_get_var( const char* str, float* val );
-bool c_autocomplete( const char* substr, char* completed );
+bool apg_c_create_var( const char* str, float val );
 
-void c_hist_add( const char* str );
-void c_hist_print();
+bool apg_c_set_var( const char* str, float val );
+
+bool apg_c_get_var( const char* str, float* val );
+
+// completed requires a buffer of at least APG_C_STR_MAX bytes
+bool apg_c_autocomplete( const char* substr, char* completed );
+
+// appends str as an output line to the scrolling output
+void apg_c_print( const char* str );
+
+void apg_c_dump_to_stdio();
 
 #ifdef __cplusplus
 }
