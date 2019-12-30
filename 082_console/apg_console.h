@@ -27,15 +27,10 @@ Instructions may be of the following forms:
 
 Built-in commands are:
 
-  "create VARIABLE VALUE" - Create a new variable with an initial value.
-  "set VARIABLE VALUE"    - Change the value of an extant variable.
-  "clear"                 - Clear the output text of the console.
-
-Such as:
-
-  "my_var 2.0" - set the value of variable 'my_var'
-  "my_var"     - print the value of variable 'my_var'
-  "clear"      - invoke the 'clear' command
+  "var my_var 2.0" - create a new variable called my_var and initialise its value to 2.0
+  "my_var 2.0"     - set the value of a variable 'my_var'
+  "my_var"         - print the value of variable 'my_var'
+  "clear"          - invoke the 'clear' command
 
 All values are stored as 32-bit floats, but may be cast as boolean or integer values.
 
@@ -59,6 +54,11 @@ This is API-agnostic so must be converted to a texture to be used with 3D APIs.
   apg_c_get_required_image_dims() - Gets the pixel dimensions required to exactly fit all the current console text into a rectangular image.
   apg_c_draw_to_image_mem()       - Writes current console text on top of a pre-allocated image.
 
+TODO
+=====
+* Display the user entered text as an additional line, starting with '>' eg "> my text here"
+* Remove the big string maker and print line-by-line.
+* Store a colour for each line so eg errors can be in red.
 ==============================================================*/
 #pragma once
 
@@ -74,6 +74,7 @@ extern "C" {
 #define APG_C_OUTPUT_LINES_MAX 32 // maximum number of lines retained in output
 
 bool apg_c_append_user_entered_text( const char* str );
+void apg_c_clear_user_entered_text( void );
 
 // creates a console variable with name `str` and initial value `val`.
 // RETURNS

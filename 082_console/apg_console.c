@@ -27,6 +27,8 @@ static int c_output_lines_oldest = -1, c_output_lines_newest = -1, c_n_output_li
 
 static int c_font_height_px = 16;
 
+static char _c_user_entered_text[APG_C_STR_MAX];
+
 // returns index or -1 if did not find
 // NOTE(Anton) could replace with a hash table
 static int _console_find_var( const char* str ) {
@@ -41,9 +43,10 @@ static int _console_find_var( const char* str ) {
 static bool _parse_user_entered_instruction( const char* str ) {
   assert( str );
 
-  char one[APG_C_STR_MAX], two[APG_C_STR_MAX], three[APG_C_STR_MAX];
+  char one[APG_C_STR_MAX], two[APG_C_STR_MAX], three[APG_C_STR_MAX], four[APG_C_STR_MAX];
+  char tmp[APG_C_STR_MAX];
   one[0] = two[0] = three[0] = '\0';
-  int n                      = sscanf( str, "%s %s %s", one, two, three );
+  int n                      = sscanf( str, "%s %s %s %s", one, two, three, four );
   switch ( n ) {
   case 0: return true; // this would be simply '\n'
   case 1: {
@@ -66,13 +69,12 @@ static bool _parse_user_entered_instruction( const char* str ) {
     }
 
     // give up
-    sprintf( tmp, "`%s` is not a recognised command or variable name.", one );
+    sprintf( tmp, "ERROR: `%s` is not a recognised command or variable name.", one );
     apg_c_print( tmp );
     return false;
   } break;
 
   case 2: {
-    char tmp[APG_C_STR_MAX];
     // assume this is equiv to "set myvariable value" with an implied "set"
     float val   = (float)atof( two );
     bool set_it = apg_c_set_var( one, val );
@@ -81,17 +83,73 @@ static bool _parse_user_entered_instruction( const char* str ) {
       apg_c_print( tmp );
       return true;
     } else {
-      sprintf( tmp, "`%s` is not a recognised command or variable name.", one );
+      sprintf( tmp, "ERROR: `%s` is not a recognised variable name. To create a new variable use `var`.", one );
       apg_c_print( tmp );
       return false;
     }
   } break;
 
-  default: return false; // shouldn't get here unless too many tokens on line
-  }
+  case 3: {
+    // "var myvariable value"
+    if ( strncmp( one, "var", APG_C_STR_MAX ) != 0 ) {
+      sprintf( tmp, "ERROR: `%s` is not a recognised command for a 3-token instruction. Did you mean `var`?", one );
+      apg_c_print( tmp );
+      return false;
+    }
+    float val      = (float)atof( three );
+    bool create_it = apg_c_create_var( two, val );
+    if ( create_it ) {
+      sprintf( tmp, "`var %s %.2f`", two, val );
+      apg_c_print( tmp );
+      return true;
+    } else {
+      sprintf( tmp, "ERROR: Symbol `%s` already exists.", two );
+      apg_c_print( tmp );
+      return false;
+    }
+  } break;
 
+  default: {
+    sprintf( tmp, "ERROR: too many tokens in instruction." );
+    apg_c_print( tmp );
+    return false;
+  } break;
+  } // endswitch
+
+  // shouldn't get here
+  assert( false );
   return false;
 }
+
+bool apg_c_append_user_entered_text( const char* str ) {
+  assert( str );
+
+  // check for buffer overflow
+  int uet_len   = strnlen( _c_user_entered_text, APG_C_STR_MAX );
+  int len       = strnlen( str, APG_C_STR_MAX );
+  int total_len = uet_len + len;
+  if ( total_len > APG_C_STR_MAX ) {
+    apg_c_clear_user_entered_text();
+    return false;
+  }
+
+  // append
+  strncat( _c_user_entered_text, str, APG_C_STR_MAX );
+
+  // check for line break and if so parse and then delete the rest of the string - no complex carry-on stuff.
+  for ( int i = uet_len; i < total_len; i++ ) {
+    if ( _c_user_entered_text[i] == '\n' ) {
+      _c_user_entered_text[i] = '\0';
+      bool parsed             = _parse_user_entered_instruction( _c_user_entered_text );
+      _c_user_entered_text[0] = '\0';
+      return parsed;
+    }
+  }
+
+  return true;
+}
+
+void apg_c_clear_user_entered_text( void ) { _c_user_entered_text[0] = '\0'; }
 
 void apg_c_output_clear( void ) {
   c_output_lines_oldest = c_output_lines_newest = -1;
@@ -184,7 +242,9 @@ int apg_c_autocomplete_var( const char* substr, char* completed ) {
   return n_matching;
 }
 
-// TODO(Anton) --> replace "my_string" with the entire string with line breaks
+// NOTE(Anton) - don't need to create the whole buffer as one string.
+//               could print line-by-line, avoiding the malloc() call, using known line height as offset.
+//               this would also allow unique colours per line for eg error messages, debug output, and user-entered text.
 bool apg_c_get_required_image_dims( int* w, int* h ) {
   assert( w && h );
 
