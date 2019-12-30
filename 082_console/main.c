@@ -90,6 +90,12 @@ int main() {
 
   stbi_write_png( "testoutput.png", w, h, n_chans, img_ptr, w * n_chans );
 
+
+  apg_c_output_clear();
+
+  retimg = apg_c_draw_to_image_mem( img_ptr, w, h, n_chans );
+  assert( retimg == false ); // empty image
+
   free( img_ptr );
 
   printf( "tests DONE\n" );

@@ -33,9 +33,9 @@ Built-in commands are:
 
 Such as:
 
-  "set my_var 2.0" - set the value of variable 'my_var'
-  "my_var"         - print the value of variable 'my_var'
-  "clear"          - invoke the 'clear' command
+  "my_var 2.0" - set the value of variable 'my_var'
+  "my_var"     - print the value of variable 'my_var'
+  "clear"      - invoke the 'clear' command
 
 All values are stored as 32-bit floats, but may be cast as boolean or integer values.
 
@@ -47,9 +47,12 @@ Variables may also be created, set, or fetched programmatically.
 
 Scrolling output text may be interacted with
 
-  apg_c_print( str )     - Adds a line of text to the output such as a debug message.
-  apg_c_dump_to_stdout() - Writes the current console output text to stdout via printf().
-
+  apg_capg_c_output_clear_clear() - Clear the output text.
+  apg_c_print( str )              - Adds a line of text to the output such as a debug message.
+  apg_c_dump_to_stdout()          - Writes the current console output text to stdout via printf().
+  apg_c_count_lines()             - Counts the number of lines in the console output.
+  apg_c_alloc_and_concat_str()    - Concatenates all lines of console output into a single string and returns a pointer to it.
+  
 The console text may also be rendered out to an image for use in graphical applications.
 This is API-agnostic so must be converted to a texture to be used with 3D APIs.
 
@@ -66,9 +69,11 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
-#define APG_C_STR_MAX 128
-#define APG_C_VARS_MAX 128
-#define APG_C_OUTPUT_LINES_MAX 32
+#define APG_C_STR_MAX 128         // maximum console string length. commands and variable names must be shorter than this.
+#define APG_C_VARS_MAX 128        // maximum number of variables stored in console
+#define APG_C_OUTPUT_LINES_MAX 32 // maximum number of lines retained in output
+
+bool apg_c_append_user_entered_text( const char* str );
 
 // creates a console variable with name `str` and initial value `val`.
 // RETURNS
@@ -98,11 +103,15 @@ int apg_c_autocomplete_var( const char* substr, char* completed );
 
 // TODO(Anton) make `apg_c_autocomplete_cmd()` or a combined one that only looks for variables after `set `
 
+void apg_c_output_clear( void );
+
 // Appends str as an output line to the scrolling output
 void apg_c_print( const char* str );
 
+int apg_c_count_lines( void );
+
 // printf everything in console to stdout stream
-void apg_c_dump_to_stdout();
+void apg_c_dump_to_stdout( void );
 
 // Calculate the image pixel dimensions of image required to fit the current console text based on the number of
 // lines of printed text in the console and the height of the text in pixels
@@ -118,13 +127,10 @@ bool apg_c_get_required_image_dims( int* w, int* h );
 // PARAMETERS
 //   img_ptr    - pointer to the destination image bytes. must not be NULL
 //   w,h        - dimensions of the destination image in pixels
-//   n_channels - number of channels in the destination image 
-//   r,g,b,a    - colour of the text
+//   n_channels - number of channels in the destination image
 // RETURNS
 //   false on any failure
-bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels, uint8_t r, uint8_t g, uint8_t b, uint8_t a );
-
-int apg_c_count_lines();
+bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels );
 
 #ifdef __cplusplus
 }
