@@ -6,6 +6,56 @@ Author:   Anton Gerdelan - @capnramses
 Contact:  <antongdl@protonmail.com>
 Website:  https://github.com/capnramses/apg - http://antongerdelan.net/
 Licence:  See bottom of this file.
+
+Instructions
+============
+The primary interface for user-entered text is:
+
+  apg_c_append_user_entered_text( str );
+
+Where `str` can be a whole line or eg one character at a time.
+Instructions end and are entered and parsed after a line break `\n` byte.
+
+Autocompletion of user-entered text can be used with:
+
+  apg_c_autocomplete();
+
+Instructions may be of the following forms:
+
+  BUILT-IN-COMMAND [VARIABLE] [VALUE]
+  VARIABLE
+
+Built-in commands are:
+
+  "create VARIABLE VALUE" - Create a new variable with an initial value.
+  "set VARIABLE VALUE"    - Change the value of an extant variable.
+  "clear"                 - Clear the output text of the console.
+
+Such as:
+
+  "set my_var 2.0" - set the value of variable 'my_var'
+  "my_var"         - print the value of variable 'my_var'
+  "clear"          - invoke the 'clear' command
+
+All values are stored as 32-bit floats, but may be cast as boolean or integer values.
+
+Variables may also be created, set, or fetched programmatically.
+
+  apg_c_create_var( str )
+  apg_c_set_var( str, val )
+  apg_c_get_var( str )
+
+Scrolling output text may be interacted with
+
+  apg_c_print( str )     - Adds a line of text to the output such as a debug message.
+  apg_c_dump_to_stdout() - Writes the current console output text to stdout via printf().
+
+The console text may also be rendered out to an image for use in graphical applications.
+This is API-agnostic so must be converted to a texture to be used with 3D APIs.
+
+  apg_c_get_required_image_dims() - Gets the pixel dimensions required to exactly fit all the current console text into a rectangular image.
+  apg_c_draw_to_image_mem()       - Writes current console text on top of a pre-allocated image.
+
 ==============================================================*/
 #pragma once
 
@@ -21,19 +71,23 @@ extern "C" {
 #define APG_C_OUTPUT_LINES_MAX 32
 
 // creates a console variable with name `str` and initial value `val`.
-// RETURNS false if value with name `str` already exists and does not set the value.
+// RETURNS
+//  false if value with name `str` already exists and does not set the value.
 bool apg_c_create_var( const char* str, float val );
 
 // changes the value of an existing console variable.
-// RETURNS false if a variable with name `str` does not already exist.
+// RETURNS
+//  false if a variable with name `str` does not already exist.
 bool apg_c_set_var( const char* str, float val );
 
 // fetches the value of a console variable with name `str`.
 // sets the float pointed to by `val` to the value of the variable.
-// RETURNS false if the variable does not exist.
+// RETURNS
+//   false if the variable does not exist.
 bool apg_c_get_var( const char* str, float* val );
 
-// RETURNS number of potential console variables that could complete `substr` found
+// RETURNS
+//   number of potential console variables that could complete `substr` found
 //   - no matches - returns 0.
 //   - exactly 1 match - match is copied into buffer pointed to by `completed`.
 //     `completed` requires a buffer of at least APG_C_STR_MAX bytes
@@ -44,22 +98,31 @@ int apg_c_autocomplete_var( const char* substr, char* completed );
 
 // TODO(Anton) make `apg_c_autocomplete_cmd()` or a combined one that only looks for variables after `set `
 
-// appends str as an output line to the scrolling output
+// Appends str as an output line to the scrolling output
 void apg_c_print( const char* str );
 
 // printf everything in console to stdout stream
 void apg_c_dump_to_stdout();
 
-// calculate the image pixel dimensions of image required to fit the current console text
-// based on the number of lines of printed text in the console and the height of the text in pixels
-// RETURNS false on any failure
+// Calculate the image pixel dimensions of image required to fit the current console text based on the number of
+// lines of printed text in the console and the height of the text in pixels
+// PARAMETERS
+//  w,h         - pointers to variables to store the width and height required in pixels.
+// RETURNS
+//  false on any failure
 bool apg_c_get_required_image_dims( int* w, int* h );
 
-// draw the current console text into an image buffer you have allocated.
-// you can get the size required to fit the full console text by first calling
-// `apg_c_get_required_image_dims()`
-// RETURNS false on any failure
-bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels );
+// Draw the current console text into an image buffer you have allocated with dimensions w, h, and n_channels.
+// You can get the size required to exactly fit the full console text by first calling `apg_c_get_required_image_dims()`.
+// The destination image does not need to exactly match the console text size - it can be bigger or smaller.
+// PARAMETERS
+//   img_ptr    - pointer to the destination image bytes. must not be NULL
+//   w,h        - dimensions of the destination image in pixels
+//   n_channels - number of channels in the destination image 
+//   r,g,b,a    - colour of the text
+// RETURNS
+//   false on any failure
+bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels, uint8_t r, uint8_t g, uint8_t b, uint8_t a );
 
 int apg_c_count_lines();
 
