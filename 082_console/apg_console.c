@@ -7,6 +7,7 @@ Website:  https://github.com/capnramses/apg - http://antongerdelan.net/
 Licence:  See bottom of header file.
 ==============================================================*/
 #include "apg_console.h"
+#include "apg_pixfont.h" // used for adding glyphs to image output
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -25,6 +26,8 @@ static uint32_t n_c_vars;
 
 static char c_hist[APG_C_HIST_MAX][APG_C_STR_MAX];
 static int c_hist_oldest = -1, c_hist_newest = -1;
+
+static int c_font_height_px = 16;
 
 // returns index or -1 if did not find
 // NOTE(Anton) could replace with a hash table
@@ -104,4 +107,19 @@ int apg_c_autocomplete_var( const char* substr, char* completed ) {
   }
   if ( 1 == n_matching ) { strncpy( completed, c_vars[last_matching_idx].str, APG_C_STR_MAX ); }
   return n_matching;
+}
+
+// TODO(Anton) --> replace "my_string" with the entire string with line breaks
+bool apg_c_get_required_image_dims( int* w, int* h ) {
+  assert( w && h );
+
+  const int thickness = 1;
+  const int outlines  = 0;
+  if ( !apg_pixfont_image_size_for_str( "my_string", w, h, thickness, outlines ) ) { return false; }
+  
+  return true;
+}
+
+void apg_c_draw_to_image_mem() {
+
 }

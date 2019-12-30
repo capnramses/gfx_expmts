@@ -1,3 +1,6 @@
+// unit tests for apg_console
+// C99
+
 #include "apg_console.h"
 #include <assert.h>
 #include <float.h>

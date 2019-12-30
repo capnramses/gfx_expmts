@@ -1,5 +1,6 @@
 /*==============================================================
 Quake-style Console mini-library
+Status: Work-In-Progress. Not functional yet.
 Language: C99
 Author:   Anton Gerdelan - @capnramses
 Contact:  <antongdl@protonmail.com>
@@ -31,7 +32,7 @@ bool apg_c_get_var( const char* str, float* val );
 
 // RETURNS number of potential console variables that could complete `substr` found
 //   - no matches - returns 0.
-//   - exactly 1 match - match is copied into buffer pointed to by `completed`. 
+//   - exactly 1 match - match is copied into buffer pointed to by `completed`.
 //     `completed` requires a buffer of at least APG_C_STR_MAX bytes
 //   - more than 1 match - prints all matches to the console.
 // NOTE if being called on a string such as `set mypartialvarname` substr should be set to `mypartialvarname`
@@ -45,6 +46,16 @@ void apg_c_print( const char* str );
 
 // printf everything in console to stdout stream
 void apg_c_dump_to_stdout();
+
+// calculate the image pixel dimensions of image required to fit the current console text
+// based on the number of lines of printed text in the console and the height of the text in pixels
+// RETURNS false on any failure
+bool apg_c_get_required_image_dims( int* w, int* h );
+
+// draw the current console text into an image buffer you have allocated.
+// you can get the size required to fit the full console text by first calling
+// `apg_c_get_required_image_dims()`
+void apg_c_draw_to_image_mem();
 
 #ifdef __cplusplus
 }
