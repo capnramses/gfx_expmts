@@ -14,8 +14,11 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define APG_C_STR_MAX 128
+#define APG_C_VARS_MAX 128
+#define APG_C_OUTPUT_LINES_MAX 32
 
 // creates a console variable with name `str` and initial value `val`.
 // RETURNS false if value with name `str` already exists and does not set the value.
@@ -55,7 +58,10 @@ bool apg_c_get_required_image_dims( int* w, int* h );
 // draw the current console text into an image buffer you have allocated.
 // you can get the size required to fit the full console text by first calling
 // `apg_c_get_required_image_dims()`
-void apg_c_draw_to_image_mem();
+// RETURNS false on any failure
+bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels );
+
+int apg_c_count_lines();
 
 #ifdef __cplusplus
 }

@@ -11,10 +11,8 @@ Licence:  See bottom of header file.
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-
-#define APG_C_VARS_MAX 128
-#define APG_C_HIST_MAX 32
 
 typedef struct c_var_t {
   char str[APG_C_STR_MAX];
@@ -24,10 +22,26 @@ typedef struct c_var_t {
 static c_var_t c_vars[APG_C_VARS_MAX];
 static uint32_t n_c_vars;
 
-static char c_hist[APG_C_HIST_MAX][APG_C_STR_MAX];
-static int c_hist_oldest = -1, c_hist_newest = -1;
+static char c_output_lines[APG_C_OUTPUT_LINES_MAX][APG_C_STR_MAX];
+static int c_output_lines_oldest = -1, c_output_lines_newest = -1, c_n_output_lines = 0;
 
 static int c_font_height_px = 16;
+
+int apg_c_count_lines() { return c_n_output_lines; }
+
+static char* _c_alloc_and_concat_str() {
+  int n_lines = apg_c_count_lines();
+  if ( n_lines < 1 ) { return NULL; }
+  // add a byte for line breaks
+  char* p = malloc( n_lines * ( APG_C_STR_MAX + 1 ) );
+  p[0]    = '\0';
+  for ( int i = 0, idx = c_output_lines_oldest; i < n_lines; i++, idx++ ) {
+    idx = idx % APG_C_OUTPUT_LINES_MAX;
+    if ( 0 != i ) { strcat( p, "\n" ); }
+    strncat( p, c_output_lines[idx], APG_C_STR_MAX );
+  }
+  return p;
+}
 
 // returns index or -1 if did not find
 // NOTE(Anton) could replace with a hash table
@@ -43,19 +57,20 @@ static int _console_find( const char* str ) {
 void apg_c_print( const char* str ) {
   assert( str );
 
-  c_hist_newest = ( c_hist_newest + 1 ) % APG_C_HIST_MAX;
-  if ( c_hist_newest == c_hist_oldest ) { c_hist_oldest = ( c_hist_oldest + 1 ) % APG_C_HIST_MAX; }
-  if ( -1 == c_hist_oldest ) { c_hist_oldest = c_hist_newest; }
-  strncpy( c_hist[c_hist_newest], str, APG_C_STR_MAX - 1 );
+  c_output_lines_newest = ( c_output_lines_newest + 1 ) % APG_C_OUTPUT_LINES_MAX;
+  c_n_output_lines      = c_n_output_lines < APG_C_OUTPUT_LINES_MAX ? c_n_output_lines + 1 : APG_C_OUTPUT_LINES_MAX;
+  if ( c_output_lines_newest == c_output_lines_oldest ) { c_output_lines_oldest = ( c_output_lines_oldest + 1 ) % APG_C_OUTPUT_LINES_MAX; }
+  if ( -1 == c_output_lines_oldest ) { c_output_lines_oldest = c_output_lines_newest; }
+  strncpy( c_output_lines[c_output_lines_newest], str, APG_C_STR_MAX - 1 );
 }
 
 void apg_c_dump_to_stdout() {
-  if ( c_hist_oldest < 0 || c_hist_newest < 0 ) { return; }
-  int idx = c_hist_oldest;
-  for ( int count = 0; count < APG_C_HIST_MAX; count++ ) {
-    printf( "%i) %s\n", idx, c_hist[idx] );
-    if ( idx == c_hist_newest ) { return; }
-    idx = ( idx + 1 ) % APG_C_HIST_MAX;
+  if ( c_output_lines_oldest < 0 || c_output_lines_newest < 0 ) { return; }
+  int idx = c_output_lines_oldest;
+  for ( int count = 0; count < APG_C_OUTPUT_LINES_MAX; count++ ) {
+    printf( "%i) %s\n", idx, c_output_lines[idx] );
+    if ( idx == c_output_lines_newest ) { return; }
+    idx = ( idx + 1 ) % APG_C_OUTPUT_LINES_MAX;
   }
 }
 
@@ -113,13 +128,29 @@ int apg_c_autocomplete_var( const char* substr, char* completed ) {
 bool apg_c_get_required_image_dims( int* w, int* h ) {
   assert( w && h );
 
+  *w                  = 0;
+  *h                  = 0;
   const int thickness = 1;
   const int outlines  = 0;
-  if ( !apg_pixfont_image_size_for_str( "my_string", w, h, thickness, outlines ) ) { return false; }
-  
+  char* str_ptr       = _c_alloc_and_concat_str();
+  if ( !str_ptr ) { return false; }
+  if ( !apg_pixfont_image_size_for_str( str_ptr, w, h, thickness, outlines ) ) { return false; }
+  free( str_ptr );
   return true;
 }
 
-void apg_c_draw_to_image_mem() {
+bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels ) {
+  assert( img_ptr );
 
+  char* str_ptr = _c_alloc_and_concat_str();
+  if ( !str_ptr ) { return false; }
+
+  const int thickness = 1;
+  const int outlines  = 0;
+  const int v_flip    = 0;
+  int result          = apg_pixfont_str_into_image( str_ptr, img_ptr, w, h, n_channels, 0xFF, 0xFF, 0xFF, 0xFF, thickness, outlines, v_flip );
+
+  free( str_ptr );
+  if ( APG_PIXFONT_FAILURE == result ) { return false; }
+  return true;
 }
