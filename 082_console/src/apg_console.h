@@ -77,19 +77,21 @@ void apg_c_clear_user_entered_text( void );
 
 // creates a console variable with name `str` and initial value `val`.
 // RETURNS
-//  false if value with name `str` already exists and does not set the value.
-bool apg_c_create_var( const char* str, float val );
+//   NULL if value with name `str` already exists. The function then does not change the value.
+//   Address of the c_var. Since c_vars cannot be deleted this can be used anywhere in your code to get or set the c_var's value.
+float* apg_c_create_var( const char* str, float val );
+
+// fetches the value of a console variable with name `str`.
+// sets the float pointed to by `val` to the value of the variable.
+// RETURNS
+//   NULL if the variable does not exist.
+//   Address of the c_var. Since c_vars cannot be deleted this can be used anywhere in your code to get or set the c_var's value.
+float* apg_c_get_var( const char* str, float* val );
 
 // changes the value of an existing console variable.
 // RETURNS
 //  false if a variable with name `str` does not already exist.
 bool apg_c_set_var( const char* str, float val );
-
-// fetches the value of a console variable with name `str`.
-// sets the float pointed to by `val` to the value of the variable.
-// RETURNS
-//   false if the variable does not exist.
-bool apg_c_get_var( const char* str, float* val );
 
 // RETURNS
 //   number of potential console variables that could complete `substr` found

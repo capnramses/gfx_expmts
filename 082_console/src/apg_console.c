@@ -65,7 +65,7 @@ static bool _parse_user_entered_instruction( const char* str ) {
 
     { // then variable. equivalent to 'get myvariable' but no 'get' command required in this console.
       float val   = 0;
-      bool got_it = apg_c_get_var( one, &val );
+      float* got_it = apg_c_get_var( one, &val );
       if ( got_it ) {
         sprintf( tmp, "%s %.2f", one, val );
         apg_c_print( tmp );
@@ -108,7 +108,7 @@ static bool _parse_user_entered_instruction( const char* str ) {
       return false;
     }
     float val      = (float)atof( three );
-    bool create_it = apg_c_create_var( two, val );
+    float* create_it = apg_c_create_var( two, val );
     if ( create_it ) {
       sprintf( tmp, "`var %s %.2f`", two, val );
       apg_c_print( tmp );
@@ -197,16 +197,25 @@ void apg_c_dump_to_stdout( void ) {
   }
 }
 
-bool apg_c_create_var( const char* str, float val ) {
+float* apg_c_create_var( const char* str, float val ) {
   assert( str );
 
   if ( n_c_vars >= APG_C_VARS_MAX ) { return false; }
   int idx = _console_find_var( str );
-  if ( idx >= 0 ) { return false; }
+  if ( idx >= 0 ) { return NULL; }
   idx = n_c_vars++;
   strncpy( c_vars[idx].str, str, APG_C_STR_MAX - 1 );
   c_vars[idx].val = val;
-  return true;
+  return &c_vars[idx].val;
+}
+
+float* apg_c_get_var( const char* str, float* val ) {
+  assert( str && val );
+
+  int idx = _console_find_var( str );
+  if ( idx < 0 ) { return NULL; }
+  *val = c_vars[idx].val;
+  return &c_vars[idx].val;
 }
 
 bool apg_c_set_var( const char* str, float val ) {
@@ -215,15 +224,6 @@ bool apg_c_set_var( const char* str, float val ) {
   int idx = _console_find_var( str );
   if ( idx < 0 ) { return false; }
   c_vars[idx].val = val;
-  return true;
-}
-
-bool apg_c_get_var( const char* str, float* val ) {
-  assert( str && val );
-
-  int idx = _console_find_var( str );
-  if ( idx < 0 ) { return false; }
-  *val = c_vars[idx].val;
   return true;
 }
 
