@@ -25,8 +25,6 @@ static uint32_t n_c_vars;
 static char c_output_lines[APG_C_OUTPUT_LINES_MAX][APG_C_STR_MAX];
 static int c_output_lines_oldest = -1, c_output_lines_newest = -1, c_n_output_lines = 0;
 
-static int c_font_height_px = 16;
-
 static char _c_user_entered_text[APG_C_STR_MAX];
 
 // returns index or -1 if did not find
@@ -40,6 +38,7 @@ static int _console_find_var( const char* str ) {
   return -1;
 }
 
+// NOTE(Anton) could treat eg `var` as a reserved word so it can't be a variable name
 static bool _parse_user_entered_instruction( const char* str ) {
   assert( str );
 
@@ -83,7 +82,7 @@ static bool _parse_user_entered_instruction( const char* str ) {
       apg_c_print( tmp );
       return true;
     } else {
-      sprintf( tmp, "ERROR: `%s` is not a recognised variable name. To create a new variable use `var`.", one );
+      sprintf( tmp, "ERROR: `%s` is not a recognised variable name. To create a new variable use `var myvar 0`.", one );
       apg_c_print( tmp );
       return false;
     }
@@ -140,6 +139,7 @@ bool apg_c_append_user_entered_text( const char* str ) {
   for ( int i = uet_len; i < total_len; i++ ) {
     if ( _c_user_entered_text[i] == '\n' ) {
       _c_user_entered_text[i] = '\0';
+      apg_c_print( _c_user_entered_text );
       bool parsed             = _parse_user_entered_instruction( _c_user_entered_text );
       _c_user_entered_text[0] = '\0';
       return parsed;
@@ -147,6 +147,13 @@ bool apg_c_append_user_entered_text( const char* str ) {
   }
 
   return true;
+}
+
+// WARNING(Anton) not unicode-aware!
+void apg_c_backspace( void ) {
+  int uet_len = strnlen( _c_user_entered_text, APG_C_STR_MAX );
+  if ( uet_len < 1 ) { return; }
+  _c_user_entered_text[uet_len - 1] = '\0';
 }
 
 void apg_c_clear_user_entered_text( void ) { _c_user_entered_text[0] = '\0'; }
@@ -262,15 +269,34 @@ bool apg_c_get_required_image_dims( int* w, int* h ) {
 bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels ) {
   assert( img_ptr );
 
-  char* str_ptr = apg_c_alloc_and_concat_str();
-  if ( !str_ptr ) { return false; }
-
+  const int row_stride    = w * n_channels;
+  const int row_height_px = 16;
+  // text properties
   const int thickness = 1;
   const int outlines  = 0;
   const int v_flip    = 0;
-  int result          = apg_pixfont_str_into_image( str_ptr, img_ptr, w, h, n_channels, 0xFF, 0xFF, 0xFF, 0xFF, thickness, outlines, v_flip );
 
-  free( str_ptr );
-  if ( APG_PIXFONT_FAILURE == result ) { return false; }
+  if ( row_stride < 1 ) { return false; }
+
+  memset( img_ptr, 0, row_stride * h );
+
+  // draw scrolling text output above the prompt line
+  int n_lines = apg_c_count_lines();
+  for (int i = 0; i < n_lines; i++ ) {
+    int line_idx = c_output_lines_newest - i;
+    if ( line_idx < 0 ) { line_idx += APG_C_OUTPUT_LINES_MAX; }
+    int row_idx = h * row_stride - ( row_height_px * row_stride ) * ( i + 2 );
+    if ( row_idx < 0 ) { break; } // don't bother if entire row above upper image bound
+    apg_pixfont_str_into_image( c_output_lines[line_idx], &img_ptr[row_idx], w, row_height_px, n_channels, 0xFF, 0xFF, 0xFF, 0xFF, thickness, outlines, v_flip );
+  }
+  { // draw user-entered text on the bottom of the image
+    char uet_str[APG_C_STR_MAX];
+    strcpy( uet_str, "> " );
+    strncat( uet_str, _c_user_entered_text, APG_C_STR_MAX - 2 );
+    int bottom_row_idx = h * row_stride - ( row_height_px * row_stride );
+    if ( bottom_row_idx < 0 ) { return false; } // not even space for one line
+    apg_pixfont_str_into_image( uet_str, &img_ptr[bottom_row_idx], w, row_height_px, n_channels, 0xFF, 0xFF, 0xFF, 0xFF, thickness, outlines, v_flip );
+  }
+
   return true;
 }

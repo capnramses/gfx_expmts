@@ -74,6 +74,7 @@ extern "C" {
 #define APG_C_OUTPUT_LINES_MAX 32 // maximum number of lines retained in output
 
 bool apg_c_append_user_entered_text( const char* str );
+void apg_c_backspace( void );
 void apg_c_clear_user_entered_text( void );
 
 // creates a console variable with name `str` and initial value `val`.
