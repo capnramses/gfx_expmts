@@ -165,20 +165,6 @@ void apg_c_output_clear( void ) {
 
 int apg_c_count_lines( void ) { return c_n_output_lines; }
 
-char* apg_c_alloc_and_concat_str( void ) {
-  int n_lines = apg_c_count_lines();
-  if ( n_lines < 1 ) { return NULL; }
-  // add a byte for line breaks
-  char* p = malloc( n_lines * ( APG_C_STR_MAX + 1 ) );
-  p[0]    = '\0';
-  for ( int i = 0, idx = c_output_lines_oldest; i < n_lines; i++, idx++ ) {
-    idx = idx % APG_C_OUTPUT_LINES_MAX;
-    if ( 0 != i ) { strcat( p, "\n" ); }
-    strncat( p, c_output_lines[idx], APG_C_STR_MAX );
-  }
-  return p;
-}
-
 void apg_c_print( const char* str ) {
   assert( str );
 
@@ -247,23 +233,6 @@ int apg_c_autocomplete_var( const char* substr, char* completed ) {
   }
   if ( 1 == n_matching ) { strncpy( completed, c_vars[last_matching_idx].str, APG_C_STR_MAX ); }
   return n_matching;
-}
-
-// NOTE(Anton) - don't need to create the whole buffer as one string.
-//               could print line-by-line, avoiding the malloc() call, using known line height as offset.
-//               this would also allow unique colours per line for eg error messages, debug output, and user-entered text.
-bool apg_c_get_required_image_dims( int* w, int* h ) {
-  assert( w && h );
-
-  *w                  = 0;
-  *h                  = 0;
-  const int thickness = 1;
-  const int outlines  = 0;
-  char* str_ptr       = apg_c_alloc_and_concat_str();
-  if ( !str_ptr ) { return false; }
-  if ( !apg_pixfont_image_size_for_str( str_ptr, w, h, thickness, outlines ) ) { return false; }
-  free( str_ptr );
-  return true;
 }
 
 bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels ) {

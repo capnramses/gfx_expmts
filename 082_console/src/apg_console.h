@@ -46,12 +46,10 @@ Scrolling output text may be interacted with
   apg_c_print( str )              - Adds a line of text to the output such as a debug message.
   apg_c_dump_to_stdout()          - Writes the current console output text to stdout via printf().
   apg_c_count_lines()             - Counts the number of lines in the console output.
-  apg_c_alloc_and_concat_str()    - Concatenates all lines of console output into a single string and returns a pointer to it.
   
 The console text may also be rendered out to an image for use in graphical applications.
 This is API-agnostic so must be converted to a texture to be used with 3D APIs.
 
-  apg_c_get_required_image_dims() - Gets the pixel dimensions required to exactly fit all the current console text into a rectangular image.
   apg_c_draw_to_image_mem()       - Writes current console text on top of a pre-allocated image.
 
 TODO
@@ -115,17 +113,9 @@ int apg_c_count_lines( void );
 // printf everything in console to stdout stream
 void apg_c_dump_to_stdout( void );
 
-// Calculate the image pixel dimensions of image required to fit the current console text based on the number of
-// lines of printed text in the console and the height of the text in pixels
-// PARAMETERS
-//  w,h         - pointers to variables to store the width and height required in pixels.
-// RETURNS
-//  false on any failure
-bool apg_c_get_required_image_dims( int* w, int* h );
-
 // Draw the current console text into an image buffer you have allocated with dimensions w, h, and n_channels.
-// You can get the size required to exactly fit the full console text by first calling `apg_c_get_required_image_dims()`.
 // The destination image does not need to exactly match the console text size - it can be bigger or smaller.
+// Text starts drawing at the bottom-left of the provided image, and lines scroll upwards.
 // PARAMETERS
 //   img_ptr    - pointer to the destination image bytes. must not be NULL
 //   w,h        - dimensions of the destination image in pixels

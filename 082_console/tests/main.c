@@ -81,9 +81,7 @@ int main() {
   n_lines = apg_c_count_lines();
   assert( n_lines == APG_C_OUTPUT_LINES_MAX );
 
-  int w = 0, h = 0, n_chans = 3;
-  bool retdims = apg_c_get_required_image_dims( &w, &h );
-  assert( retdims );
+  int w = 1204, h = 768, n_chans = 3;
   uint8_t* img_ptr = calloc( w * h * n_chans, 1 );
   bool retimg      = apg_c_draw_to_image_mem( img_ptr, w, h, n_chans );
   assert( retimg );
@@ -103,9 +101,6 @@ int main() {
     bool resc = apg_c_append_user_entered_text( "io\n" );
     assert( resc );
 
-    int w = 0, h = 0, n_chans = 3;
-    bool retdims = apg_c_get_required_image_dims( &w, &h );
-    assert( retdims );
     uint8_t* img_ptr = calloc( w * h * n_chans, 1 );
 
     bool resimg = apg_c_draw_to_image_mem( img_ptr, w, h, n_chans );
