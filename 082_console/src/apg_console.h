@@ -123,7 +123,7 @@ void apg_c_dump_to_stdout( void );
 //   n_channels - number of channels in the destination image
 // RETURNS
 //   false on any failure
-bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels );
+bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels, uint8_t* background_colour );
 
 #ifdef __cplusplus
 }

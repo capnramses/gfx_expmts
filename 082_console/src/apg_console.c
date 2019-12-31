@@ -245,7 +245,7 @@ int apg_c_autocomplete_var( const char* substr, char* completed ) {
   return n_matching;
 }
 
-bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels ) {
+bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels, uint8_t* background_colour ) {
   assert( img_ptr );
 
   const int row_stride    = w * n_channels;
@@ -258,6 +258,14 @@ bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels ) {
   if ( row_stride < 1 ) { return false; }
 
   memset( img_ptr, 0, row_stride * h );
+  for ( int y = 0; y < h; y++ ) {
+    for ( int x = 0; x < w; x++ ) {
+      for ( int c = 0; c < n_channels; c++ ) {
+        int idx = row_stride * y + x * n_channels + c;
+        img_ptr[idx] = background_colour[c];
+      }
+    }
+  }
 
   // draw scrolling text output above the prompt line
   int n_lines = apg_c_count_lines();

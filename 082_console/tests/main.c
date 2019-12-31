@@ -81,8 +81,9 @@ int main() {
   assert( n_lines == APG_C_OUTPUT_LINES_MAX );
 
   int w = 1204, h = 768, n_chans = 3;
-  uint8_t* img_ptr = calloc( w * h * n_chans, 1 );
-  bool retimg      = apg_c_draw_to_image_mem( img_ptr, w, h, n_chans );
+  uint8_t console_background[4] = { 0, 0, 0, 255 };
+  uint8_t* img_ptr              = calloc( w * h * n_chans, 1 );
+  bool retimg                   = apg_c_draw_to_image_mem( img_ptr, w, h, n_chans, console_background );
   assert( retimg );
   stbi_write_png( "testoutput.png", w, h, n_chans, img_ptr, w * n_chans );
 
@@ -100,7 +101,7 @@ int main() {
 
     uint8_t* img_ptr = calloc( w * h * n_chans, 1 );
 
-    bool resimg = apg_c_draw_to_image_mem( img_ptr, w, h, n_chans );
+    bool resimg = apg_c_draw_to_image_mem( img_ptr, w, h, n_chans, console_background );
     assert( resimg ); // empty image
     stbi_write_png( "testuserenteredtext.png", w, h, n_chans, img_ptr, w * n_chans );
 
