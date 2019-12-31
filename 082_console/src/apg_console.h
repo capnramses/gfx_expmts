@@ -82,11 +82,10 @@ void apg_c_clear_user_entered_text( void );
 float* apg_c_create_var( const char* str, float val );
 
 // fetches the value of a console variable with name `str`.
-// sets the float pointed to by `val` to the value of the variable.
 // RETURNS
 //   NULL if the variable does not exist.
 //   Address of the c_var. Since c_vars cannot be deleted this can be used anywhere in your code to get or set the c_var's value.
-float* apg_c_get_var( const char* str, float* val );
+float* apg_c_get_var( const char* str );
 
 // changes the value of an existing console variable.
 // RETURNS

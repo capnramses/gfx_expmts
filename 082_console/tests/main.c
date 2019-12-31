@@ -18,10 +18,9 @@ int main() {
   int n_lines = apg_c_count_lines();
   assert( 0 == n_lines );
 
-  float a    = 0.0f;
-  float* ret_a = apg_c_get_var( "anton", &a ); // fetch non-existent var
+  float* ret_a = apg_c_get_var( "anton" ); // fetch non-existent var
   assert( NULL == ret_a );
-  bool ret_b = apg_c_set_var( "anton", a ); // set non-existent var
+  bool ret_b = apg_c_set_var( "anton", 0.0f ); // set non-existent var
   assert( false == ret_b );
   n_lines = apg_c_count_lines();
   assert( 0 == n_lines );
@@ -29,12 +28,12 @@ int main() {
   assert( ret_c );
   float* ret_d = apg_c_create_var( "anton", 456.0f ); // double-create extant var
   assert( NULL == ret_d );
-  float* ret_e = apg_c_get_var( "anton", &a ); // fetch var
-  assert( ret_e && fabsf( a ) >= 123.0f - FLT_EPSILON );
+  float* ret_e = apg_c_get_var( "anton" ); // fetch var
+  assert( ret_e && fabsf( *ret_e ) >= 123.0f - FLT_EPSILON );
   bool ret_f = apg_c_set_var( "anton", 789.0f ); // change var
   assert( ret_f );
-  float* ret_g = apg_c_get_var( "anton", &a ); // fetch var
-  assert( ret_g && fabsf( a ) >= 789.0f - FLT_EPSILON );
+  float* ret_g = apg_c_get_var( "anton" ); // fetch var
+  assert( ret_g && fabsf( *ret_g ) >= 789.0f - FLT_EPSILON );
   char completed[APG_C_STR_MAX];
   int ret_h = apg_c_autocomplete_var( "ant", completed );
   assert( ret_h == 1 );

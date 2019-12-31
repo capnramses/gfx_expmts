@@ -75,6 +75,12 @@ int main() {
 
     // TODO(Anton) GLFW_KEY_TAB for autocomplete
 
+    // test that a variable called 'anton' exists and if so print its value
+    float* anton_ptr = apg_c_get_var( "anton" );
+    if ( anton_ptr ) {
+      printf("anton is now %.2f\n", *anton_ptr );
+    }
+
   } // end main loop
 
   gfx_stop();

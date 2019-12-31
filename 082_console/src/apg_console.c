@@ -64,10 +64,9 @@ static bool _parse_user_entered_instruction( const char* str ) {
     }
 
     { // then variable. equivalent to 'get myvariable' but no 'get' command required in this console.
-      float val   = 0;
-      float* got_it = apg_c_get_var( one, &val );
+      float* got_it = apg_c_get_var( one );
       if ( got_it ) {
-        sprintf( tmp, "%s %.2f", one, val );
+        sprintf( tmp, "%s %.2f", one, *got_it );
         apg_c_print( tmp );
         return true;
       }
@@ -209,12 +208,11 @@ float* apg_c_create_var( const char* str, float val ) {
   return &c_vars[idx].val;
 }
 
-float* apg_c_get_var( const char* str, float* val ) {
-  assert( str && val );
+float* apg_c_get_var( const char* str ) {
+  assert( str );
 
   int idx = _console_find_var( str );
   if ( idx < 0 ) { return NULL; }
-  *val = c_vars[idx].val;
   return &c_vars[idx].val;
 }
 
