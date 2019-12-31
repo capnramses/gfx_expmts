@@ -57,6 +57,12 @@ static bool _parse_user_entered_instruction( const char* str ) {
       return true;
     }
 
+    if ( strncmp( one, "var", APG_C_STR_MAX ) == 0 ) {
+      sprintf( tmp, "ERROR: form is: `var myvariablename 1`" );
+      apg_c_print( tmp );
+      return true;
+    }
+
     { // then variable. equivalent to 'get myvariable' but no 'get' command required in this console.
       float val   = 0;
       bool got_it = apg_c_get_var( one, &val );
@@ -82,8 +88,14 @@ static bool _parse_user_entered_instruction( const char* str ) {
       apg_c_print( tmp );
       return true;
     } else {
-      sprintf( tmp, "ERROR: `%s` is not a recognised variable name. To create a new variable use `var myvar 0`.", one );
-      apg_c_print( tmp );
+      if ( strncmp( one, "var", APG_C_STR_MAX ) == 0 ) {
+        sprintf( tmp, "ERROR: `var` must be initialised to a value `var myvar 1`." );
+        apg_c_print( tmp );
+        return true;
+      } else {
+        sprintf( tmp, "ERROR: `%s` is not a recognised variable name. To create a new variable use `var myvar 0`.", one );
+        apg_c_print( tmp );
+      }
       return false;
     }
   } break;
@@ -251,7 +263,7 @@ bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels ) {
 
   // draw scrolling text output above the prompt line
   int n_lines = apg_c_count_lines();
-  for (int i = 0; i < n_lines; i++ ) {
+  for ( int i = 0; i < n_lines; i++ ) {
     int line_idx = c_output_lines_newest - i;
     if ( line_idx < 0 ) { line_idx += APG_C_OUTPUT_LINES_MAX; }
     int row_idx = h * row_stride - ( row_height_px * row_stride ) * ( i + 2 );
