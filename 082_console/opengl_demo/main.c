@@ -10,7 +10,7 @@
 
 static bool console_open = true;
 static double console_state_time;
-static uint8_t console_background[] = { 0x22, 0x77, 0x11, 0xAA };
+static uint8_t console_background[] = { 0x22, 0, 0, 0x00 }; // alpha must be zero or outlines on text won't be added
 
 static bool _change_colour( float var ) {
   if ( var ) {
@@ -68,6 +68,7 @@ int main() {
   int console_shader_idx        = gfx_create_managed_shader_from_files( "opengl_demo/console_text.vert", "opengl_demo/console_text.frag" );
   gfx_texture_t console_texture = gfx_load_image_mem_to_texture( img_ptr, w, h, n_chans, true, false, true, true, false );
 
+  gfx_blend_one_minus_src_alpha( true );
   gfx_buffer_colour( NULL, 0.5f, 0.5f, 0.5f, 1.0f );
   double prev_s = gfx_get_time_s();
   while ( !gfx_should_window_close() ) {

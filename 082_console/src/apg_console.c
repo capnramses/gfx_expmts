@@ -399,7 +399,7 @@ bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels, ui
   const int row_height_px = 16;
   // text properties
   const int thickness = 1;
-  const int outlines  = 0;
+  const int outlines  = 1;
   const int v_flip    = 0;
 
   if ( row_stride < 1 ) { return false; }
