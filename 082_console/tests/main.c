@@ -34,9 +34,6 @@ int main() {
   assert( ret_f );
   float* ret_g = apg_c_get_var( "anton" ); // fetch var
   assert( ret_g && fabsf( *ret_g ) >= 789.0f - FLT_EPSILON );
-  char completed[APG_C_STR_MAX];
-  int ret_h = apg_c_autocomplete_var( "ant", completed );
-  assert( ret_h == 1 );
 
   n_lines = apg_c_count_lines();
   printf( "n_lines=%i\n", n_lines );
@@ -44,16 +41,11 @@ int main() {
 
   apg_c_dump_to_stdout();
   printf( "---\n" );
-  printf( "completed `ant` to `%s`\n", completed );
-  assert( strcmp( completed, "anton" ) == 0 );
-  int ret_i = apg_c_autocomplete_var( "not_a_var", completed );
-  assert( ret_i == 0 );
+
   apg_c_dump_to_stdout();
   printf( "---\n" );
   float* ret_j = apg_c_create_var( "antonio", 101112.0f ); // set another far that would match substring "ant"
   assert( ret_j );
-  int ret_k = apg_c_autocomplete_var( "ant", completed );
-  assert( ret_k == 2 );
 
   apg_c_dump_to_stdout();
   printf( "---\n" );

@@ -36,16 +36,16 @@ All values are stored as 32-bit floats, but may be cast as boolean or integer va
 
 Variables may also be created, set, or fetched programmatically.
 
-  apg_c_create_var( str )
+  apg_c_create_var( str, val )
   apg_c_set_var( str, val )
-  apg_c_get_var( str )
+  apg_c_get_var()
 
 Scrolling output text may be interacted with
 
-  apg_capg_c_output_clear_clear() - Clear the output text.
-  apg_c_print( str )              - Adds a line of text to the output such as a debug message.
-  apg_c_dump_to_stdout()          - Writes the current console output text to stdout via printf().
-  apg_c_count_lines()             - Counts the number of lines in the console output.
+  apg_c_apg_c_output_clear() - Clear the output text.
+  apg_c_print( str )         - Adds a line of text to the output such as a debug message.
+  apg_c_dump_to_stdout()     - Writes the current console output text to stdout via printf().
+  apg_c_count_lines()        - Counts the number of lines in the console output.
   
 The console text may also be rendered out to an image for use in graphical applications.
 This is API-agnostic so must be converted to a texture to be used with 3D APIs.
@@ -68,7 +68,8 @@ extern "C" {
 #include <stdint.h>
 
 #define APG_C_STR_MAX 128         // maximum console string length. commands and variable names must be shorter than this.
-#define APG_C_VARS_MAX 128        // maximum number of variables stored in console
+#define APG_C_VARS_MAX 256        // maximum number of variables stored in console
+#define APG_C_FUNCS_MAX 128       // maximum number of console commands
 #define APG_C_OUTPUT_LINES_MAX 32 // maximum number of lines retained in output
 
 bool apg_c_append_user_entered_text( const char* str );
@@ -92,17 +93,9 @@ float* apg_c_get_var( const char* str );
 //  false if a variable with name `str` does not already exist.
 bool apg_c_set_var( const char* str, float val );
 
-// RETURNS
-//   number of potential console variables that could complete `substr` found
-//   - no matches - returns 0.
-//   - exactly 1 match - match is copied into buffer pointed to by `completed`.
-//     `completed` requires a buffer of at least APG_C_STR_MAX bytes
-//   - more than 1 match - prints all matches to the console.
-// NOTE if being called on a string such as `set mypartialvarname` substr should be set to `mypartialvarname`
-// to find matching variables.
-int apg_c_autocomplete_var( const char* substr, char* completed );
+bool apg_c_create_func( const char* str, bool ( *fptr )( float ) );
 
-// TODO(Anton) make `apg_c_autocomplete_cmd()` or a combined one that only looks for variables after `set `
+void apg_c_autocomplete( void );
 
 void apg_c_output_clear( void );
 

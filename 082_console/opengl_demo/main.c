@@ -35,9 +35,9 @@ int main() {
   // unicode codepoint callback for typing
   glfwSetCharCallback( g_window, character_callback );
 
-  apg_c_print( "first line" );
-  apg_c_print( "second line" );
-  apg_c_print( "third line" );
+  apg_c_print( "Anton's Console Drop-In Lib" );
+  apg_c_print( "Commands: clear, var." );
+  apg_c_print( "Autocomplete with tab." );
 
   int w                        = 1920 / 2;
   int h                        = 1080 / 2; // 16 * ( APG_C_OUTPUT_LINES_MAX + 1 );
@@ -95,6 +95,15 @@ int main() {
         backspace_held = true;
       } else {
         backspace_held = false;
+      }
+
+      // tab to autocomplete
+      static bool tab_held = false;
+      if ( glfwGetKey( g_window, GLFW_KEY_TAB ) ) {
+        if ( !tab_held ) { apg_c_autocomplete(); }
+        tab_held = true;
+      } else {
+        tab_held = false;
       }
     }
 
