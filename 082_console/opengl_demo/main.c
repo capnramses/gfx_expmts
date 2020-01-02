@@ -22,6 +22,12 @@ static bool _change_colour( float var ) {
     console_background[1] = 0x22;
     console_background[2] = 0x77;
   }
+  return true;
+}
+
+static bool _deliberate_error( float var ) {
+  APG_C_UNUSED( var );
+  return false;
 }
 
 void character_callback( GLFWwindow* window, unsigned int codepoint ) {
@@ -48,6 +54,7 @@ int main() {
   // unicode codepoint callback for typing
   glfwSetCharCallback( g_window, character_callback );
 
+  apg_c_create_func( "deliberate_error", _deliberate_error );
   apg_c_create_func( "change_colour", _change_colour );
   apg_c_print( "Anton's Console Drop-In Lib" );
   apg_c_print( "Type `help` for basic commands." );

@@ -15,8 +15,6 @@ Licence:  See bottom of header file.
 #include <stdlib.h>
 #include <string.h>
 
-#define APG_C_UNUSED( x ) (void)( x ) // to suppress compiler warnings
-
 typedef struct c_var_t {
   char str[APG_C_STR_MAX];
   float val;
@@ -162,7 +160,11 @@ static bool _parse_user_entered_instruction( const char* str ) {
     int func_idx = _console_find_func( one );
     if ( func_idx >= 0 ) {
       bool res = _c_funcs[func_idx].func_ptr( 0.0f );
-      if ( !res ) { sprintf( tmp, "ERROR: function `%s` returned error.", one ); }
+      if ( !res ) {
+        sprintf( tmp, "ERROR: function `%s` returned error.", one );
+        apg_c_print( tmp );
+      }
+      return true;
     }
 
     // search for command match
@@ -212,7 +214,11 @@ static bool _parse_user_entered_instruction( const char* str ) {
     int func_idx = _console_find_func( one );
     if ( func_idx >= 0 ) {
       bool res = _c_funcs[func_idx].func_ptr( val );
-      if ( !res ) { sprintf( tmp, "ERROR: function `%s` returned error.", one ); }
+      if ( !res ) {
+        sprintf( tmp, "ERROR: function `%s` returned error.", one );
+        apg_c_print( tmp );
+      }
+      return true;
     }
 
     // assume this is equiv to "set myvariable value" with an implied "set"

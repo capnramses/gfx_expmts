@@ -82,10 +82,11 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
-#define APG_C_STR_MAX 128         // maximum console string length. commands and variable names must be shorter than this.
-#define APG_C_VARS_MAX 256        // maximum number of variables stored in console
-#define APG_C_FUNCS_MAX 128       // maximum number of console commands
-#define APG_C_OUTPUT_LINES_MAX 32 // maximum number of lines retained in output
+#define APG_C_UNUSED( x ) (void)( x ) // to suppress compiler warnings with unused/dummy arguments in callbacks
+#define APG_C_STR_MAX 128             // maximum console string length. commands and variable names must be shorter than this.
+#define APG_C_VARS_MAX 256            // maximum number of variables stored in console
+#define APG_C_FUNCS_MAX 128           // maximum number of console commands
+#define APG_C_OUTPUT_LINES_MAX 32     // maximum number of lines retained in output
 
 bool apg_c_append_user_entered_text( const char* str );
 void apg_c_backspace( void );
