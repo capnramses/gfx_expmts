@@ -404,7 +404,6 @@ bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels, ui
 
   if ( row_stride < 1 ) { return false; }
 
-  memset( img_ptr, 0, row_stride * h );
   for ( int y = 0; y < h; y++ ) {
     for ( int x = 0; x < w; x++ ) {
       for ( int c = 0; c < n_channels; c++ ) {
