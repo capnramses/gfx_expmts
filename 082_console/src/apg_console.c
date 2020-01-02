@@ -103,7 +103,6 @@ void apg_c_autocomplete() {
   int n_matching        = 0;
   int last_matching_idx = -1;
   int section_matching  = -1;
-  printf( "i = %i token = `%s`\n", i, token );
   // check built-in funcs
   for ( int l = 0; l < _c_n_built_in_commands; l++ ) {
     char* res = strstr( _c_built_in_commands[l], token );
