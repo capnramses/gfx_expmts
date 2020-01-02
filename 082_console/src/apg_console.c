@@ -145,7 +145,6 @@ void apg_c_autocomplete() {
   }
 }
 
-// NOTE(Anton) could treat eg `var` as a reserved word so it can't be a variable name
 static bool _parse_user_entered_instruction( const char* str ) {
   assert( str );
 
