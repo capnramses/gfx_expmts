@@ -9,11 +9,14 @@ Licence:  See bottom of this file.
 
 Instructions
 ============
+* Just drop the 4 files under the src/ subfolder into your project (font and console source code).
+* No external image or font assets are required. The font is hard-coded into the source code.
+* This file is the console interface - #include "apg_console.h" in your application code.
 * Your program handles keyboard capture and drawing.
 * You then feed keyboard input to this console.
 * You ask this console to render an RGBA image to memory.
 * You then use that for drawing any way you like. You don't need a 3D graphics API.
-* For an OpenGL example see that subfolder.
+* For an OpenGL example see the opengl_demo/ subfolder.
 
 The primary interface for user-entered text is:
 
@@ -22,7 +25,7 @@ The primary interface for user-entered text is:
 Where `str` can be a whole line or eg one character at a time.
 Instructions end and are entered and parsed after a line break `\n` byte.
 
-Autocompletion of user-entered text can be used with:
+Autocompletion of user-entered text is supported. e.g. After you application detects the TAB key is pressed call:
 
   apg_c_autocomplete();
 
@@ -30,15 +33,17 @@ Instructions may be of the following forms:
 
   BUILT-IN-COMMAND [VARIABLE] [VALUE]
   VARIABLE
+  FUNCTION [VALUE]
 
-Built-in commands are:
+Built-in commands include:
 
-  "var my_var 2.0" - create a new variable called my_var and initialise its value to 2.0
-  "my_var 2.0"     - set the value of a variable 'my_var'
-  "my_var"         - print the value of variable 'my_var'
-  "clear"          - invoke the 'clear' command
+  "help"           - list built-in commands.
+  "var my_var 2.0" - create a new variable called my_var and initialise its value to 2.0.
+  "my_var 2.0"     - set the value of a variable 'my_var'.
+  "my_var"         - print the value of variable 'my_var'.
+  "clear"          - invoke the 'clear' command.
 
-All values are stored as 32-bit floats, but may be cast as boolean or integer values.
+All values are stored as 32-bit floats, but may be cast to also represent boolean or integer values.
 
 Variables may also be created, set, or fetched programmatically.
 
@@ -47,7 +52,7 @@ Variables may also be created, set, or fetched programmatically.
   apg_c_get_var()
 
 C functions can be called from console by registering a command name and function to call.
-These are in the form `bool my_function( float arg )`. If your function returns false the console prints an error message.
+Your callback functions must be in the form `bool my_function( float arg )`. If your function returns false the console prints an error message.
 User functions always require 1 float argument but if you call it without supplying an argument then the argument value is set to 0.
 
   apg_c_create_func( str, function_ptr );
