@@ -10,6 +10,19 @@
 
 static bool console_open = true;
 static double console_state_time;
+static uint8_t console_background[] = { 0x22, 0x77, 0x11, 0xAA };
+
+static bool _change_colour( float var ) {
+  if ( var ) {
+    console_background[0] = 0x22;
+    console_background[1] = 0x77;
+    console_background[2] = 0x11;
+  } else {
+    console_background[0] = 0x11;
+    console_background[1] = 0x22;
+    console_background[2] = 0x77;
+  }
+}
 
 void character_callback( GLFWwindow* window, unsigned int codepoint ) {
   if ( '`' == codepoint ) {
@@ -35,17 +48,18 @@ int main() {
   // unicode codepoint callback for typing
   glfwSetCharCallback( g_window, character_callback );
 
+  apg_c_create_func( "change_colour", _change_colour );
   apg_c_print( "Anton's Console Drop-In Lib" );
-  apg_c_print( "Commands: clear, var." );
-  apg_c_print( "Autocomplete with tab." );
+  apg_c_print( "Type `help` for basic commands." );
+  apg_c_print( "Autocomplete with TAB." );
 
-  int w                        = gfx_fb_width / 2;
-  int h                        = gfx_fb_height / 2;
-  int n_chans                  = 4;
-  uint8_t console_background[] = { 0x22, 0x77, 0x11, 0xAA };
+  int w            = gfx_fb_width / 2;
+  int h            = gfx_fb_height / 2;
+  int n_chans      = 4;
+  uint8_t* img_ptr = calloc( w * h * n_chans, 1 );
 
   int console_shader_idx        = gfx_create_managed_shader_from_files( "opengl_demo/console_text.vert", "opengl_demo/console_text.frag" );
-  gfx_texture_t console_texture = gfx_load_image_mem_to_texture( NULL, w, h, n_chans, true, false, true, true, false );
+  gfx_texture_t console_texture = gfx_load_image_mem_to_texture( img_ptr, w, h, n_chans, true, false, true, true, false );
 
   gfx_buffer_colour( NULL, 0.5f, 0.5f, 0.5f, 1.0f );
   double prev_s = gfx_get_time_s();
@@ -59,14 +73,20 @@ int main() {
 
     // TODO(Anton) if apg_c_has_changed()
 
-    w                = gfx_fb_width / 2;
-    h                = gfx_fb_height / 2;
-    uint8_t* img_ptr = calloc( w * h * n_chans, 1 );
-    apg_c_draw_to_image_mem( img_ptr, w, h, n_chans, console_background );
-    console_texture.w = w;
-    console_texture.h = h;
-    gfx_update_texture( &console_texture, img_ptr );
-    free( img_ptr );
+    w           = gfx_fb_width / 2;
+    h           = gfx_fb_height / 2;
+    bool redraw = apg_c_image_redraw_required();
+    if ( console_texture.w != w || console_texture.h != h ) {
+      console_texture.w = w;
+      console_texture.h = h;
+      free( img_ptr );
+      img_ptr = calloc( w * h * n_chans, 1 );
+      redraw  = true;
+    }
+    if ( redraw ) {
+      apg_c_draw_to_image_mem( img_ptr, w, h, n_chans, console_background );
+      gfx_update_texture( &console_texture, img_ptr );
+    }
 
     {
       gfx_bind_framebuffer_with_viewport( NULL );
@@ -138,6 +158,7 @@ int main() {
   } // end main loop
 
   gfx_stop();
+  free( img_ptr );
 
   return 0;
 }
