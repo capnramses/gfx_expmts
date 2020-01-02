@@ -1,5 +1,5 @@
 /*==============================================================
-Quake-style Console mini-library
+APG_C - A Quake-style Console mini-library
 Language: C99
 Author:   Anton Gerdelan - @capnramses
 Contact:  <antongdl@protonmail.com>
@@ -39,6 +39,8 @@ static char _c_user_entered_text[APG_C_STR_MAX];
 
 static const int _c_n_built_in_commands            = 5;
 static char _c_built_in_commands[5][APG_C_STR_MAX] = { "help", "clear", "var", "list_vars", "list_funcs" };
+
+static bool _c_redraw_required;
 
 static void _help() {
   apg_c_print( "APG_C by Anton Gerdelan. Autocomplete supported. Built-in functions are:" );
@@ -156,7 +158,12 @@ static bool _parse_user_entered_instruction( const char* str ) {
   switch ( n ) {
   case 0: return true; // this would be simply '\n'
   case 1: {
-    char tmp[APG_C_STR_MAX];
+    // search for func match
+    int func_idx = _console_find_func( one );
+    if ( func_idx >= 0 ) {
+      bool res = _c_funcs[func_idx].func_ptr( 0.0f );
+      if ( !res ) { sprintf( tmp, "ERROR: function `%s` returned error.", one ); }
+    }
 
     // search for command match
     if ( strncmp( one, "help", APG_C_STR_MAX ) == 0 ) {
@@ -200,8 +207,15 @@ static bool _parse_user_entered_instruction( const char* str ) {
   } break;
 
   case 2: {
+    float val = (float)atof( two );
+
+    int func_idx = _console_find_func( one );
+    if ( func_idx >= 0 ) {
+      bool res = _c_funcs[func_idx].func_ptr( val );
+      if ( !res ) { sprintf( tmp, "ERROR: function `%s` returned error.", one ); }
+    }
+
     // assume this is equiv to "set myvariable value" with an implied "set"
-    float val   = (float)atof( two );
     bool set_it = apg_c_set_var( one, val );
     if ( set_it ) {
       sprintf( tmp, "`%s %.2f`", one, val );
@@ -278,6 +292,7 @@ bool apg_c_append_user_entered_text( const char* str ) {
     }
   }
 
+  _c_redraw_required = true;
   return true;
 }
 
@@ -286,13 +301,18 @@ void apg_c_backspace( void ) {
   int uet_len = strnlen( _c_user_entered_text, APG_C_STR_MAX );
   if ( uet_len < 1 ) { return; }
   _c_user_entered_text[uet_len - 1] = '\0';
+  _c_redraw_required                = true;
 }
 
-void apg_c_clear_user_entered_text( void ) { _c_user_entered_text[0] = '\0'; }
+void apg_c_clear_user_entered_text( void ) {
+  _c_user_entered_text[0] = '\0';
+  _c_redraw_required      = true;
+}
 
 void apg_c_output_clear( void ) {
   c_output_lines_oldest = c_output_lines_newest = -1;
   c_n_output_lines                              = 0;
+  _c_redraw_required                            = true;
 }
 
 int apg_c_count_lines( void ) { return c_n_output_lines; }
@@ -305,6 +325,8 @@ void apg_c_print( const char* str ) {
   if ( c_output_lines_newest == c_output_lines_oldest ) { c_output_lines_oldest = ( c_output_lines_oldest + 1 ) % APG_C_OUTPUT_LINES_MAX; }
   if ( -1 == c_output_lines_oldest ) { c_output_lines_oldest = c_output_lines_newest; }
   strncpy( c_output_lines[c_output_lines_newest], str, APG_C_STR_MAX - 1 );
+
+  _c_redraw_required = true;
 }
 
 void apg_c_dump_to_stdout( void ) {
@@ -405,5 +427,8 @@ bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels, ui
     apg_pixfont_str_into_image( uet_str, &img_ptr[bottom_row_idx], w, row_height_px, n_channels, 0xFF, 0xFF, 0xFF, 0xFF, thickness, outlines, v_flip );
   }
 
+  _c_redraw_required = false;
   return true;
 }
+
+bool apg_c_image_redraw_required() { return _c_redraw_required; }

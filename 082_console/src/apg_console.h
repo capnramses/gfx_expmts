@@ -1,6 +1,6 @@
 /*==============================================================
-Quake-style Console mini-library
-Status: Work-In-Progress. Not functional yet.
+APG_C - A Quake-style Console mini-library
+Status: Basic functionality working.
 Language: C99
 Author:   Anton Gerdelan - @capnramses
 Contact:  <antongdl@protonmail.com>
@@ -9,6 +9,12 @@ Licence:  See bottom of this file.
 
 Instructions
 ============
+* Your program handles keyboard capture and drawing.
+* You then feed keyboard input to this console.
+* You ask this console to render an RGBA image to memory.
+* You then use that for drawing any way you like. You don't need a 3D graphics API.
+* For an OpenGL example see that subfolder.
+
 The primary interface for user-entered text is:
 
   apg_c_append_user_entered_text( str );
@@ -40,6 +46,12 @@ Variables may also be created, set, or fetched programmatically.
   apg_c_set_var( str, val )
   apg_c_get_var()
 
+C functions can be called from console by registering a command name and function to call.
+These are in the form `bool my_function( float arg )`. If your function returns false the console prints an error message.
+User functions always require 1 float argument but if you call it without supplying an argument then the argument value is set to 0.
+
+  apg_c_create_func( str, function_ptr );
+
 Scrolling output text may be interacted with
 
   apg_c_apg_c_output_clear() - Clear the output text.
@@ -47,16 +59,19 @@ Scrolling output text may be interacted with
   apg_c_dump_to_stdout()     - Writes the current console output text to stdout via printf().
   apg_c_count_lines()        - Counts the number of lines in the console output.
   
-The console text may also be rendered out to an image for use in graphical applications.
+The console text may also be rendered out to an image for use in any graphical applications.
 This is API-agnostic so must be converted to a texture to be used with 3D APIs.
 
   apg_c_draw_to_image_mem()       - Writes current console text on top of a pre-allocated image.
+  apg_c_image_redraw_required()   - Check if anything has actually changed requiring a redraw. You should also redraw if eg the display area changes size.
 
 TODO
+* definitely
+~ maybe
 =====
-* Display the user entered text as an additional line, starting with '>' eg "> my text here"
-* Remove the big string maker and print line-by-line.
-* Store a colour for each line so eg errors can be in red.
+~ Up arrow key scrolls command history or selects previous 1 command.
+~ Support dynamic key bindings `bind keycode c_func` - just requires support for 2-argument functions. App can do the rest.
+~ Store a colour for each line so eg errors can be in red.
 ==============================================================*/
 #pragma once
 
@@ -117,6 +132,9 @@ void apg_c_dump_to_stdout( void );
 // RETURNS
 //   false on any failure
 bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels, uint8_t* background_colour );
+
+// RETURNS true if console has changed since last call to apg_c_draw_to_image_mem() and can be painted again
+bool apg_c_image_redraw_required();
 
 #ifdef __cplusplus
 }
