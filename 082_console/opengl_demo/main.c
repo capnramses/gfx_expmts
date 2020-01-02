@@ -39,15 +39,13 @@ int main() {
   apg_c_print( "Commands: clear, var." );
   apg_c_print( "Autocomplete with tab." );
 
-  int w                        = 1920 / 2;
-  int h                        = 1080 / 2; // 16 * ( APG_C_OUTPUT_LINES_MAX + 1 );
+  int w                        = gfx_fb_width / 2;
+  int h                        = gfx_fb_height / 2;
   int n_chans                  = 4;
   uint8_t console_background[] = { 0x22, 0x77, 0x11, 0xAA };
-  uint8_t* img_ptr             = calloc( w * h * n_chans, 1 );
-  apg_c_draw_to_image_mem( img_ptr, w, h, n_chans, console_background );
 
   int console_shader_idx        = gfx_create_managed_shader_from_files( "opengl_demo/console_text.vert", "opengl_demo/console_text.frag" );
-  gfx_texture_t console_texture = gfx_load_image_mem_to_texture( img_ptr, w, h, n_chans, true, false, false, false, false );
+  gfx_texture_t console_texture = gfx_load_image_mem_to_texture( NULL, w, h, n_chans, true, false, true, true, false );
 
   gfx_buffer_colour( NULL, 0.5f, 0.5f, 0.5f, 1.0f );
   double prev_s = gfx_get_time_s();
@@ -60,10 +58,18 @@ int main() {
     float console_state_f = (float)console_state_time / 0.5f;
 
     // TODO(Anton) if apg_c_has_changed()
+
+    w                = gfx_fb_width / 2;
+    h                = gfx_fb_height / 2;
+    uint8_t* img_ptr = calloc( w * h * n_chans, 1 );
     apg_c_draw_to_image_mem( img_ptr, w, h, n_chans, console_background );
+    console_texture.w = w;
+    console_texture.h = h;
     gfx_update_texture( &console_texture, img_ptr );
+    free( img_ptr );
 
     {
+      gfx_bind_framebuffer_with_viewport( NULL );
       gfx_clear_colour_and_depth_buffers();
 
       if ( console_open ) {
@@ -132,7 +138,6 @@ int main() {
   } // end main loop
 
   gfx_stop();
-  free( img_ptr );
 
   return 0;
 }
