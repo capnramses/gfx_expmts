@@ -1822,9 +1822,6 @@ void gfx_clear_colour_and_depth_buffers() {
     glCullFace( GL_BACK );
     glFrontFace( GL_CCW );
     glEnable( GL_CULL_FACE );
-    // glEnable( GL_CLIP_DISTANCE0 ); // clip plane A
-    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-    glDisable( GL_BLEND );
   }
 }
 

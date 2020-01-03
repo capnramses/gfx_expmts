@@ -404,14 +404,7 @@ bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels, ui
 
   if ( row_stride < 1 ) { return false; }
 
-  for ( int y = 0; y < h; y++ ) {
-    for ( int x = 0; x < w; x++ ) {
-      for ( int c = 0; c < n_channels; c++ ) {
-        int idx      = row_stride * y + x * n_channels + c;
-        img_ptr[idx] = background_colour[c];
-      }
-    }
-  }
+  memset( img_ptr, 0, row_stride * h );
 
   // draw scrolling text output above the prompt line
   int n_lines = apg_c_count_lines();
@@ -429,6 +422,19 @@ bool apg_c_draw_to_image_mem( uint8_t* img_ptr, int w, int h, int n_channels, ui
     int bottom_row_idx = h * row_stride - ( row_height_px * row_stride );
     if ( bottom_row_idx < 0 ) { return false; } // not even space for one line
     apg_pixfont_str_into_image( uet_str, &img_ptr[bottom_row_idx], w, row_height_px, n_channels, 0xFF, 0xFF, 0xFF, 0xFF, thickness, outlines, v_flip );
+  }
+
+  // set background colour wherever there is no text/outline
+  // NOTE(Anton) this is not ideal for performance - use a second background image instead and blt onto it or render both
+  for ( int y = 0; y < h; y++ ) {
+    for ( int x = 0; x < w; x++ ) {
+      int sum = 0;
+      for ( int c = 0; c < n_channels; c++ ) {
+        int idx = row_stride * y + x * n_channels + c;
+        sum += img_ptr[idx];
+      }
+      if ( 0 == sum ) { memcpy( &img_ptr[row_stride * y + x * n_channels], background_colour, n_channels ); }
+    }
   }
 
   _c_redraw_required = false;

@@ -10,7 +10,7 @@
 
 static bool console_open = true;
 static double console_state_time;
-static uint8_t console_background[] = { 0x22, 0, 0, 0x00 }; // alpha must be zero or outlines on text won't be added
+static uint8_t console_background[] = { 0x22, 0, 0, 127 };
 
 static bool _change_colour( float var ) {
   if ( var ) {
