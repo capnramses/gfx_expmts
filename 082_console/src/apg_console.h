@@ -1,11 +1,13 @@
 /*==============================================================
 APG_C - A Quake-style Console mini-library
-Status: Basic functionality working.
+Status:   Working. Not tested across compilers/platforms yet. Expect warnings.
 Language: C99
 Author:   Anton Gerdelan - @capnramses
 Contact:  <antongdl@protonmail.com>
 Website:  https://github.com/capnramses/apg - http://antongerdelan.net/
 Licence:  See bottom of this file.
+Version History:
+  2020/01/04 - Moved to apg libraries repository. Minor tweaks from testing in a game integration.
 
 Instructions
 ============
@@ -16,7 +18,7 @@ Instructions
 * You then feed keyboard input to this console.
 * You ask this console to render an RGBA image to memory.
 * You then use that for drawing any way you like. You don't need a 3D graphics API.
-* For an OpenGL example see the opengl_demo/ subfolder.
+* For an OpenGL example see example 082 in my "gfx_expmts" repository on GitHub.
 
 The primary interface for user-entered text is:
 

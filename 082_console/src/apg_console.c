@@ -36,9 +36,16 @@ static int c_output_lines_oldest = -1, c_output_lines_newest = -1, c_n_output_li
 static char _c_user_entered_text[APG_C_STR_MAX];
 
 static const int _c_n_built_in_commands            = 5;
-static char _c_built_in_commands[5][APG_C_STR_MAX] = { "help", "clear", "var", "list_vars", "list_funcs" };
+static char _c_built_in_commands[5][APG_C_STR_MAX] = {"help", "clear", "var", "list_vars", "list_funcs"};
 
 static bool _c_redraw_required;
+
+/* because string.h doesn't always have strnlen() */
+static int apg_c_strnlen( const char* str, int maxlen ) {
+  int i = 0;
+  while ( i < maxlen && str[i] ) { i++; }
+  return i;
+}
 
 static void _help() {
   apg_c_print( "APG_C by Anton Gerdelan. Autocomplete supported. Built-in functions are:" );
@@ -275,8 +282,8 @@ bool apg_c_append_user_entered_text( const char* str ) {
   assert( str );
 
   // check for buffer overflow
-  int uet_len   = strnlen( _c_user_entered_text, APG_C_STR_MAX );
-  int len       = strnlen( str, APG_C_STR_MAX );
+  int uet_len   = apg_c_strnlen( _c_user_entered_text, APG_C_STR_MAX );
+  int len       = apg_c_strnlen( str, APG_C_STR_MAX );
   int total_len = uet_len + len;
   if ( total_len > APG_C_STR_MAX ) {
     apg_c_clear_user_entered_text();
@@ -303,7 +310,7 @@ bool apg_c_append_user_entered_text( const char* str ) {
 
 // WARNING(Anton) not unicode-aware!
 void apg_c_backspace( void ) {
-  int uet_len = strnlen( _c_user_entered_text, APG_C_STR_MAX );
+  int uet_len = apg_c_strnlen( _c_user_entered_text, APG_C_STR_MAX );
   if ( uet_len < 1 ) { return; }
   _c_user_entered_text[uet_len - 1] = '\0';
   _c_redraw_required                = true;
