@@ -101,7 +101,6 @@ int apg_pixfont_image_size_for_str( const char* ascii_str, int* w, int* h, int t
   int x_cursor = 0, y_cursor = 0, max_x = 0;
 
   for ( int i = 0; i < len; i++ ) {
-    uint32_t atlas_index = (uint32_t)ascii_str[i];
     if ( '\n' == ascii_str[i] ) {
       y_cursor += _font_img_h;
       x_cursor = 0;
@@ -113,7 +112,7 @@ int apg_pixfont_image_size_for_str( const char* ascii_str, int* w, int* h, int t
       continue;
     }
     int additional_i = 0;
-    atlas_index      = _atlas_index_for_sequence( &ascii_str[i], &additional_i );
+    uint32_t atlas_index      = _atlas_index_for_sequence( &ascii_str[i], &additional_i );
     i += additional_i;
     x_cursor += _get_spacing_for_codepoint( atlas_index );
     max_x = x_cursor > max_x ? x_cursor : max_x;
@@ -162,7 +161,6 @@ int apg_pixfont_str_into_image( const char* ascii_str, unsigned char* image, int
   if ( 2 == n_channels ) { colour[1] = a; } // 2-channel is usually RedAlpha, not RG.
 
   for ( int i = 0; i < len; i++ ) {
-    uint32_t atlas_index = (uint32_t)ascii_str[i];
     if ( '\n' == ascii_str[i] ) {
       y_cursor += _font_img_h * thickness;
       x_cursor = 0;
@@ -173,7 +171,7 @@ int apg_pixfont_str_into_image( const char* ascii_str, unsigned char* image, int
       continue;
     }
     int additional_i = 0;
-    atlas_index      = _atlas_index_for_sequence( &ascii_str[i], &additional_i );
+    uint32_t atlas_index      = _atlas_index_for_sequence( &ascii_str[i], &additional_i );
     i += additional_i;
     int spacing_px = _get_spacing_for_codepoint( atlas_index );
     atlas_index -= 33;

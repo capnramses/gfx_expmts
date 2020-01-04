@@ -47,12 +47,12 @@ static void _help() {
 
 static void _list_c_vars() {
   apg_c_print( "c_vars are:" );
-  for ( int i = 0; i < n_c_vars; i++ ) { apg_c_print( c_vars[i].str ); }
+  for ( uint32_t i = 0; i < n_c_vars; i++ ) { apg_c_print( c_vars[i].str ); }
 }
 
 static void _list_c_funcs() {
   apg_c_print( "c_funcs are:" );
-  for ( int i = 0; i < _n_c_funcs; i++ ) { apg_c_print( _c_funcs[i].str ); }
+  for ( uint32_t i = 0; i < _n_c_funcs; i++ ) { apg_c_print( _c_funcs[i].str ); }
 }
 
 // returns index or -1 if did not find
@@ -60,7 +60,7 @@ static void _list_c_funcs() {
 static int _console_find_var( const char* str ) {
   assert( str );
 
-  for ( int i = 0; i < n_c_vars; i++ ) {
+  for ( uint32_t i = 0; i < n_c_vars; i++ ) {
     if ( strncmp( str, c_vars[i].str, APG_C_STR_MAX ) == 0 ) { return i; }
   }
   return -1;
@@ -69,7 +69,7 @@ static int _console_find_var( const char* str ) {
 static int _console_find_func( const char* str ) {
   assert( str );
 
-  for ( int i = 0; i < _n_c_funcs; i++ ) {
+  for ( uint32_t i = 0; i < _n_c_funcs; i++ ) {
     if ( strncmp( str, _c_funcs[i].str, APG_C_STR_MAX ) == 0 ) { return i; }
   }
   return -1;
@@ -115,7 +115,7 @@ void apg_c_autocomplete() {
   }
 
   // check cfuncs
-  for ( int m = 0; m < _n_c_funcs; m++ ) {
+  for ( uint32_t m = 0; m < _n_c_funcs; m++ ) {
     char* res = strstr( _c_funcs[m].str, token );
     if ( _c_funcs[m].str == res ) {
       n_matching++;
@@ -126,7 +126,7 @@ void apg_c_autocomplete() {
   }
 
   // check variables
-  for ( int o = 0; o < n_c_vars; o++ ) {
+  for ( uint32_t o = 0; o < n_c_vars; o++ ) {
     char* res = strstr( c_vars[o].str, token );
     if ( c_vars[o].str == res ) {
       n_matching++;
@@ -160,7 +160,7 @@ static bool _parse_user_entered_instruction( const char* str ) {
     if ( func_idx >= 0 ) {
       bool res = _c_funcs[func_idx].func_ptr( 0.0f );
       if ( !res ) {
-        sprintf( tmp, "ERROR: function `%s` returned error.", one );
+        snprintf( tmp, APG_C_STR_MAX, "ERROR: function `%s` returned error.", one );
         apg_c_print( tmp );
       }
       return true;
@@ -178,7 +178,7 @@ static bool _parse_user_entered_instruction( const char* str ) {
     }
 
     if ( strncmp( one, "var", APG_C_STR_MAX ) == 0 ) {
-      sprintf( tmp, "To create a variable with `var` the form is: `var myvariablename 1`" );
+      snprintf( tmp, APG_C_STR_MAX, "To create a variable with `var` the form is: `var myvariablename 1`" );
       apg_c_print( tmp );
       return true;
     }
@@ -195,14 +195,14 @@ static bool _parse_user_entered_instruction( const char* str ) {
     { // then variable. equivalent to 'get myvariable' but no 'get' command required in this console.
       float* got_it = apg_c_get_var( one );
       if ( got_it ) {
-        sprintf( tmp, "%s %.2f", one, *got_it );
+        snprintf( tmp, APG_C_STR_MAX, "%s %.2f", one, *got_it );
         apg_c_print( tmp );
         return true;
       }
     }
 
     // give up
-    sprintf( tmp, "ERROR: `%s` is not a recognised command or variable name.", one );
+    snprintf( tmp, APG_C_STR_MAX, "ERROR: `%s` is not a recognised command or variable name.", one );
     apg_c_print( tmp );
     return false;
   } break;
@@ -214,7 +214,7 @@ static bool _parse_user_entered_instruction( const char* str ) {
     if ( func_idx >= 0 ) {
       bool res = _c_funcs[func_idx].func_ptr( val );
       if ( !res ) {
-        sprintf( tmp, "ERROR: function `%s` returned error.", one );
+        snprintf( tmp, APG_C_STR_MAX, "ERROR: function `%s` returned error.", one );
         apg_c_print( tmp );
       }
       return true;
@@ -223,16 +223,16 @@ static bool _parse_user_entered_instruction( const char* str ) {
     // assume this is equiv to "set myvariable value" with an implied "set"
     bool set_it = apg_c_set_var( one, val );
     if ( set_it ) {
-      sprintf( tmp, "`%s %.2f`", one, val );
+      snprintf( tmp, APG_C_STR_MAX, "`%s %.2f`", one, val );
       apg_c_print( tmp );
       return true;
     } else {
       if ( strncmp( one, "var", APG_C_STR_MAX ) == 0 ) {
-        sprintf( tmp, "ERROR: `var` must be initialised to a value `var myvar 1`." );
+        snprintf( tmp, APG_C_STR_MAX, "ERROR: `var` must be initialised to a value `var myvar 1`." );
         apg_c_print( tmp );
         return true;
       } else {
-        sprintf( tmp, "ERROR: `%s` is not a recognised variable name. To create a new variable use `var myvar 0`.", one );
+        snprintf( tmp, APG_C_STR_MAX, "ERROR: `%s` is not a recognised variable name. To create a new variable use `var myvar 0`.", one );
         apg_c_print( tmp );
       }
       return false;
@@ -242,25 +242,25 @@ static bool _parse_user_entered_instruction( const char* str ) {
   case 3: {
     // "var myvariable value"
     if ( strncmp( one, "var", APG_C_STR_MAX ) != 0 ) {
-      sprintf( tmp, "ERROR: `%s` is not a recognised command for a 3-token instruction. Did you mean `var`?", one );
+      snprintf( tmp, APG_C_STR_MAX, "ERROR: `%s` is not a recognised command for a 3-token instruction. Did you mean `var`?", one );
       apg_c_print( tmp );
       return false;
     }
     float val        = (float)atof( three );
     float* create_it = apg_c_create_var( two, val );
     if ( create_it ) {
-      sprintf( tmp, "`var %s %.2f`", two, val );
+      snprintf( tmp, APG_C_STR_MAX, "`var %s %.2f`", two, val );
       apg_c_print( tmp );
       return true;
     } else {
-      sprintf( tmp, "ERROR: Symbol `%s` already exists.", two );
+      snprintf( tmp, APG_C_STR_MAX, "ERROR: Symbol `%s` already exists.", two );
       apg_c_print( tmp );
       return false;
     }
   } break;
 
   default: {
-    sprintf( tmp, "ERROR: too many tokens in instruction." );
+    snprintf( tmp, APG_C_STR_MAX, "ERROR: too many tokens in instruction." );
     apg_c_print( tmp );
     return false;
   } break;
