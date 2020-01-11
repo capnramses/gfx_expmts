@@ -5,6 +5,8 @@ Idea is to see if I can have a python stub and heavy lifting in existing opengl/
 * create and display triangle with shaders
 * load image from file - use my C TGA loader if possible or console lib.
 * texture triangle with image
+
+* worth reading - http://pyopengl.sourceforge.net/documentation/opengl_diffs.html
 """
 
 import glfw
