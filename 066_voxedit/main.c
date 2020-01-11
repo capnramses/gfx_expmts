@@ -25,7 +25,7 @@ bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
 
   // load latest v of palette
   int w, h, n;
-  uint8_t* palette_img = apg_tga_read_file( "palette.tga", &w, &h, &n, 1 ); // vertically flip
+  uint8_t* palette_img = apg_tga_read_file( "palette.tga", &w, &h, &n, 0 ); // vertically flip
   if ( !palette_img ) { return false; }
 
   // fetch buffers of vertex data
@@ -51,9 +51,13 @@ bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
   // TODO(Anton) also write out normals? yes?
 
   // write
-  uint32_t r = apg_ply_write( "out.ply",
-    ( apg_ply_t ){
-      .n_positions_comps = 3, .n_colours_comps = 3, .n_normals_comps = vertex_data.n_vn_comps .positions_ptr = vertex_data.positions_ptr, .colours_ptr = colours_buffer, .n_vertices = vertex_data.n_vertices, .loaded = true } );
+  uint32_t r = apg_ply_write( "out.ply", ( apg_ply_t ){ .n_positions_comps = 3,
+                                           .n_colours_comps                = 3,
+                                           .n_normals_comps                = vertex_data.n_vn_comps,
+                                           .positions_ptr                  = vertex_data.positions_ptr,
+                                           .colours_ptr                    = colours_buffer,
+                                           .n_vertices                     = vertex_data.n_vertices,
+                                           .loaded                         = true } );
 
   // free mem
   free( colours_buffer );
@@ -122,6 +126,7 @@ int main() {
       "out vec4 v_n;\n"
       "void main () {\n"
       "  vec2 pal_st = vec2( float(a_vpal_idx) / 16.0, 1.0 );\n"
+    //  "  pal_st.t = 1.0 - pal_st.t;\n"
       "  v_c = texture( u_palette_texture, pal_st ).rgb;\n"
       "  v_n.xyz = (u_M * vec4( a_vn.xyz, 0.0 )).xyz;\n"
       "  v_n.w = a_vn.w;\n"
