@@ -144,11 +144,12 @@ int main() {
       "vec3 sun_rgb = vec3( 1.0, 1.0, 1.0 );"
       "vec3 fwd_rgb = vec3( 1.0, 1.0, 1.0 );"
       "void main () {\n"
-      "  vec3 col          = pow( v_c, vec3( 2.2 ) );\n"
-      "  float sun_dp      = clamp( dot( normalize( v_n.xyz ), normalize( -vec3( 0.5, -1.0, 0.0 ) ) ), 0.0 , 1.0 );\n"
-      "  float fwd_dp      = clamp( dot( normalize( v_n.xyz ), -u_fwd ), 0.0, 1.0 );\n"
-      "  o_frag_colour     = vec4( sun_rgb * v_n.w * col * sun_dp * 0.7 + fwd_rgb * fwd_dp * col * 0.1 + v_n.w * col * 0.10 + col * 0.10, 1.0f );\n"
-      "  o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );\n"
+      "  vec3 col           = v_c; /*pow( v_c, vec3( 2.2 ) );*/ \n" // tga image load is linear colour space already w/o gamma
+      "  float sun_dp       = clamp( dot( normalize( v_n.xyz ), normalize( -vec3( -0.3, -1.0, 0.2 ) ) ), 0.0 , 1.0 );\n"
+      "  float fwd_dp       = clamp( dot( normalize( v_n.xyz ), -u_fwd ), 0.0, 1.0 );\n"
+      "  float outdoors_fac = v_n.w;\n"
+      "  o_frag_colour      = vec4( sun_rgb * col * sun_dp * outdoors_fac * 0.7 + col * 0.2 + fwd_dp * col * 0.1, 1.0f );\n"
+      "  o_frag_colour.rgb  = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );\n"
       "}\n"
     };
     voxel_shader = create_shader_program_from_strings( vert_shader_str, frag_shader_str );
