@@ -1,6 +1,7 @@
 // An Implementation of the Diamond-Square algorithm (Fournier, Fussell and Carpenter at SIGGRAPH 1982) for heightmap output
 // based on http://www.bluh.org/code-the-diamond-square-algorithm/
 // Anton Gerdelan 15 July 2019
+// gcc main.c apg_bmp.c -I ..\common\include\stb\
 // C99
 
 #include "apg_bmp.h"
@@ -103,7 +104,7 @@ int main( int argc, char** argv ) {
   {
     printf( "feature seeding...\n" );
     // create some starting crap
-    int feature_size = 256; // bigger equals more mountainous/tables
+    int feature_size = 128; // bigger equals wider mountainous/tables
     for ( int y = 0; y < height; y += feature_size ) {
       for ( int x = 0; x < width; x += feature_size ) { set_sample( x, y, _apg_rand( 0, 255 ) ); }
     }
