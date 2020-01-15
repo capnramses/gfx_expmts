@@ -93,7 +93,7 @@ int main() {
   assert( CHUNK_X == CHUNK_Z );
   int default_height       = 1;
   int noise_scale          = 4;
-  int feature_spread       = 16;
+  int feature_spread       = 8;
   int feature_max_height   = 32;
   dsquare_heightmap_t dshm = dsquare_heightmap_alloc( CHUNK_X * 2, default_height );
   dsquare_heightmap_gen( &dshm, noise_scale, feature_spread, feature_max_height );
