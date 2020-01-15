@@ -6,9 +6,9 @@
 #include <stdint.h>
 
 // dimensions of chunk in voxels
-#define CHUNK_X 16 // 32
+#define CHUNK_X 16  // 32
 #define CHUNK_Y 256 // 256
-#define CHUNK_Z 16 // 32
+#define CHUNK_Z 16  // 32
 
 #define VOXEL_FACE_VERTS 6
 #define VOXEL_VP_COMPS 3
@@ -62,7 +62,7 @@ typedef struct chunk_vertex_data_t {
   size_t vpicking_buffer_sz;
 } chunk_vertex_data_t;
 
-chunk_t chunk_generate();
+chunk_t chunk_generate( const uint8_t* heightmap, int hm_w, int hm_h, int x_offset, int z_offset );
 chunk_t chunk_generate_flat();
 
 // warning: if chunk was already loaded or generated, then call chunk_free() first!

@@ -12,12 +12,14 @@
 #include "apg_ply.h"
 #include "apg_tga.h"
 #include "camera.h"
+#include "diamond_square.h"
 #include "gl_utils.h"
 #include "input.h"
 #include "voxels.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 // exports to a PLY, baking the correct colours from the palette
 bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
@@ -82,16 +84,39 @@ int main() {
     free( palette_img );
   }
 
-  mesh_t chunk_mesh;
+  mesh_t chunk_meshes[4];
   shader_t colour_picking_shader;
 
-  chunk_t chunk_b = chunk_generate();
-  {
-    chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunk_b );
-    chunk_mesh = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr, vertex_data.n_vpalidx_comps,
+  uint32_t seed = time( NULL );
+  printf( "seed = %u\n", seed );
+  srand( seed );
+  assert( CHUNK_X == CHUNK_Z );
+  int default_height       = 1;
+  int noise_scale          = 4;
+  int feature_spread       = 16;
+  int feature_max_height   = 32;
+  dsquare_heightmap_t dshm = dsquare_heightmap_alloc( CHUNK_X * 2, default_height );
+  dsquare_heightmap_gen( &dshm, noise_scale, feature_spread, feature_max_height );
+
+  int x_offset = 0;
+  int z_offset = 0;
+  chunk_t chunks[4];
+  chunks[0] = chunk_generate( dshm.heightmap, dshm.w, dshm.h, x_offset, z_offset );
+  chunks[1] = chunk_generate( dshm.heightmap, dshm.w, dshm.h, x_offset + CHUNK_X, z_offset );
+  chunks[2] = chunk_generate( dshm.heightmap, dshm.w, dshm.h, x_offset, z_offset + CHUNK_Z );
+  chunks[3] = chunk_generate( dshm.heightmap, dshm.w, dshm.h, x_offset + CHUNK_X, z_offset + CHUNK_Z );
+  for ( int i = 0; i < 4; i++ ) {
+    chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunks[i] );
+    chunk_meshes[i] = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr, vertex_data.n_vpalidx_comps,
       vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
     chunk_free_vertex_data( &vertex_data );
   }
+  const float voxel_scale = 0.2f;
+  mat4 chunks_M[4];
+  chunks_M[0] = identity_mat4();
+  chunks_M[1] = translate_mat4( ( vec3 ){ .x = CHUNK_X * voxel_scale } );
+  chunks_M[2] = translate_mat4( ( vec3 ){ .z = CHUNK_Z * voxel_scale } );
+  chunks_M[3] = translate_mat4( ( vec3 ){ .x = CHUNK_X * voxel_scale, .z = CHUNK_Z * voxel_scale } );
 
   texture_t text_texture;
   {
@@ -126,7 +151,7 @@ int main() {
       "out vec4 v_n;\n"
       "void main () {\n"
       "  vec2 pal_st = vec2( float(a_vpal_idx) / 16.0, 1.0 );\n"
-    //  "  pal_st.t = 1.0 - pal_st.t;\n"
+      //  "  pal_st.t = 1.0 - pal_st.t;\n"
       "  v_c = texture( u_palette_texture, pal_st ).rgb;\n"
       "  v_n.xyz = (u_M * vec4( a_vn.xyz, 0.0 )).xyz;\n"
       "  v_n.w = a_vn.w;\n"
@@ -240,23 +265,6 @@ int main() {
         }
       }
 
-      if ( was_key_pressed( g_export_mesh_key ) ) {
-        printf( "exporting out.ply...\n" );
-        bool ret = export_voxel_ply( "out.ply", &chunk_b );
-        if ( !ret ) { fprintf( stderr, "ERROR exporting out.ply\n" ); }
-      }
-
-      if ( was_key_pressed( g_reset_key ) ) {
-        chunk_free( &chunk_b );
-        chunk_b = chunk_generate_flat();
-        {
-          chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunk_b );
-          chunk_mesh = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr, vertex_data.n_vpalidx_comps,
-            vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
-          chunk_free_vertex_data( &vertex_data );
-        }
-      }
-
       if ( picked ) {
         bool changed = false;
         if ( lmb_clicked() ) {
@@ -270,17 +278,58 @@ int main() {
           case 5: zz++; break;
           default: assert( false ); break;
           }
-          changed = set_block_type_in_chunk( &chunk_b, xx, yy, zz, block_type_to_create );
+          assert( picked_chunk_id >= 0 && picked_chunk_id < 4 );
+
+          // TODO(Anton) replace with generic formula that scales
+          if ( xx < 0 ) {
+            if ( picked_chunk_id == 1 ) {
+              xx              = 15;
+              picked_chunk_id = 0;
+            } else if ( picked_chunk_id == 3 ) {
+              xx              = 15;
+              picked_chunk_id = 2;
+            }
+          }
+          if ( zz < 0 ) {
+            if ( picked_chunk_id == 2 ) {
+              zz              = 15;
+              picked_chunk_id = 0;
+            } else if ( picked_chunk_id == 3 ) {
+              zz              = 15;
+              picked_chunk_id = 1;
+            }
+          }
+
+          if ( xx > 15 ) {
+            if ( picked_chunk_id == 0 ) {
+              xx              = 0;
+              picked_chunk_id = 1;
+            } else if ( picked_chunk_id == 2 ) {
+              xx              = 0;
+              picked_chunk_id = 3;
+            }
+          }
+          if ( zz > 15 ) {
+            if ( picked_chunk_id == 0 ) {
+              zz              = 0;
+              picked_chunk_id = 2;
+            } else if ( picked_chunk_id == 1 ) {
+              zz              = 0;
+              picked_chunk_id = 3;
+            }
+          }
+
+          changed = set_block_type_in_chunk( &chunks[picked_chunk_id], xx, yy, zz, block_type_to_create );
         } else if ( rmb_clicked() ) {
-          changed = set_block_type_in_chunk( &chunk_b, picked_x, picked_y, picked_z, BLOCK_TYPE_AIR );
+          changed = set_block_type_in_chunk( &chunks[picked_chunk_id], picked_x, picked_y, picked_z, BLOCK_TYPE_AIR );
         }
         if ( changed ) {
           // TODO(Anton) reuse a scratch buffer to avoid mallocs
-          chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunk_b );
+          chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunks[picked_chunk_id] );
           // TODO(Anton) and reuse the previous VBOs
-          delete_mesh( &chunk_mesh );
-          chunk_mesh = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr, vertex_data.n_vpalidx_comps,
-            vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
+          delete_mesh( &chunk_meshes[picked_chunk_id] );
+          chunk_meshes[picked_chunk_id] = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
+            vertex_data.n_vpalidx_comps, vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
           chunk_free_vertex_data( &vertex_data );
         }
       }
@@ -339,8 +388,7 @@ int main() {
     viewport( 0, 0, fb_width, fb_height );
 
     uniform3f( voxel_shader, voxel_shader.u_fwd, cam.forward.x, cam.forward.y, cam.forward.z );
-    draw_mesh( voxel_shader, cam.P, cam.V, identity_mat4(), chunk_mesh.vao, chunk_mesh.n_vertices, &palette_tex, 1 );
-
+    for ( int i = 0; i < 4; i++ ) { draw_mesh( voxel_shader, cam.P, cam.V, chunks_M[i], chunk_meshes[i].vao, chunk_meshes[i].n_vertices, &palette_tex, 1 ); }
     // update FPS image every so often
     if ( text_timer > 0.1 ) {
       int w = 0, h = 0; // actual image writing area can be smaller than img dims
@@ -389,9 +437,10 @@ int main() {
       clear_colour_and_depth_buffers( 1, 1, 1, 1 );
       // clear_depth_buffer();
 
-      uniform1f( colour_picking_shader, colour_picking_shader.u_chunk_id, 0.0f );
-      draw_mesh( colour_picking_shader, offcentre_P, cam.V, identity_mat4(), chunk_mesh.vao, chunk_mesh.n_vertices, NULL, 0 );
-
+      for ( uint32_t i = 0; i < 4; i++ ) {
+        uniform1f( colour_picking_shader, colour_picking_shader.u_chunk_id, (float)i / 255.0f );
+        draw_mesh( colour_picking_shader, offcentre_P, cam.V, chunks_M[i], chunk_meshes[i].vao, chunk_meshes[i].n_vertices, NULL, 0 );
+      }
       uint8_t data[4] = { 0, 0, 0, 0 };
       // TODO(Anton) this is blocking cpu/gpu sync and can stall. to speed up use the 2-PBO method perhaps.
       read_pixels( x + w / 2, y + h / 2, 1, 1, 4, data );
@@ -407,9 +456,11 @@ int main() {
     swap_buffer();
   }
 
-  chunk_free( &chunk_b );
+  for ( int i = 0; i < 4; i++ ) {
+    chunk_free( &chunks[i] );
+    delete_mesh( &chunk_meshes[i] );
+  }
   free( fps_img_mem );
-  delete_mesh( &chunk_mesh );
   delete_texture( &palette_tex );
   stop_gl();
   printf( "HALT\n" );
