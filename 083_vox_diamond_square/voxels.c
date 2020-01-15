@@ -1,9 +1,11 @@
 #include "voxels.h"
+#include "diamond_square.h"
 #define APG_TGA_IMPLEMENTATION
 #include "../common/include/apg_tga.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /* TODO / rough plan
 * program maintains a chunks table
@@ -152,6 +154,14 @@ uint8_t noisei( int x, int z, int max_height ) {
 // todo ifdef write_heightmap img
 chunk_t chunk_generate() {
   chunk_t chunk;
+  srand( time( NULL ) );
+
+  assert( CHUNK_X == CHUNK_Z );
+  dsquare_heightmap_t ds  = dsquare_heightmap_alloc( CHUNK_X, 0 ); // start at half height
+  int noise_scale         = 16;                                    // vary up or down by a height
+  int feature_spread      = 16;
+  int feature_seed_height = 8;
+  dsquare_heightmap_gen( &ds, noise_scale, feature_spread, feature_seed_height );
 
   memset( &chunk, 0, sizeof( chunk_t ) );
   chunk.voxels = calloc( CHUNK_X * CHUNK_Y * CHUNK_Z, sizeof( voxel_t ) );
@@ -159,13 +169,19 @@ chunk_t chunk_generate() {
 
   for ( int z = 0; z < CHUNK_Z; z++ ) {
     for ( int x = 0; x < CHUNK_X; x++ ) {
-      uint8_t height = noisei( x, z, CHUNK_Y - 1 ); // TODO add position of chunk to x and y for continuous/infinite map
+      // uint8_t height = noisei( x, z, CHUNK_Y - 1 ); // TODO add position of chunk to x and y for continuous/infinite map
+
+      int idx        = CHUNK_X * z + x;
+      uint8_t height = CLAMP( ds.heightmap[idx] + 16, 1, CHUNK_Y );
+
       set_block_type_in_chunk( &chunk, x, height, z, BLOCK_TYPE_GRASS );
       set_block_type_in_chunk( &chunk, x, height - 1, z, BLOCK_TYPE_DIRT );
       for ( int y = height - 2; y > 0; y-- ) { set_block_type_in_chunk( &chunk, x, y, z, BLOCK_TYPE_STONE ); }
       set_block_type_in_chunk( &chunk, x, 0, z, BLOCK_TYPE_CRUST );
     } // x
   }   // z
+
+  dsquare_heightmap_free( &ds );
 
   return chunk;
 }
@@ -404,9 +420,9 @@ void chunk_free_vertex_data( chunk_vertex_data_t* chunk_vertex_data ) {
 
 bool picked_colour_to_voxel_idx( uint8_t r, uint8_t g, uint8_t b, uint8_t a, int* x, int* y, int* z, int* face, int* chunk_id ) {
   if ( b > 5 ) { return false; }
-  *x        = (int)r % 16;
+  *x        = (int)r % CHUNK_X;
   *y        = (int)g;
-  *z        = (int)r / 16;
+  *z        = (int)r / CHUNK_X;
   *face     = (int)b;
   *chunk_id = (int)a;
   return true;

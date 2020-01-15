@@ -7,7 +7,7 @@
 
 // dimensions of chunk in voxels
 #define CHUNK_X 16 // 32
-#define CHUNK_Y 16 // 256
+#define CHUNK_Y 256 // 256
 #define CHUNK_Z 16 // 32
 
 #define VOXEL_FACE_VERTS 6
