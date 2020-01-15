@@ -90,7 +90,9 @@ projects, and volatile software. Mostly OpenGL but some other graphics-related s
 | 080     | `d3d_init`                  | Initialise Direct3D 11.                                                    | working            |
 | 081     | `gfx_platform`              | "Hello Cube" project starter using a graphics platform wrapper I wrote.    | working            |
 | 082     | `console`                   | Quake-style interactive console mini-lib.                                  | working            |
-| 083     | `diamond_square`                   | Diamond-Square Alg for vox-edit.                                  | started            |
+| 083     | `diamond_square`            | Diamond-Square Alg for vox-edit.                                           | started            |
+| 084     | `pygl`                      | Python script that launches a GLFW window with OpenGL context.             | working            |
+| 085     | `py_c_lib`                  | See if I can use my C tga loader from Python app.                          | proposed           |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed           |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                            | proposed           |
 | xxx     | `geo_mipmap   `             | heightmap terrain sampled in vertex shader, scrolling camera mesh          | proposed           |
