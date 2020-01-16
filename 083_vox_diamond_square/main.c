@@ -1,3 +1,12 @@
+
+// Use discrete GPU by default. not sure if it works on other OS. if in C++ must be in extern "C" { } block
+#ifdef _WIN32
+// http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf
+__declspec( dllexport ) unsigned long int NvOptimusEnablement = 0x00000001;
+// https://gpuopen.com/amdpowerxpressrequesthighperformance/
+__declspec( dllexport ) int AmdPowerXpressRequestHighPerformance = 1;
+#endif
+
 /* demo motivations
 
 - DONE create/delete a chunk's worth of voxels with the mouse lmb rmb
@@ -20,6 +29,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
+#define CHUNKS_N 256
+static int _chunks_w = 16, _chunks_h = 16;
 
 // exports to a PLY, baking the correct colours from the palette
 bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
@@ -84,7 +96,10 @@ int main() {
     free( palette_img );
   }
 
-  mesh_t chunk_meshes[4];
+  mesh_t chunk_meshes[CHUNKS_N];
+  chunk_t chunks[CHUNKS_N];
+  mat4 chunks_M[CHUNKS_N];
+
   shader_t colour_picking_shader;
 
   uint32_t seed = time( NULL );
@@ -92,31 +107,27 @@ int main() {
   srand( seed );
   assert( CHUNK_X == CHUNK_Z );
   int default_height       = 1;
-  int noise_scale          = 4;
-  int feature_spread       = 8;
-  int feature_max_height   = 32;
-  dsquare_heightmap_t dshm = dsquare_heightmap_alloc( CHUNK_X * 2, default_height );
+  int noise_scale          = 2;
+  int feature_spread       = 32;
+  int feature_max_height   = 64;
+  assert( _chunks_w == _chunks_h );
+  dsquare_heightmap_t dshm = dsquare_heightmap_alloc( CHUNK_X * _chunks_w, default_height );
   dsquare_heightmap_gen( &dshm, noise_scale, feature_spread, feature_max_height );
-
-  int x_offset = 0;
-  int z_offset = 0;
-  chunk_t chunks[4];
-  chunks[0] = chunk_generate( dshm.heightmap, dshm.w, dshm.h, x_offset, z_offset );
-  chunks[1] = chunk_generate( dshm.heightmap, dshm.w, dshm.h, x_offset + CHUNK_X, z_offset );
-  chunks[2] = chunk_generate( dshm.heightmap, dshm.w, dshm.h, x_offset, z_offset + CHUNK_Z );
-  chunks[3] = chunk_generate( dshm.heightmap, dshm.w, dshm.h, x_offset + CHUNK_X, z_offset + CHUNK_Z );
-  for ( int i = 0; i < 4; i++ ) {
-    chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunks[i] );
-    chunk_meshes[i] = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr, vertex_data.n_vpalidx_comps,
-      vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
-    chunk_free_vertex_data( &vertex_data );
-  }
   const float voxel_scale = 0.2f;
-  mat4 chunks_M[4];
-  chunks_M[0] = identity_mat4();
-  chunks_M[1] = translate_mat4( ( vec3 ){ .x = CHUNK_X * voxel_scale } );
-  chunks_M[2] = translate_mat4( ( vec3 ){ .z = CHUNK_Z * voxel_scale } );
-  chunks_M[3] = translate_mat4( ( vec3 ){ .x = CHUNK_X * voxel_scale, .z = CHUNK_Z * voxel_scale } );
+
+  for ( int cz = 0; cz < _chunks_h; cz++ ) {
+    for ( int cx = 0; cx < _chunks_w; cx++ ) {
+      int idx     = cz * _chunks_w + cx;
+      chunks[idx] = chunk_generate( dshm.heightmap, dshm.w, dshm.h, cx * CHUNK_X, cz * CHUNK_Z );
+      {
+        chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunks[idx] );
+        chunk_meshes[idx] = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr, vertex_data.n_vpalidx_comps,
+          vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
+        chunk_free_vertex_data( &vertex_data );
+      }
+      chunks_M[idx] = translate_mat4( ( vec3 ){ .x = cx * CHUNK_X * voxel_scale, .z = cz * CHUNK_Z * voxel_scale } );
+    }
+  }
 
   texture_t text_texture;
   {
@@ -388,7 +399,7 @@ int main() {
     viewport( 0, 0, fb_width, fb_height );
 
     uniform3f( voxel_shader, voxel_shader.u_fwd, cam.forward.x, cam.forward.y, cam.forward.z );
-    for ( int i = 0; i < 4; i++ ) { draw_mesh( voxel_shader, cam.P, cam.V, chunks_M[i], chunk_meshes[i].vao, chunk_meshes[i].n_vertices, &palette_tex, 1 ); }
+    for ( int i = 0; i < CHUNKS_N; i++ ) { draw_mesh( voxel_shader, cam.P, cam.V, chunks_M[i], chunk_meshes[i].vao, chunk_meshes[i].n_vertices, &palette_tex, 1 ); }
     // update FPS image every so often
     if ( text_timer > 0.1 ) {
       int w = 0, h = 0; // actual image writing area can be smaller than img dims
@@ -437,7 +448,7 @@ int main() {
       clear_colour_and_depth_buffers( 1, 1, 1, 1 );
       // clear_depth_buffer();
 
-      for ( uint32_t i = 0; i < 4; i++ ) {
+      for ( uint32_t i = 0; i < CHUNKS_N; i++ ) {
         uniform1f( colour_picking_shader, colour_picking_shader.u_chunk_id, (float)i / 255.0f );
         draw_mesh( colour_picking_shader, offcentre_P, cam.V, chunks_M[i], chunk_meshes[i].vao, chunk_meshes[i].n_vertices, NULL, 0 );
       }
