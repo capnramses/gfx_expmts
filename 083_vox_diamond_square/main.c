@@ -160,13 +160,15 @@ int main() {
       "uniform mat4 u_P, u_V, u_M;\n"
       "out vec3 v_c;\n"
       "out vec4 v_n;\n"
+      "out vec3 v_p_eye;\n"
       "void main () {\n"
       "  vec2 pal_st = vec2( float(a_vpal_idx) / 16.0, 1.0 );\n"
       //  "  pal_st.t = 1.0 - pal_st.t;\n"
       "  v_c = texture( u_palette_texture, pal_st ).rgb;\n"
       "  v_n.xyz = (u_M * vec4( a_vn.xyz, 0.0 )).xyz;\n"
       "  v_n.w = a_vn.w;\n"
-      "  gl_Position = u_P * u_V * u_M * vec4( a_vp * 0.1, 1.0 );\n"
+      "  v_p_eye =  (u_V * u_M * vec4( a_vp * 0.1, 1.0 )).xyz;\n"
+      "  gl_Position = u_P * vec4( v_p_eye, 1.0 );\n"
       "}\n"
     };
     // heightmap 0 or 1 factor is stored in normal's w channel. used to disable sunlight for rooms/caves/overhangs (assumes sun is always _directly_ overhead,
@@ -175,19 +177,24 @@ int main() {
       "#version 410\n"
       "in vec3 v_c;\n"
       "in vec4 v_n;\n"
+      "in vec3 v_p_eye;\n"
       "uniform vec3 u_fwd;\n"
       "out vec4 o_frag_colour;\n"
       "vec3 sun_rgb = vec3( 1.0, 1.0, 1.0 );"
       "vec3 fwd_rgb = vec3( 1.0, 1.0, 1.0 );"
+      "vec3 fog_rgb = vec3( 0.5, 0.5, 0.9 );"
       "void main () {\n"
+      "  float fog_fac      = clamp( abs( v_p_eye.z * v_p_eye.z ) / 1000.0, 0.0, 1.0 );\n"
       "  vec3 col           = v_c; /*pow( v_c, vec3( 2.2 ) );*/ \n" // tga image load is linear colour space already w/o gamma
       "  float sun_dp       = clamp( dot( normalize( v_n.xyz ), normalize( -vec3( -0.3, -1.0, 0.2 ) ) ), 0.0 , 1.0 );\n"
       "  float fwd_dp       = clamp( dot( normalize( v_n.xyz ), -u_fwd ), 0.0, 1.0 );\n"
       "  float outdoors_fac = v_n.w;\n"
       "  o_frag_colour      = vec4( sun_rgb * col * sun_dp * outdoors_fac * 0.7 + col * 0.2 + fwd_dp * col * 0.1, 1.0f );\n"
       "  o_frag_colour.rgb  = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );\n"
+      "  o_frag_colour.rgb  = mix(o_frag_colour.rgb, fog_rgb, fog_fac);\n"
       "}\n"
     };
+		// NOTE(Anton) fog calc after rgb because colour is trying to match gl clear colour
     voxel_shader = create_shader_program_from_strings( vert_shader_str, frag_shader_str );
   }
   {
