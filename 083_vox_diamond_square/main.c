@@ -106,10 +106,10 @@ int main() {
   printf( "seed = %u\n", seed );
   srand( seed );
   assert( CHUNK_X == CHUNK_Z );
-  int default_height       = 63;
-  int noise_scale          = 64;
-  int feature_spread       = 64;
-  int feature_max_height   = 64;
+  int default_height     = 63;
+  int noise_scale        = 64;
+  int feature_spread     = 64;
+  int feature_max_height = 64;
   assert( _chunks_w == _chunks_h );
   dsquare_heightmap_t dshm = dsquare_heightmap_alloc( CHUNK_X * _chunks_w, default_height );
   dsquare_heightmap_gen( &dshm, noise_scale, feature_spread, feature_max_height );
@@ -289,46 +289,32 @@ int main() {
           case 5: zz++; break;
           default: assert( false ); break;
           }
-          assert( picked_chunk_id >= 0 && picked_chunk_id < 4 );
+          assert( picked_chunk_id >= 0 && picked_chunk_id < CHUNKS_N );
 
-          // TODO(Anton) replace with generic formula that scales
+          int chunk_x = picked_chunk_id % _chunks_w;
+          int chunk_z = picked_chunk_id / _chunks_w;
+
           if ( xx < 0 ) {
-            if ( picked_chunk_id == 1 ) {
-              xx              = 15;
-              picked_chunk_id = 0;
-            } else if ( picked_chunk_id == 3 ) {
-              xx              = 15;
-              picked_chunk_id = 2;
-            }
+            assert( chunk_x > 0 );
+            xx = 15;
+            chunk_x--;
+          }
+          if ( xx > 15 ) {
+            assert( chunk_x < _chunks_w );
+            xx = 0;
+            chunk_x++;
           }
           if ( zz < 0 ) {
-            if ( picked_chunk_id == 2 ) {
-              zz              = 15;
-              picked_chunk_id = 0;
-            } else if ( picked_chunk_id == 3 ) {
-              zz              = 15;
-              picked_chunk_id = 1;
-            }
-          }
-
-          if ( xx > 15 ) {
-            if ( picked_chunk_id == 0 ) {
-              xx              = 0;
-              picked_chunk_id = 1;
-            } else if ( picked_chunk_id == 2 ) {
-              xx              = 0;
-              picked_chunk_id = 3;
-            }
+            assert( chunk_z > 0 );
+            zz = 15;
+            chunk_z--;
           }
           if ( zz > 15 ) {
-            if ( picked_chunk_id == 0 ) {
-              zz              = 0;
-              picked_chunk_id = 2;
-            } else if ( picked_chunk_id == 1 ) {
-              zz              = 0;
-              picked_chunk_id = 3;
-            }
+            assert( chunk_z < _chunks_h );
+            zz = 0;
+            chunk_z++;
           }
+          picked_chunk_id = chunk_z * _chunks_w + chunk_x;
 
           changed = set_block_type_in_chunk( &chunks[picked_chunk_id], xx, yy, zz, block_type_to_create );
         } else if ( rmb_clicked() ) {
@@ -399,7 +385,9 @@ int main() {
     viewport( 0, 0, fb_width, fb_height );
 
     uniform3f( voxel_shader, voxel_shader.u_fwd, cam.forward.x, cam.forward.y, cam.forward.z );
-    for ( int i = 0; i < CHUNKS_N; i++ ) { draw_mesh( voxel_shader, cam.P, cam.V, chunks_M[i], chunk_meshes[i].vao, chunk_meshes[i].n_vertices, &palette_tex, 1 ); }
+    for ( int i = 0; i < CHUNKS_N; i++ ) {
+      draw_mesh( voxel_shader, cam.P, cam.V, chunks_M[i], chunk_meshes[i].vao, chunk_meshes[i].n_vertices, &palette_tex, 1 );
+    }
     // update FPS image every so often
     if ( text_timer > 0.1 ) {
       int w = 0, h = 0; // actual image writing area can be smaller than img dims
