@@ -3,7 +3,8 @@
 
 typedef struct dsquare_heightmap_t {
   int w,h;
-  uint8_t* heightmap;
+  uint8_t* filtered_heightmap;
+  uint8_t* unfiltered_heightmap;
 } dsquare_heightmap_t;
 
 // default_height - eg 127 for half way up/down a 256 height block

@@ -106,9 +106,9 @@ int main() {
   printf( "seed = %u\n", seed );
   srand( seed );
   assert( CHUNK_X == CHUNK_Z );
-  int default_height       = 1;
-  int noise_scale          = 2;
-  int feature_spread       = 32;
+  int default_height       = 63;
+  int noise_scale          = 64;
+  int feature_spread       = 64;
   int feature_max_height   = 64;
   assert( _chunks_w == _chunks_h );
   dsquare_heightmap_t dshm = dsquare_heightmap_alloc( CHUNK_X * _chunks_w, default_height );
@@ -118,7 +118,7 @@ int main() {
   for ( int cz = 0; cz < _chunks_h; cz++ ) {
     for ( int cx = 0; cx < _chunks_w; cx++ ) {
       int idx     = cz * _chunks_w + cx;
-      chunks[idx] = chunk_generate( dshm.heightmap, dshm.w, dshm.h, cx * CHUNK_X, cz * CHUNK_Z );
+      chunks[idx] = chunk_generate( dshm.filtered_heightmap, dshm.w, dshm.h, cx * CHUNK_X, cz * CHUNK_Z );
       {
         chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunks[idx] );
         chunk_meshes[idx] = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr, vertex_data.n_vpalidx_comps,
