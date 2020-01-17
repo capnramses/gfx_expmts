@@ -184,7 +184,7 @@ int main() {
       "vec3 fwd_rgb = vec3( 1.0, 1.0, 1.0 );"
       "vec3 fog_rgb = vec3( 0.5, 0.5, 0.9 );"
       "void main () {\n"
-      "  float fog_fac      = clamp( abs( v_p_eye.z * v_p_eye.z ) / 1000.0, 0.0, 1.0 );\n"
+      "  float fog_fac      = clamp( v_p_eye.z * v_p_eye.z / 1000.0, 0.0, 1.0 );\n"
       "  vec3 col           = v_c; /*pow( v_c, vec3( 2.2 ) );*/ \n" // tga image load is linear colour space already w/o gamma
       "  float sun_dp       = clamp( dot( normalize( v_n.xyz ), normalize( -vec3( -0.3, -1.0, 0.2 ) ) ), 0.0 , 1.0 );\n"
       "  float fwd_dp       = clamp( dot( normalize( v_n.xyz ), -u_fwd ), 0.0, 1.0 );\n"
@@ -409,9 +409,9 @@ int main() {
       memset( fps_img_mem, 0x00, fps_img_w * fps_img_h * fps_n_channels );
 
       sprintf( string,
-        "FPS %.2f\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\nhovered voxel: %s\n\nLMB,RMB   edit voxels\n1,2,3...     block type\nF2        "
+        "FPS %.2f\n%s\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\nhovered voxel: %s\n\nLMB,RMB   edit voxels\n1,2,3...     block type\nF2        "
         "export `out.ply`\nF9        reset chunk",
-        fps, win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, hovered_voxel_str );
+        fps, gfx_renderer_str(), win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, hovered_voxel_str );
 
       if ( APG_PIXFONT_FAILURE == apg_pixfont_image_size_for_str( string, &w, &h, thickness, outlines ) ) {
         fprintf( stderr, "ERROR apg_pixfont_image_size_for_str\n" );

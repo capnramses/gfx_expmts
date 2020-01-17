@@ -214,6 +214,8 @@ void stop_gl() {
   glfwTerminate();
 }
 
+const char* gfx_renderer_str( void ) { return glGetString( GL_RENDERER ); }
+
 mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, const uint32_t* pal_idx_buffer, int n_pal_idx_comps, const float* picking_buffer,
   int n_picking_comps, const float* normals_buffer, int n_normal_comps, int n_vertices ) {
   assert( points_buffer && n_points_comps > 0 && n_vertices > 0 );
