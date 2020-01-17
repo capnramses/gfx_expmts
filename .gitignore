@@ -92,3 +92,5 @@ test_cube.ply
 testoutput.png
 testuserenteredtext.png
 083_vox_diamond_square/heightmap_out.png
+filtered_heightmap_out.png
+unfiltered_heightmap_out.png
