@@ -169,7 +169,7 @@ int main() {
       "  float sun_dp       = clamp( dot( normalize( v_n.xyz ), normalize( -vec3( -0.3, -1.0, 0.2 ) ) ), 0.0 , 1.0 );\n"
       "  float fwd_dp       = clamp( dot( normalize( v_n.xyz ), -u_fwd ), 0.0, 1.0 );\n"
       "  float outdoors_fac = v_n.w;\n"
-      "  o_frag_colour      = vec4( sun_rgb * col * sun_dp * outdoors_fac * 0.7 + col * 0.2 + fwd_dp * col * 0.1, 1.0f );\n"
+      "  o_frag_colour      = vec4( sun_rgb * col * sun_dp * outdoors_fac * 0.9 + col * 0.1, 1.0f );\n"
       "  o_frag_colour.rgb  = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );\n"
       "  o_frag_colour.rgb  = mix(o_frag_colour.rgb, fog_rgb, fog_fac);\n"
       "}\n"
