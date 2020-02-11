@@ -82,7 +82,8 @@ void chunk_free( chunk_t* chunk );
 
 bool chunk_write_heightmap( const char* filename, const chunk_t* chunk );
 
-chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk );
+// as chunk_gen_vertex_data but for just 1 vertical level in the chunk. y range params can default to: 0, CHUNK_Y for an entire chunk
+chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk, int from_y_inclusive, int to_y_exclusive );
 
 void chunk_free_vertex_data( chunk_vertex_data_t* chunk_vertex_data );
 

@@ -96,7 +96,7 @@ int main() {
       int idx     = cz * _chunks_w + cx;
       chunks[idx] = chunk_generate( dshm.filtered_heightmap, dshm.w, dshm.h, cx * CHUNK_X, cz * CHUNK_Z );
       {
-        chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunks[idx] );
+        chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunks[idx], 0, CHUNK_Y );
         chunk_meshes[idx]               = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
           vertex_data.n_vpalidx_comps, vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.texcoords_ptr, vertex_data.n_vt_comps,
           vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
@@ -311,7 +311,7 @@ int main() {
         }
         if ( changed ) {
           // TODO(Anton) reuse a scratch buffer to avoid mallocs
-          chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunks[picked_chunk_id] );
+          chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunks[picked_chunk_id], 0, CHUNK_Y ); // TODO(Anton) also only load the changed slices
           // TODO(Anton) and reuse the previous VBOs
           delete_mesh( &chunk_meshes[picked_chunk_id] );
           chunk_meshes[picked_chunk_id] = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,

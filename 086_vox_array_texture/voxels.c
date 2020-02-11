@@ -326,7 +326,10 @@ static void _memcpy_face_normals( const chunk_t* chunk, int x, int y, int z, int
   for ( int v = 0; v < VOXEL_FACE_VERTS; v++ ) { memcpy( &dest[curr_float + v * VOXEL_VN_COMPS], buff, sizeof( float ) * VOXEL_VN_COMPS ); }
 }
 
-chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk ) {
+chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk, int from_y_inclusive, int to_y_exclusive ) {
+	assert( chunk );
+	assert( from_y_inclusive >= 0 && to_y_exclusive <= CHUNK_Y );
+
   chunk_vertex_data_t data = ( chunk_vertex_data_t ){
     .n_vp_comps = VOXEL_VP_COMPS, .n_vt_comps = VOXEL_VT_COMPS, .n_vpicking_comps = VOXEL_VPICKING_COMPS, .n_vn_comps = VOXEL_VN_COMPS, .n_vpalidx_comps = VOXEL_VPALIDX_COMPS
   };
@@ -351,7 +354,7 @@ chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk ) {
   uint32_t total_vn_floats  = 0;
   uint32_t total_palindices = 0;
 
-  for ( int y = 0; y < CHUNK_Y; y++ ) {
+  for ( int y = from_y_inclusive; y < to_y_exclusive; y++ ) {
     for ( int z = 0; z < CHUNK_Z; z++ ) {
       for ( int x = 0; x < CHUNK_X; x++ ) {
         block_type_t our_block_type = 0;
