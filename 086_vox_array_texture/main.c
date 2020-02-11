@@ -106,6 +106,8 @@ int main() {
     }
   }
 
+  dsquare_heightmap_free( &dshm );
+
   texture_t text_texture;
   {
     int w, h;
@@ -442,7 +444,7 @@ int main() {
     swap_buffer();
   }
 
-  for ( int i = 0; i < 4; i++ ) {
+  for ( int i = 0; i < CHUNKS_N; i++ ) {
     chunk_free( &chunks[i] );
     delete_mesh( &chunk_meshes[i] );
   }

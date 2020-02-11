@@ -166,7 +166,7 @@ chunk_t chunk_generate( const uint8_t* heightmap, int hm_w, int hm_h, int x_offs
       int xx         = x_offset + x;
       int zz         = z_offset + z;
       int idx        = hm_w * zz + xx; // uses offsets and width/height of map
-      uint8_t height = CLAMP( heightmap[idx] + 16, 1, CHUNK_Y );
+      uint8_t height = CLAMP( heightmap[idx] + 16, 1, CHUNK_Y - 1 ); // -1 because chunk_y is 256 which would wrap around to 0 in a uint8
 
       set_block_type_in_chunk( &chunk, x, height, z, BLOCK_TYPE_GRASS );
       set_block_type_in_chunk( &chunk, x, height - 1, z, BLOCK_TYPE_DIRT );
@@ -341,8 +341,6 @@ chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk ) {
   assert( data.palette_indices_ptr );
   data.picking_ptr = malloc( data.vpicking_buffer_sz );
   assert( data.picking_ptr );
-  data.texcoords_ptr = malloc( data.vt_buffer_sz );
-  assert( data.texcoords_ptr );
   data.texcoords_ptr = malloc( data.vt_buffer_sz );
   assert( data.texcoords_ptr );
   data.normals_ptr = malloc( data.vn_buffer_sz );
