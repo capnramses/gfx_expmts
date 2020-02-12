@@ -32,25 +32,25 @@ static void _median_filter( uint8_t* output, const uint8_t* input, int dims ) {
   const int win_dims = 3;
   int edgex          = ( win_dims / 2 ); // rounded down
   int edgey          = ( win_dims / 2 ); // rounded down
-  
-  
-  printf("edge %i %i\n", edgex, dims);
-  
-  for ( int y = edgey; y < dims - edgey; y++ ) {
-    for ( int x = edgex; x < dims - edgex; x++ ) {
-      
+
+  // NOTE(Anton) other mediam filters start at (edge_x, edge_y) and go to (dims - edge_x, dims - edge_y).
+  // This ignores the border of pixels around the edge of the image. Therefore I go from (0,0) to (dims,dims),
+  // but clamp the result into the dims range for the whole image.
+  for ( int y = 0; y < dims; y++ ) {
+    for ( int x = 0; x < dims; x++ ) {
       int i = 0;
       for ( int fy = 0; fy < win_dims; fy++ ) {
         for ( int fx = 0; fx < win_dims; fx++ ) {
           int ix        = x + fx - edgex;
           int iy        = y + fy - edgey;
+          ix            = CLAMP( ix, 0, dims );
+          iy            = CLAMP( iy, 0, dims );
           int input_idx = iy * dims + ix;
           window[i]     = input[input_idx];
           i++;
         }
       }
       qsort( window, 9, sizeof( int ), _comp );
-      //for ( int j = 0; j < 9; j++ ) { printf( "window %i)%i\n", j, window[j] ); }
       int output_idx     = y * dims + x;
       output[output_idx] = window[9 / 2];
     }
