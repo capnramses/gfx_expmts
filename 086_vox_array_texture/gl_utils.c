@@ -18,7 +18,7 @@ static mesh_t _ss_quad_mesh;
 
 static void _init_ss_quad() {
   float ss_quad_pos[] = { -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0 };
-  _ss_quad_mesh       = create_mesh_from_mem( ss_quad_pos, 2, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 4 );
+  _ss_quad_mesh       = create_mesh_from_mem( ss_quad_pos, 2, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 4 );
 }
 
 static bool _recompile_shader_with_check( GLuint shader, const char* src_str ) {
@@ -203,8 +203,6 @@ bool start_gl( const char* window_title ) {
   glFrontFace( GL_CCW );
   glEnable( GL_CULL_FACE );
   // glEnable( GL_CLIP_DISTANCE0 ); // clip plane A
-  glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-  glDisable( GL_BLEND );
 
   glfwSwapInterval( 1 );
 
@@ -219,11 +217,17 @@ void stop_gl() {
 void enable_depth_testing() { glEnable( GL_DEPTH_TEST ); }
 
 void disable_depth_testing() { glDisable( GL_DEPTH_TEST ); }
+void enable_alpha_testing() {
+  glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+  glEnable( GL_BLEND );
+}
+void disable_alpha_testing() { glDisable( GL_BLEND ); }
 
 const char* gfx_renderer_str( void ) { return (const char*)glGetString( GL_RENDERER ); }
 
 mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, const uint32_t* pal_idx_buffer, int n_pal_idx_comps, const float* picking_buffer,
-  int n_picking_comps, const float* texcoords_buffer, int n_texcoord_comps, const float* normals_buffer, int n_normal_comps, int n_vertices ) {
+  int n_picking_comps, const float* texcoords_buffer, int n_texcoord_comps, const float* normals_buffer, int n_normal_comps, const float* vcolours_buffer,
+  int n_vcolour_comps, int n_vertices ) {
   assert( points_buffer && n_points_comps > 0 && n_vertices > 0 );
 
   GLuint vertex_array_gl;
@@ -270,14 +274,14 @@ mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, con
     glVertexAttribPointer( SHADER_BINDING_VN, n_normal_comps, GL_FLOAT, GL_FALSE, 0, NULL );
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
   }
-  /*if ( vcolours_buffer && n_vcolour_comps > 0 ) {
+  if ( vcolours_buffer && n_vcolour_comps > 0 ) {
     glGenBuffers( 1, &vcolours_buffer_gl );
     glBindBuffer( GL_ARRAY_BUFFER, vcolours_buffer_gl );
     glBufferData( GL_ARRAY_BUFFER, sizeof( float ) * n_vcolour_comps * n_vertices, vcolours_buffer, GL_STATIC_DRAW );
     glEnableVertexAttribArray( SHADER_BINDING_VC );
     glVertexAttribPointer( SHADER_BINDING_VC, n_vcolour_comps, GL_FLOAT, GL_FALSE, 0, NULL );
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
-  }*/
+  }
   glBindVertexArray( 0 );
 
   mesh_t mesh = ( mesh_t ){ .vao = vertex_array_gl,

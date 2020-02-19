@@ -42,9 +42,17 @@ int main() {
   if ( !start_gl( "Voxedit by Anton Gerdelan" ) ) { return 1; }
   init_input();
 
-	// TODO(Anton) work in progress. position in world (get xyz of selected voxel?) and rotate to the face 
-  float box_pos[] = { 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0 };
-  mesh_t box_mesh = create_mesh_from_mem( box_pos, 3, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 6 );
+  // TODO(Anton) work in progress. position in world (get xyz of selected voxel?) and rotate to the face. slightly offset in y
+  float box_pos[] = {
+    1.0, -1.01, -1.0,  //
+    1.0, -1.01, 1.0,   //
+    -1.0, -1.01, 1.0,  //
+    -1.0, -1.01, 1.0,  //
+    -1.0, -1.01, -1.0, //
+    1.0, -1.01, -1.0   //
+  };                   //
+  float box_col[] = { 0.25, 0.25, 1, 0.25, 0.25, 1, 0.25, 0.25, 1, 0.25, 0.25, 1, 0.25, 0.25, 1, 0.25, 0.25, 1 };
+  mesh_t box_mesh = create_mesh_from_mem( box_pos, 3, NULL, 0, NULL, 0, NULL, 0, NULL, 0, box_col, 3, 6 );
 
   texture_t array_texture = ( texture_t ){ .handle_gl = 0, .w = 16, .h = 16, .n_channels = 3, .srgb = false, .is_depth = false, .is_array = true };
 
@@ -103,7 +111,7 @@ int main() {
         chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunks[idx], 0, CHUNK_Y );
         chunk_meshes[idx]               = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
           vertex_data.n_vpalidx_comps, vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.texcoords_ptr, vertex_data.n_vt_comps,
-          vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
+          vertex_data.normals_ptr, vertex_data.n_vn_comps, NULL, 0, vertex_data.n_vertices );
         chunk_free_vertex_data( &vertex_data );
       }
       chunks_M[idx] = translate_mat4( ( vec3 ){ .x = cx * CHUNK_X * voxel_scale, .z = cz * CHUNK_Z * voxel_scale } );
@@ -320,7 +328,7 @@ int main() {
           delete_mesh( &chunk_meshes[picked_chunk_id] );
           chunk_meshes[picked_chunk_id] = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
             vertex_data.n_vpalidx_comps, vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.texcoords_ptr, vertex_data.n_vt_comps,
-            vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
+            vertex_data.normals_ptr, vertex_data.n_vn_comps, NULL, 0, vertex_data.n_vertices );
           chunk_free_vertex_data( &vertex_data );
         }
       }
@@ -373,6 +381,7 @@ int main() {
         turn_cam_right( &cam, elapsed_s );
       }
       recalc_cam_V( &cam );
+      printf( "cam_pos:%f,%f,%f\n", cam.pos.x, cam.pos.y, cam.pos.z );
     }
 
     clear_colour_and_depth_buffers( 0.5, 0.5, 0.9, 1.0 );
@@ -382,6 +391,42 @@ int main() {
     for ( int i = 0; i < CHUNKS_N; i++ ) {
       draw_mesh( voxel_shader, cam.P, cam.V, chunks_M[i], chunk_meshes[i].vao, chunk_meshes[i].n_vertices, &array_texture, 1 );
     }
+
+    // draw box for selection
+    if ( picked ) {
+      mat4 R = identity_mat4();
+      printf( "case %i\n", picked_face );
+      switch ( picked_face ) {
+      case 0: R = mult_mat4_mat4( rot_y_deg_mat4( 90.0f ), rot_x_deg_mat4( 90.0f ) ); break;  // rgt
+      case 1: R = mult_mat4_mat4( rot_y_deg_mat4( 270.0f ), rot_x_deg_mat4( 90.0f ) ); break; // lft
+      case 2: break;                                                                          // from below
+      case 3: R = rot_x_deg_mat4( 180.0f ); break;                                            // from above
+      case 4: R = rot_x_deg_mat4( 90.0f ); break;                                             // behind
+      case 5: R = rot_x_deg_mat4( 270.0f ); break;                                            // ahead
+      default: assert( false ); break;
+      }
+
+      const int chunk_x       = picked_chunk_id % _chunks_w;
+      const int chunk_z       = picked_chunk_id / _chunks_w;
+      const float voxel_scale = 0.2f;
+      const float x_wor       = ( chunk_x * _chunks_w + picked_x ) * voxel_scale;
+      const float y_wor       = picked_y * voxel_scale;
+      const float z_wor       = ( chunk_z * _chunks_w + picked_z ) * voxel_scale;
+      printf( "x/y/z= %f,%f,%f\n", x_wor, y_wor, z_wor );
+      mat4 T = translate_mat4( ( vec3 ){ x_wor, y_wor, z_wor } );
+      mat4 M = mult_mat4_mat4( T, R );
+
+      // disable_depth_testing();
+
+      enable_alpha_testing();
+      float pulse = sinf( 5.0f * get_time_s() ) * 0.5f + 0.5f;
+      uniform1f( g_default_shader, g_default_shader.u_alpha, 0.25f + pulse * 0.25f );
+      draw_mesh( g_default_shader, cam.P, cam.V, M, box_mesh.vao, box_mesh.n_vertices, NULL, 0 );
+      uniform1f( g_default_shader, g_default_shader.u_alpha, 1.0f );
+      disable_alpha_testing();
+      //  enable_depth_testing();
+    }
+
     // update FPS image every so often
     if ( text_timer > 0.1 ) {
       int w = 0, h = 0; // actual image writing area can be smaller than img dims
@@ -445,28 +490,6 @@ int main() {
       }
 
       bind_framebuffer( NULL );
-    }
-
-    // draw box for selection
-    if ( picked ) {
-      mat4 R = identity_mat4();
-      switch ( picked_face ) {
-      case 0: R = rot_y_deg_mat4( 270.0f ); break;
-      case 1: R = rot_y_deg_mat4( 90.0f ); break;
-      case 2: R = rot_x_deg_mat4( 90.0f ); break;
-      case 3: R = rot_x_deg_mat4( 270.0f ); break;
-      case 4: R = rot_y_deg_mat4( 180.0f ); break;
-      case 5: break;
-      default: assert( false ); break;
-      }
-			int x_mult = picked_chunk_id % CHUNK_X;
-			int z_mult = picked_chunk_id / CHUNK_Z;
-      mat4 T = translate_mat4( ( vec3 ){ x_mult * picked_x * 0.1f, picked_y * 0.1f, z_mult * picked_z * 0.1f } );
-			mat4 M = mult_mat4_mat4( T, R );
-
-      disable_depth_testing();
-      draw_mesh( g_default_shader, cam.P, cam.V, M, box_mesh.vao, box_mesh.n_vertices, NULL, 0 );
-      enable_depth_testing();
     }
 
     swap_buffer();
