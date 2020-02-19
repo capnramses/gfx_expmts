@@ -7,7 +7,7 @@
 
 typedef struct mesh_t {
   uint32_t vao;
-  uint32_t points_vbo, colours_vbo, picking_vbo, texcoords_vbo, normals_vbo;
+  uint32_t points_vbo, palidx_vbo, picking_vbo, texcoords_vbo, normals_vbo, vcolours_vbo;
   size_t n_vertices;
 } mesh_t;
 
@@ -78,6 +78,8 @@ void viewport( int x, int y, int w, int h );
 void clear_colour_and_depth_buffers( float r, float g, float b, float a );
 void clear_colour_buffer();
 void clear_depth_buffer();
+void enable_depth_testing();
+void disable_depth_testing();
 void swap_buffer();
 void poll_events();
 double get_time_s();

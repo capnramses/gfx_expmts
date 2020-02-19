@@ -216,6 +216,10 @@ void stop_gl() {
   glfwTerminate();
 }
 
+void enable_depth_testing() { glEnable( GL_DEPTH_TEST ); }
+
+void disable_depth_testing() { glDisable( GL_DEPTH_TEST ); }
+
 const char* gfx_renderer_str( void ) { return (const char*)glGetString( GL_RENDERER ); }
 
 mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, const uint32_t* pal_idx_buffer, int n_pal_idx_comps, const float* picking_buffer,
@@ -223,7 +227,7 @@ mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, con
   assert( points_buffer && n_points_comps > 0 && n_vertices > 0 );
 
   GLuint vertex_array_gl;
-  GLuint points_buffer_gl = 0, colour_buffer_gl = 0, picking_buffer_gl = 0, texcoords_buffer_gl = 0, normals_buffer_gl = 0;
+  GLuint points_buffer_gl = 0, palidx_buffer_gl = 0, picking_buffer_gl = 0, texcoords_buffer_gl = 0, normals_buffer_gl = 0, vcolours_buffer_gl = 0;
   glGenVertexArrays( 1, &vertex_array_gl );
   glBindVertexArray( vertex_array_gl );
   {
@@ -235,8 +239,8 @@ mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, con
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
   }
   if ( pal_idx_buffer && n_pal_idx_comps > 0 ) {
-    glGenBuffers( 1, &colour_buffer_gl );
-    glBindBuffer( GL_ARRAY_BUFFER, colour_buffer_gl );
+    glGenBuffers( 1, &palidx_buffer_gl );
+    glBindBuffer( GL_ARRAY_BUFFER, palidx_buffer_gl );
     glBufferData( GL_ARRAY_BUFFER, sizeof( uint32_t ) * n_pal_idx_comps * n_vertices, pal_idx_buffer, GL_STATIC_DRAW );
     glEnableVertexAttribArray( SHADER_BINDING_VPAL_IDX );
     glVertexAttribIPointer( SHADER_BINDING_VPAL_IDX, 1, GL_UNSIGNED_INT, 0, NULL ); // NOTE(Anton) ...IPointer... variant
@@ -266,14 +270,23 @@ mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, con
     glVertexAttribPointer( SHADER_BINDING_VN, n_normal_comps, GL_FLOAT, GL_FALSE, 0, NULL );
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
   }
+  /*if ( vcolours_buffer && n_vcolour_comps > 0 ) {
+    glGenBuffers( 1, &vcolours_buffer_gl );
+    glBindBuffer( GL_ARRAY_BUFFER, vcolours_buffer_gl );
+    glBufferData( GL_ARRAY_BUFFER, sizeof( float ) * n_vcolour_comps * n_vertices, vcolours_buffer, GL_STATIC_DRAW );
+    glEnableVertexAttribArray( SHADER_BINDING_VC );
+    glVertexAttribPointer( SHADER_BINDING_VC, n_vcolour_comps, GL_FLOAT, GL_FALSE, 0, NULL );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+  }*/
   glBindVertexArray( 0 );
 
   mesh_t mesh = ( mesh_t ){ .vao = vertex_array_gl,
     .points_vbo                  = points_buffer_gl,
-    .colours_vbo                 = colour_buffer_gl,
+    .palidx_vbo                  = palidx_buffer_gl,
     .picking_vbo                 = picking_buffer_gl,
     .texcoords_vbo               = texcoords_buffer_gl,
     .normals_vbo                 = normals_buffer_gl,
+    .vcolours_vbo                = vcolours_buffer_gl,
     .n_vertices                  = n_vertices };
   return mesh;
 }
@@ -281,7 +294,11 @@ mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, con
 void delete_mesh( mesh_t* mesh ) {
   assert( mesh && mesh->vao > 0 && mesh->points_vbo > 0 );
 
-  if ( mesh->colours_vbo ) { glDeleteBuffers( 1, &mesh->colours_vbo ); }
+  if ( mesh->vcolours_vbo ) { glDeleteBuffers( 1, &mesh->vcolours_vbo ); }
+  if ( mesh->normals_vbo ) { glDeleteBuffers( 1, &mesh->normals_vbo ); }
+  if ( mesh->texcoords_vbo ) { glDeleteBuffers( 1, &mesh->texcoords_vbo ); }
+  if ( mesh->picking_vbo ) { glDeleteBuffers( 1, &mesh->picking_vbo ); }
+  if ( mesh->palidx_vbo ) { glDeleteBuffers( 1, &mesh->palidx_vbo ); }
   glDeleteBuffers( 1, &mesh->points_vbo );
   glDeleteVertexArrays( 1, &mesh->vao );
   memset( mesh, 0, sizeof( mesh_t ) );
@@ -376,11 +393,11 @@ void draw_textured_quad( texture_t texture, vec2 scale, vec2 pos ) {
   glUseProgram( g_text_shader.program_gl );
   glProgramUniform2f( g_text_shader.program_gl, g_text_shader.u_scale, scale.x, scale.y );
   glProgramUniform2f( g_text_shader.program_gl, g_text_shader.u_pos, pos.x, pos.y );
-  glBindVertexArray( _ss_quad_mesh.vao );
+  glBindVertexArray( g_ss_quad_mesh.vao );
   glActiveTexture( GL_TEXTURE0 );
   glBindTexture( tex_type, texture.handle_gl );
 
-  glDrawArrays( GL_TRIANGLE_STRIP, 0, _ss_quad_mesh.n_vertices );
+  glDrawArrays( GL_TRIANGLE_STRIP, 0, g_ss_quad_mesh.n_vertices );
 
   glBindTexture( tex_type, 0 );
   glBindVertexArray( 0 );
