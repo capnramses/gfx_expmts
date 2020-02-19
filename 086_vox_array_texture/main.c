@@ -42,7 +42,7 @@ int main() {
   if ( !start_gl( "Voxedit by Anton Gerdelan" ) ) { return 1; }
   init_input();
 
-  // TODO(Anton) work in progress. position in world (get xyz of selected voxel?) and rotate to the face. slightly offset in y
+  // face highlight box thing. slightly offset in y
   float box_pos[] = {
     1.0, -1.05, -1.0,  //
     1.0, -1.05, 1.0,   //
