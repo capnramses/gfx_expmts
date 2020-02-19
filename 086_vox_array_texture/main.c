@@ -44,14 +44,14 @@ int main() {
 
   // TODO(Anton) work in progress. position in world (get xyz of selected voxel?) and rotate to the face. slightly offset in y
   float box_pos[] = {
-    1.0, -1.01, -1.0,  //
-    1.0, -1.01, 1.0,   //
-    -1.0, -1.01, 1.0,  //
-    -1.0, -1.01, 1.0,  //
-    -1.0, -1.01, -1.0, //
-    1.0, -1.01, -1.0   //
+    1.0, -1.05, -1.0,  //
+    1.0, -1.05, 1.0,   //
+    -1.0, -1.05, 1.0,  //
+    -1.0, -1.05, 1.0,  //
+    -1.0, -1.05, -1.0, //
+    1.0, -1.05, -1.0   //
   };                   //
-  float box_col[] = { 0.25, 0.25, 1, 0.25, 0.25, 1, 0.25, 0.25, 1, 0.25, 0.25, 1, 0.25, 0.25, 1, 0.25, 0.25, 1 };
+  float box_col[] = { 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1 };
   mesh_t box_mesh = create_mesh_from_mem( box_pos, 3, NULL, 0, NULL, 0, NULL, 0, NULL, 0, box_col, 3, 6 );
 
   texture_t array_texture = ( texture_t ){ .handle_gl = 0, .w = 16, .h = 16, .n_channels = 3, .srgb = false, .is_depth = false, .is_array = true };
@@ -381,7 +381,6 @@ int main() {
         turn_cam_right( &cam, elapsed_s );
       }
       recalc_cam_V( &cam );
-      printf( "cam_pos:%f,%f,%f\n", cam.pos.x, cam.pos.y, cam.pos.z );
     }
 
     clear_colour_and_depth_buffers( 0.5, 0.5, 0.9, 1.0 );
@@ -395,7 +394,6 @@ int main() {
     // draw box for selection
     if ( picked ) {
       mat4 R = identity_mat4();
-      printf( "case %i\n", picked_face );
       switch ( picked_face ) {
       case 0: R = mult_mat4_mat4( rot_y_deg_mat4( 90.0f ), rot_x_deg_mat4( 90.0f ) ); break;  // rgt
       case 1: R = mult_mat4_mat4( rot_y_deg_mat4( 270.0f ), rot_x_deg_mat4( 90.0f ) ); break; // lft
@@ -412,15 +410,14 @@ int main() {
       const float x_wor       = ( chunk_x * _chunks_w + picked_x ) * voxel_scale;
       const float y_wor       = picked_y * voxel_scale;
       const float z_wor       = ( chunk_z * _chunks_w + picked_z ) * voxel_scale;
-      printf( "x/y/z= %f,%f,%f\n", x_wor, y_wor, z_wor );
-      mat4 T = translate_mat4( ( vec3 ){ x_wor, y_wor, z_wor } );
-      mat4 M = mult_mat4_mat4( T, R );
+      mat4 T                  = translate_mat4( ( vec3 ){ x_wor, y_wor, z_wor } );
+      mat4 M                  = mult_mat4_mat4( T, R );
 
       // disable_depth_testing();
 
       enable_alpha_testing();
       float pulse = sinf( 5.0f * get_time_s() ) * 0.5f + 0.5f;
-      uniform1f( g_default_shader, g_default_shader.u_alpha, 0.25f + pulse * 0.25f );
+      uniform1f( g_default_shader, g_default_shader.u_alpha, 0.5f + pulse * 0.25f );
       draw_mesh( g_default_shader, cam.P, cam.V, M, box_mesh.vao, box_mesh.n_vertices, NULL, 0 );
       uniform1f( g_default_shader, g_default_shader.u_alpha, 1.0f );
       disable_alpha_testing();
@@ -441,8 +438,9 @@ int main() {
       memset( fps_img_mem, 0x00, fps_img_w * fps_img_h * fps_n_channels );
 
       sprintf( string,
-        "FPS %.2f\n%s\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\nhovered voxel: %s\n\nLMB,RMB   edit voxels\n1,2,3...     block type\n", fps,
-        gfx_renderer_str(), win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, hovered_voxel_str );
+        "FPS %.2f\n%s\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\ncam pos (%.2f,%.2f,%.2f)\nhovered voxel: %s\n\nLMB,RMB   edit voxels\n1,2,3... "
+        "    block type\n",
+        fps, gfx_renderer_str(), win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, cam.pos.x, cam.pos.y, cam.pos.z, hovered_voxel_str );
 
       if ( APG_PIXFONT_FAILURE == apg_pixfont_image_size_for_str( string, &w, &h, thickness, outlines ) ) {
         fprintf( stderr, "ERROR apg_pixfont_image_size_for_str\n" );
