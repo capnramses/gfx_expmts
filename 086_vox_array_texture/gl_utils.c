@@ -393,11 +393,11 @@ void draw_textured_quad( texture_t texture, vec2 scale, vec2 pos ) {
   glUseProgram( g_text_shader.program_gl );
   glProgramUniform2f( g_text_shader.program_gl, g_text_shader.u_scale, scale.x, scale.y );
   glProgramUniform2f( g_text_shader.program_gl, g_text_shader.u_pos, pos.x, pos.y );
-  glBindVertexArray( g_ss_quad_mesh.vao );
+  glBindVertexArray( _ss_quad_mesh.vao );
   glActiveTexture( GL_TEXTURE0 );
   glBindTexture( tex_type, texture.handle_gl );
 
-  glDrawArrays( GL_TRIANGLE_STRIP, 0, g_ss_quad_mesh.n_vertices );
+  glDrawArrays( GL_TRIANGLE_STRIP, 0, _ss_quad_mesh.n_vertices );
 
   glBindTexture( tex_type, 0 );
   glBindVertexArray( 0 );

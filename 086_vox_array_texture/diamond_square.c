@@ -43,8 +43,8 @@ static void _median_filter( uint8_t* output, const uint8_t* input, int dims ) {
         for ( int fx = 0; fx < win_dims; fx++ ) {
           int ix        = x + fx - edgex;
           int iy        = y + fy - edgey;
-          ix            = CLAMP( ix, 0, dims );
-          iy            = CLAMP( iy, 0, dims );
+          ix            = CLAMP( ix, 0, dims - 1 );
+          iy            = CLAMP( iy, 0, dims - 1 );
           int input_idx = iy * dims + ix;
           window[i]     = input[input_idx];
           i++;

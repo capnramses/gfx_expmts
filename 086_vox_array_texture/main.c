@@ -42,6 +42,10 @@ int main() {
   if ( !start_gl( "Voxedit by Anton Gerdelan" ) ) { return 1; }
   init_input();
 
+	// TODO(Anton) work in progress. position in world (get xyz of selected voxel?) and rotate to the face 
+  float box_pos[] = { 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0 };
+  mesh_t box_mesh = create_mesh_from_mem( box_pos, 3, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 6 );
+
   texture_t array_texture = ( texture_t ){ .handle_gl = 0, .w = 16, .h = 16, .n_channels = 3, .srgb = false, .is_depth = false, .is_array = true };
 
   {
@@ -429,6 +433,7 @@ int main() {
         uniform1f( colour_picking_shader, colour_picking_shader.u_chunk_id, (float)i / 255.0f );
         draw_mesh( colour_picking_shader, offcentre_P, cam.V, chunks_M[i], chunk_meshes[i].vao, chunk_meshes[i].n_vertices, NULL, 0 );
       }
+
       uint8_t data[4] = { 0, 0, 0, 0 };
       // TODO(Anton) this is blocking cpu/gpu sync and can stall. to speed up use the 2-PBO method perhaps.
       read_pixels( x + w / 2, y + h / 2, 1, 1, 4, data );
@@ -441,6 +446,29 @@ int main() {
 
       bind_framebuffer( NULL );
     }
+
+    // draw box for selection
+    if ( picked ) {
+      mat4 R = identity_mat4();
+      switch ( picked_face ) {
+      case 0: R = rot_y_deg_mat4( 270.0f ); break;
+      case 1: R = rot_y_deg_mat4( 90.0f ); break;
+      case 2: R = rot_x_deg_mat4( 90.0f ); break;
+      case 3: R = rot_x_deg_mat4( 270.0f ); break;
+      case 4: R = rot_y_deg_mat4( 180.0f ); break;
+      case 5: break;
+      default: assert( false ); break;
+      }
+			int x_mult = picked_chunk_id % CHUNK_X;
+			int z_mult = picked_chunk_id / CHUNK_Z;
+      mat4 T = translate_mat4( ( vec3 ){ x_mult * picked_x * 0.1f, picked_y * 0.1f, z_mult * picked_z * 0.1f } );
+			mat4 M = mult_mat4_mat4( T, R );
+
+      disable_depth_testing();
+      draw_mesh( g_default_shader, cam.P, cam.V, M, box_mesh.vao, box_mesh.n_vertices, NULL, 0 );
+      enable_depth_testing();
+    }
+
     swap_buffer();
   }
 
