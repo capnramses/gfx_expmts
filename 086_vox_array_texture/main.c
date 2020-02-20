@@ -450,6 +450,8 @@ int main() {
         fprintf( stderr, "ERROR apg_pixfont_image_size_for_str\n" );
         return 1;
       }
+      // TODO(Anton) just update the existing texture
+      delete_texture( &text_texture );
       text_texture = create_texture_from_mem( fps_img_mem, w, h, fps_n_channels, false, false, false );
       text_scale.x = (float)w / fb_width * 2.0f;
       text_scale.y = (float)h / fb_height * 2.0f;
@@ -497,7 +499,11 @@ int main() {
     chunk_free( &chunks[i] );
     delete_mesh( &chunk_meshes[i] );
   }
+  delete_mesh( &box_mesh );
+  delete_texture( &text_texture );
   free( fps_img_mem );
+  delete_shader_program( &voxel_shader );
+  delete_shader_program( &colour_picking_shader );
   stop_gl();
   printf( "HALT\n" );
   return 0;
