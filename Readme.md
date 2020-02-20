@@ -99,7 +99,7 @@ projects, and volatile software. Mostly OpenGL but some other graphics-related s
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed           |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed           |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                            | proposed           |
-| xxx     | `geo_mipmap   `             | heightmap terrain sampled in vertex shader, scrolling camera mesh          | proposed           |
+| xxx     | `geo_mipmap`                | heightmap terrain sampled in vertex shader, scrolling camera mesh          | proposed           |
 | xxx     | `fresnel_prism`             | refraction/reflection colour split as in nvidia cg_tutorial_chapter07      | proposed           |
 | xxx     | `wu_line`                   | wu's line drawing algorithm (pseudo on wiki)                               | proposed           |
 | xxx     | `3ds parse`                 | a 3ds binary format loader                                                 | proposed           |
