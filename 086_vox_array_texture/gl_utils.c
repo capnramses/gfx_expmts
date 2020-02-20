@@ -202,7 +202,8 @@ bool start_gl( const char* window_title ) {
   glCullFace( GL_BACK );
   glFrontFace( GL_CCW );
   glEnable( GL_CULL_FACE );
-  // glEnable( GL_CLIP_DISTANCE0 ); // clip plane A
+  glEnable( GL_CLIP_DISTANCE0 ); // clip plane A
+  glEnable( GL_CLIP_DISTANCE1 ); // clip plane B
 
   glfwSwapInterval( 1 );
 

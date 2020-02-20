@@ -158,8 +158,11 @@ int main() {
       "  v_st = a_vt;\n"
       "  v_n.xyz = (u_M * vec4( a_vn.xyz, 0.0 )).xyz;\n"
       "  v_n.w = a_vn.w;\n"
-      "  v_p_eye =  (u_V * u_M * vec4( a_vp * 0.1, 1.0 )).xyz;\n"
+      "  vec4 p_wor = u_M * vec4( a_vp * 0.1, 1.0 );\n"
+      "  v_p_eye =  ( u_V * p_wor ).xyz;\n"
       "  gl_Position = u_P * vec4( v_p_eye, 1.0 );\n"
+	   // "  gl_ClipDistance[0] = dot( p_wor, vec4( 0.0, -1.0, 0.0, 5.0 ) );\n" // okay if below 10
+	   // "  gl_ClipDistance[1] = dot( p_wor, vec4( 0.0, 1.0, 0.0, -2.0 ) );\n" // okay if above 2
       "}\n"
     };
     // heightmap 0 or 1 factor is stored in normal's w channel. used to disable sunlight for rooms/caves/overhangs (assumes sun is always _directly_ overhead,
