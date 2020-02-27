@@ -10,6 +10,8 @@ bool chunks_create( uint32_t seed );
 
 bool chunks_free();
 
+void chunks_sort_draw_queue( vec3 cam_pos );
+
 void chunks_draw( vec3 cam_fwd, mat4 P, mat4 V );
 
 void chunks_draw_colour_picking( mat4 offcentre_P, mat4 V );

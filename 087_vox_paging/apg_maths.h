@@ -94,9 +94,16 @@ static inline vec3 sub_vec3_f( vec3 a, float b ) { return ( vec3 ){ .x = a.x - b
 static inline vec3 mult_vec3_f( vec3 a, float b ) { return ( vec3 ){ .x = a.x * b, .y = a.y * b, .z = a.z * b }; }
 static inline vec3 div_vec3_f( vec3 a, float b ) { return ( vec3 ){ .x = a.x / b, .y = a.y / b, .z = a.z / b }; }
 static inline vec3 add_vec3_vec3( vec3 a, vec3 b ) { return ( vec3 ){ .x = a.x + b.x, .y = a.y + b.y, .z = a.z + b.z }; }
+static inline vec2 sub_vec2_vec2( vec2 a, vec2 b ) { return ( vec2 ){ .x = a.x - b.x, .y = a.y - b.y }; }
 static inline vec3 sub_vec3_vec3( vec3 a, vec3 b ) { return ( vec3 ){ .x = a.x - b.x, .y = a.y - b.y, .z = a.z - b.z }; }
 static inline vec3 mult_vec3_vec3( vec3 a, vec3 b ) { return ( vec3 ){ .x = a.x * b.x, .y = a.y * b.y, .z = a.z * b.z }; }
 static inline vec3 div_vec3_vec3( vec3 a, vec3 b ) { return ( vec3 ){ .x = a.x / b.x, .y = a.y / b.y, .z = a.z / b.z }; }
+
+// magnitude or length of a vec2
+static inline float length_vec2( vec2 v ) { return sqrt( v.x * v.x + v.y * v.y ); }
+
+// squared length
+static inline float length2_vec2( vec2 v ) { return v.x * v.x + v.y * v.y; }
 
 // magnitude or length of a vec3
 static inline float length_vec3( vec3 v ) { return sqrt( v.x * v.x + v.y * v.y + v.z * v.z ); }

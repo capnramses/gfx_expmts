@@ -36,7 +36,6 @@ chunks binary file:
 ...
 */
 
-
 // dimensions of chunk in voxels
 #define CHUNK_X 16  // 32
 #define CHUNK_Y 256 // 256
@@ -83,7 +82,7 @@ typedef struct chunk_t {
 
 typedef struct chunk_vertex_data_t {
   float* positions_ptr;
-	float* texcoords_ptr;
+  float* texcoords_ptr;
   float* picking_ptr; // only needs 3 bytes
   float* normals_ptr;
   uint32_t* palette_indices_ptr;
@@ -124,8 +123,6 @@ bool get_block_type_in_chunk( const chunk_t* chunk, int x, int y, int z, block_t
 bool is_voxel_above_surface( const chunk_t* chunk, int x, int y, int z );
 
 bool is_voxel_face_exposed_to_sun( const chunk_t* chunk, int x, int y, int z, int face_idx );
-
-
 
 /* creates vertex data for a cube made from 6 individual faces */
 chunk_vertex_data_t _test_cube_from_faces();
@@ -175,7 +172,7 @@ chunk_vertex_data_t _test_cube_from_faces() {
   return cube;
 }
 
-bool _set_block_type_in_chunk( chunk_t *chunk, int x, int y, int z, block_type_t type ) {
+bool _set_block_type_in_chunk( chunk_t* chunk, int x, int y, int z, block_type_t type ) {
   assert( chunk && chunk->voxels );
 
   bool changed = false;
@@ -186,27 +183,27 @@ bool _set_block_type_in_chunk( chunk_t *chunk, int x, int y, int z, block_type_t
 
   block_type_t prev_type = chunk->voxels[idx].type;
   if ( prev_type == type ) { return changed; } // no change!
-  if ( prev_type == BLOCK_TYPE_AIR && type != BLOCK_TYPE_AIR ) {chunk->n_non_air_voxels++; }
+  if ( prev_type == BLOCK_TYPE_AIR && type != BLOCK_TYPE_AIR ) { chunk->n_non_air_voxels++; }
   if ( prev_type != BLOCK_TYPE_AIR && type == BLOCK_TYPE_AIR ) {
-    assert(chunk->n_non_air_voxels > 0 );
-   chunk->n_non_air_voxels--;
+    assert( chunk->n_non_air_voxels > 0 );
+    chunk->n_non_air_voxels--;
   }
- chunk->voxels[idx].type = type;
+  chunk->voxels[idx].type = type;
 
-  int prev_height =chunk->heightmap[CHUNK_X * z + x];
+  int prev_height = chunk->heightmap[CHUNK_X * z + x];
   if ( y > prev_height && type != BLOCK_TYPE_AIR ) { // higher than before
-   chunk->heightmap[CHUNK_X * z + x] = y;
+    chunk->heightmap[CHUNK_X * z + x] = y;
   } else if ( y == prev_height && type == BLOCK_TYPE_AIR ) { // lowering
     for ( int yy = y; yy >= 0; yy-- ) {
       int idx = CHUNK_X * CHUNK_Z * yy + CHUNK_X * z + x;
-      if (chunk->voxels[idx].type != BLOCK_TYPE_AIR ) {
-       chunk->heightmap[CHUNK_X * z + x] = yy;
+      if ( chunk->voxels[idx].type != BLOCK_TYPE_AIR ) {
+        chunk->heightmap[CHUNK_X * z + x] = yy;
         break;
       }
     }
   }
 
-  assert(chunk->n_non_air_voxels <= CHUNK_X * CHUNK_Y * CHUNK_Z );
+  assert( chunk->n_non_air_voxels <= CHUNK_X * CHUNK_Y * CHUNK_Z );
 
   changed = true;
   return changed;
@@ -267,11 +264,11 @@ chunk_t chunk_generate( const uint8_t* heightmap, int hm_w, int hm_h, int x_offs
     for ( int x = 0; x < CHUNK_X; x++ ) {
       // uint8_t height = noisei( x, z, CHUNK_Y - 1 ); // TODO add position of chunk to x and y for continuous/infinite map
 
-      int xx         = x_offset + x;
-      int zz         = z_offset + z;
-      int idx        = hm_w * zz + xx; // uses offsets and width/height of map
+      int xx                       = x_offset + x;
+      int zz                       = z_offset + z;
+      int idx                      = hm_w * zz + xx; // uses offsets and width/height of map
       const int underground_height = 16;
-      const int heightmap_sample = heightmap[idx]; // uint8_t to int to avoid overflow when adding a hm sample of 255 to underground height > 0
+      const int heightmap_sample   = heightmap[idx]; // uint8_t to int to avoid overflow when adding a hm sample of 255 to underground height > 0
 
       uint8_t height = CLAMP( heightmap_sample + underground_height, 1, CHUNK_Y - 1 ); // -1 because chunk_y is 256 which would wrap around to 0 in a uint8
 
@@ -390,7 +387,9 @@ static void _memcpy_face_palidx( block_type_t block_type, uint32_t* dest ) {
   case BLOCK_TYPE_STONE: {
     palidx = palette_stone;
   } break;
-  default: { assert( false ); } break;
+  default: {
+    assert( false );
+  } break;
   }
   // per the 6 vertices in this face
   for ( int v = 0; v < VOXEL_FACE_VERTS; v++ ) { *( dest + v ) = palidx; }
@@ -434,8 +433,8 @@ static void _memcpy_face_normals( const chunk_t* chunk, int x, int y, int z, int
 }
 
 chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk, int from_y_inclusive, int to_y_exclusive ) {
-	assert( chunk );
-	assert( from_y_inclusive >= 0 && to_y_exclusive <= CHUNK_Y );
+  assert( chunk );
+  assert( from_y_inclusive >= 0 && to_y_exclusive <= CHUNK_Y );
 
   chunk_vertex_data_t data = ( chunk_vertex_data_t ){
     .n_vp_comps = VOXEL_VP_COMPS, .n_vt_comps = VOXEL_VT_COMPS, .n_vpicking_comps = VOXEL_VPICKING_COMPS, .n_vn_comps = VOXEL_VN_COMPS, .n_vpalidx_comps = VOXEL_VPALIDX_COMPS
@@ -552,10 +551,10 @@ static shader_t _voxel_shader;
 static shader_t _colour_picking_shader;
 static texture_t _array_texture;
 static int _chunks_w = 16, _chunks_h = 16;
+static float _voxel_scale = 0.2f;
 static bool _chunks_created;
 
 bool chunks_create( uint32_t seed ) {
-
   dsquare_heightmap_t dshm;
   {
     srand( seed );
@@ -569,21 +568,18 @@ bool chunks_create( uint32_t seed ) {
     dsquare_heightmap_gen( &dshm, noise_scale, feature_spread, feature_max_height );
   }
 
-
-  const float voxel_scale = 0.2f;
-
   for ( int cz = 0; cz < _chunks_h; cz++ ) {
     for ( int cx = 0; cx < _chunks_w; cx++ ) {
-      const int idx     = cz * _chunks_w + cx;
-      _chunks[idx] = chunk_generate( dshm.filtered_heightmap, dshm.w, dshm.h, cx * CHUNK_X, cz * CHUNK_Z );
+      const int idx = cz * _chunks_w + cx;
+      _chunks[idx]  = chunk_generate( dshm.filtered_heightmap, dshm.w, dshm.h, cx * CHUNK_X, cz * CHUNK_Z );
       {
         chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &_chunks[idx], 0, CHUNK_Y );
-        _chunk_meshes[idx]               = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
+        _chunk_meshes[idx]              = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
           vertex_data.n_vpalidx_comps, vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.texcoords_ptr, vertex_data.n_vt_comps,
           vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
         chunk_free_vertex_data( &vertex_data );
       }
-      _chunks_M[idx] = translate_mat4( ( vec3 ){ .x = cx * CHUNK_X * voxel_scale, .z = cz * CHUNK_Z * voxel_scale } );
+      _chunks_M[idx] = translate_mat4( ( vec3 ){ .x = cx * CHUNK_X * _voxel_scale, .z = cz * CHUNK_Z * _voxel_scale } );
     }
   }
 
@@ -664,8 +660,8 @@ bool chunks_create( uint32_t seed ) {
 
   {
     const char images[16][256] = { "textures/grass.png", "textures/slab.png", "textures/side_grass.png", "textures/hersk-export.png" };
-    GLsizei layerCount    = 4;
-    GLsizei mipLevelCount = 5;
+    GLsizei layerCount         = 4;
+    GLsizei mipLevelCount      = 5;
 
     _array_texture = ( texture_t ){ .handle_gl = 0, .w = 16, .h = 16, .n_channels = 3, .srgb = false, .is_depth = false, .is_array = true };
 
@@ -716,13 +712,40 @@ bool chunks_free() {
   return true;
 }
 
+typedef struct chunk_queue_item_t {
+  int idx;
+  float sqdist;
+} chunk_queue_item_t;
+
+static chunk_queue_item_t _chunk_draw_queue[CHUNKS_N];
+
+static int _chunk_cmp( const void* a, const void* b ) {
+  chunk_queue_item_t* ptr_a = (chunk_queue_item_t*)a;
+  chunk_queue_item_t* ptr_b = (chunk_queue_item_t*)b;
+  return (int)( ptr_a->sqdist - ptr_b->sqdist );
+}
+
+void chunks_sort_draw_queue( vec3 cam_pos ) {
+  // sort chunks by distance from camera - render closest first
+  for ( int i = 0; i < CHUNKS_N; i++ ) {
+    _chunk_draw_queue[i].idx    = i;
+    int chunk_x                 = i % _chunks_w;
+    int chunk_z                 = i / _chunks_w;
+    vec2 cam_centre             = ( vec2 ){ .x = cam_pos.x, .y = cam_pos.z };
+    vec2 chunk_centre           = ( vec2 ){ .x = chunk_x * CHUNK_X * _voxel_scale, .y = chunk_z * CHUNK_Z * _voxel_scale };
+    _chunk_draw_queue[i].sqdist = length2_vec2( sub_vec2_vec2( cam_centre, chunk_centre ) );
+  }
+  qsort( _chunk_draw_queue, CHUNKS_N, sizeof( chunk_queue_item_t ), _chunk_cmp );
+}
+
 void chunks_draw( vec3 cam_fwd, mat4 P, mat4 V ) {
   assert( _chunks_created );
   if ( !_chunks_created ) { return; }
 
   uniform3f( _voxel_shader, _voxel_shader.u_fwd, cam_fwd.x, cam_fwd.y, cam_fwd.z );
   for ( int i = 0; i < CHUNKS_N; i++ ) {
-    draw_mesh( _voxel_shader, P, V, _chunks_M[i], _chunk_meshes[i].vao, _chunk_meshes[i].n_vertices, &_array_texture, 1 );
+    int idx = _chunk_draw_queue[i].idx;
+    draw_mesh( _voxel_shader, P, V, _chunks_M[idx], _chunk_meshes[idx].vao, _chunk_meshes[idx].n_vertices, &_array_texture, 1 );
   }
 }
 
@@ -731,8 +754,9 @@ void chunks_draw_colour_picking( mat4 offcentre_P, mat4 V ) {
   if ( !_chunks_created ) { return; }
 
   for ( uint32_t i = 0; i < CHUNKS_N; i++ ) {
-    uniform1f( _colour_picking_shader, _colour_picking_shader.u_chunk_id, (float)i / 255.0f );
-    draw_mesh( _colour_picking_shader, offcentre_P, V, _chunks_M[i], _chunk_meshes[i].vao, _chunk_meshes[i].n_vertices, NULL, 0 );
+    int idx = _chunk_draw_queue[i].idx;
+    uniform1f( _colour_picking_shader, _colour_picking_shader.u_chunk_id, (float)idx / 255.0f );
+    draw_mesh( _colour_picking_shader, offcentre_P, V, _chunks_M[idx], _chunk_meshes[idx].vao, _chunk_meshes[idx].n_vertices, NULL, 0 );
   }
 }
 
@@ -752,18 +776,18 @@ bool chunks_set_block_type_in_chunk( int chunk_id, int x, int y, int z, block_ty
   return _set_block_type_in_chunk( &_chunks[chunk_id], x, y, z, type );
 }
 
-bool chunks_create_block_on_face( int picked_chunk_id, int picked_x, int picked_y, int picked_z, int picked_face,  block_type_t type ) {
+bool chunks_create_block_on_face( int picked_chunk_id, int picked_x, int picked_y, int picked_z, int picked_face, block_type_t type ) {
   assert( picked_chunk_id >= 0 && picked_chunk_id < CHUNKS_N );
 
   int xx = picked_x, yy = picked_y, zz = picked_z;
   switch ( picked_face ) {
-    case 0: xx--; break;
-    case 1: xx++; break;
-    case 2: yy--; break;
-    case 3: yy++; break;
-    case 4: zz--; break;
-    case 5: zz++; break;
-    default: assert( false ); break;
+  case 0: xx--; break;
+  case 1: xx++; break;
+  case 2: yy--; break;
+  case 3: yy++; break;
+  case 4: zz--; break;
+  case 5: zz++; break;
+  default: assert( false ); break;
   }
 
   int chunk_x = picked_chunk_id % _chunks_w;
@@ -790,7 +814,7 @@ bool chunks_create_block_on_face( int picked_chunk_id, int picked_x, int picked_
     chunk_z++;
   }
   const int chunk_id_to_modify = chunk_z * _chunks_w + chunk_x;
-  bool changed = chunks_set_block_type_in_chunk( chunk_id_to_modify, xx, yy, zz, type );
+  bool changed                 = chunks_set_block_type_in_chunk( chunk_id_to_modify, xx, yy, zz, type );
   return changed;
 }
 

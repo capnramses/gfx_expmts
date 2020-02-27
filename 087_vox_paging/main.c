@@ -186,6 +186,7 @@ int main() {
     clear_colour_and_depth_buffers( 0.5, 0.5, 0.9, 1.0 );
     viewport( 0, 0, fb_width, fb_height );
 
+    chunks_sort_draw_queue( cam.pos );
     chunks_draw( cam.forward, cam.P, cam.V );
 
     // update FPS image every so often
