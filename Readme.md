@@ -94,7 +94,7 @@ projects, and volatile software. Mostly OpenGL but some other graphics-related s
 | 084     | `pygl`                      | Python script that launches a GLFW window with OpenGL context.             | working            |
 | 085     | `py_c_lib`                  | See if I can use my C tga loader from Python app.                          | proposed           |
 | 086     | `vox_array_texture`         | Using OpenGL array texture instead of texture atlas for voxel terrain.                          | working           |
-| 087     | `vox_paging`                | Paging chunks of voxel terraint to/from disk.                          | proposed           |
+| 087     | `vox_paging`                | Paging chunks of voxel terraint to/from disk.                          | started           |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed           |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                            | proposed           |
 | xxx     | `geo_mipmap   `             | heightmap terrain sampled in vertex shader, scrolling camera mesh          | proposed           |
