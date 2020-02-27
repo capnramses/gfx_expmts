@@ -60,7 +60,7 @@ int main() {
     text_texture = create_texture_from_mem( img_mem, w, h, n_channels, false, false, false );
     free( img_mem );
   }
-  
+
   unsigned char* fps_img_mem = NULL;
   int fps_img_w = 256, fps_img_h = 256;
   int fps_n_channels = 4;
@@ -186,7 +186,6 @@ int main() {
     clear_colour_and_depth_buffers( 0.5, 0.5, 0.9, 1.0 );
     viewport( 0, 0, fb_width, fb_height );
 
-    
     chunks_draw( cam.forward, cam.P, cam.V );
 
     // update FPS image every so often
