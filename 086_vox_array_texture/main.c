@@ -42,6 +42,18 @@ int main() {
   if ( !start_gl( "Voxedit by Anton Gerdelan" ) ) { return 1; }
   init_input();
 
+  // face highlight box thing. slightly offset in y
+  float box_pos[] = {
+    1.0, -1.05, -1.0,  //
+    1.0, -1.05, 1.0,   //
+    -1.0, -1.05, 1.0,  //
+    -1.0, -1.05, 1.0,  //
+    -1.0, -1.05, -1.0, //
+    1.0, -1.05, -1.0   //
+  };                   //
+  float box_col[] = { 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1 };
+  mesh_t box_mesh = create_mesh_from_mem( box_pos, 3, NULL, 0, NULL, 0, NULL, 0, NULL, 0, box_col, 3, 6 );
+
   texture_t array_texture = ( texture_t ){ .handle_gl = 0, .w = 16, .h = 16, .n_channels = 3, .srgb = false, .is_depth = false, .is_array = true };
 
   {
@@ -99,7 +111,7 @@ int main() {
         chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunks[idx], 0, CHUNK_Y );
         chunk_meshes[idx]               = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
           vertex_data.n_vpalidx_comps, vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.texcoords_ptr, vertex_data.n_vt_comps,
-          vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
+          vertex_data.normals_ptr, vertex_data.n_vn_comps, NULL, 0, vertex_data.n_vertices );
         chunk_free_vertex_data( &vertex_data );
       }
       chunks_M[idx] = translate_mat4( ( vec3 ){ .x = cx * CHUNK_X * voxel_scale, .z = cz * CHUNK_Z * voxel_scale } );
@@ -146,8 +158,11 @@ int main() {
       "  v_st = a_vt;\n"
       "  v_n.xyz = (u_M * vec4( a_vn.xyz, 0.0 )).xyz;\n"
       "  v_n.w = a_vn.w;\n"
-      "  v_p_eye =  (u_V * u_M * vec4( a_vp * 0.1, 1.0 )).xyz;\n"
+      "  vec4 p_wor = u_M * vec4( a_vp * 0.1, 1.0 );\n"
+      "  v_p_eye =  ( u_V * p_wor ).xyz;\n"
       "  gl_Position = u_P * vec4( v_p_eye, 1.0 );\n"
+	   // "  gl_ClipDistance[0] = dot( p_wor, vec4( 0.0, -1.0, 0.0, 5.0 ) );\n" // okay if below 10
+	   // "  gl_ClipDistance[1] = dot( p_wor, vec4( 0.0, 1.0, 0.0, -2.0 ) );\n" // okay if above 2
       "}\n"
     };
     // heightmap 0 or 1 factor is stored in normal's w channel. used to disable sunlight for rooms/caves/overhangs (assumes sun is always _directly_ overhead,
@@ -171,7 +186,7 @@ int main() {
       "  float sun_dp       = clamp( dot( normalize( v_n.xyz ), normalize( -vec3( -0.3, -1.0, 0.2 ) ) ), 0.0 , 1.0 );\n"
       "  float fwd_dp       = clamp( dot( normalize( v_n.xyz ), -u_fwd ), 0.0, 1.0 );\n"
       "  float outdoors_fac = v_n.w;\n"
-      "  o_frag_colour      = vec4( sun_rgb * col * sun_dp * outdoors_fac * 0.9 + col * 0.1, 1.0f );\n"
+      "  o_frag_colour      = vec4(sun_rgb * col * sun_dp * outdoors_fac * 0.9 + (fwd_dp * 0.75 + 0.25) * col * 0.1, 1.0f );\n"
       "  o_frag_colour.rgb  = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );\n"
       "  o_frag_colour.rgb  = mix(o_frag_colour.rgb, fog_rgb, fog_fac);\n"
       "}\n"
@@ -316,7 +331,7 @@ int main() {
           delete_mesh( &chunk_meshes[picked_chunk_id] );
           chunk_meshes[picked_chunk_id] = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
             vertex_data.n_vpalidx_comps, vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.texcoords_ptr, vertex_data.n_vt_comps,
-            vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
+            vertex_data.normals_ptr, vertex_data.n_vn_comps, NULL, 0, vertex_data.n_vertices );
           chunk_free_vertex_data( &vertex_data );
         }
       }
@@ -378,6 +393,40 @@ int main() {
     for ( int i = 0; i < CHUNKS_N; i++ ) {
       draw_mesh( voxel_shader, cam.P, cam.V, chunks_M[i], chunk_meshes[i].vao, chunk_meshes[i].n_vertices, &array_texture, 1 );
     }
+
+    // draw box for selection
+    if ( picked ) {
+      mat4 R = identity_mat4();
+      switch ( picked_face ) {
+      case 0: R = mult_mat4_mat4( rot_y_deg_mat4( 90.0f ), rot_x_deg_mat4( 90.0f ) ); break;  // rgt
+      case 1: R = mult_mat4_mat4( rot_y_deg_mat4( 270.0f ), rot_x_deg_mat4( 90.0f ) ); break; // lft
+      case 2: break;                                                                          // from below
+      case 3: R = rot_x_deg_mat4( 180.0f ); break;                                            // from above
+      case 4: R = rot_x_deg_mat4( 90.0f ); break;                                             // behind
+      case 5: R = rot_x_deg_mat4( 270.0f ); break;                                            // ahead
+      default: assert( false ); break;
+      }
+
+      const int chunk_x       = picked_chunk_id % _chunks_w;
+      const int chunk_z       = picked_chunk_id / _chunks_w;
+      const float voxel_scale = 0.2f;
+      const float x_wor       = ( chunk_x * _chunks_w + picked_x ) * voxel_scale;
+      const float y_wor       = picked_y * voxel_scale;
+      const float z_wor       = ( chunk_z * _chunks_w + picked_z ) * voxel_scale;
+      mat4 T                  = translate_mat4( ( vec3 ){ x_wor, y_wor, z_wor } );
+      mat4 M                  = mult_mat4_mat4( T, R );
+
+      // disable_depth_testing();
+
+      enable_alpha_testing();
+      float pulse = sinf( 5.0f * get_time_s() ) * 0.5f + 0.5f;
+      uniform1f( g_default_shader, g_default_shader.u_alpha, 0.5f + pulse * 0.25f );
+      draw_mesh( g_default_shader, cam.P, cam.V, M, box_mesh.vao, box_mesh.n_vertices, NULL, 0 );
+      uniform1f( g_default_shader, g_default_shader.u_alpha, 1.0f );
+      disable_alpha_testing();
+      //  enable_depth_testing();
+    }
+
     // update FPS image every so often
     if ( text_timer > 0.1 ) {
       int w = 0, h = 0; // actual image writing area can be smaller than img dims
@@ -392,8 +441,9 @@ int main() {
       memset( fps_img_mem, 0x00, fps_img_w * fps_img_h * fps_n_channels );
 
       sprintf( string,
-        "FPS %.2f\n%s\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\nhovered voxel: %s\n\nLMB,RMB   edit voxels\n1,2,3...     block type\n", fps,
-        gfx_renderer_str(), win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, hovered_voxel_str );
+        "FPS %.2f\n%s\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\ncam pos (%.2f,%.2f,%.2f)\nhovered voxel: %s\n\nLMB,RMB   edit voxels\n1,2,3... "
+        "    block type\n",
+        fps, gfx_renderer_str(), win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, cam.pos.x, cam.pos.y, cam.pos.z, hovered_voxel_str );
 
       if ( APG_PIXFONT_FAILURE == apg_pixfont_image_size_for_str( string, &w, &h, thickness, outlines ) ) {
         fprintf( stderr, "ERROR apg_pixfont_image_size_for_str\n" );
@@ -403,6 +453,8 @@ int main() {
         fprintf( stderr, "ERROR apg_pixfont_image_size_for_str\n" );
         return 1;
       }
+      // TODO(Anton) just update the existing texture
+      delete_texture( &text_texture );
       text_texture = create_texture_from_mem( fps_img_mem, w, h, fps_n_channels, false, false, false );
       text_scale.x = (float)w / fb_width * 2.0f;
       text_scale.y = (float)h / fb_height * 2.0f;
@@ -429,6 +481,7 @@ int main() {
         uniform1f( colour_picking_shader, colour_picking_shader.u_chunk_id, (float)i / 255.0f );
         draw_mesh( colour_picking_shader, offcentre_P, cam.V, chunks_M[i], chunk_meshes[i].vao, chunk_meshes[i].n_vertices, NULL, 0 );
       }
+
       uint8_t data[4] = { 0, 0, 0, 0 };
       // TODO(Anton) this is blocking cpu/gpu sync and can stall. to speed up use the 2-PBO method perhaps.
       read_pixels( x + w / 2, y + h / 2, 1, 1, 4, data );
@@ -441,6 +494,7 @@ int main() {
 
       bind_framebuffer( NULL );
     }
+
     swap_buffer();
   }
 
@@ -448,7 +502,11 @@ int main() {
     chunk_free( &chunks[i] );
     delete_mesh( &chunk_meshes[i] );
   }
+  delete_mesh( &box_mesh );
+  delete_texture( &text_texture );
   free( fps_img_mem );
+  delete_shader_program( &voxel_shader );
+  delete_shader_program( &colour_picking_shader );
   stop_gl();
   printf( "HALT\n" );
   return 0;
