@@ -543,6 +543,7 @@ void chunk_free_vertex_data( chunk_vertex_data_t* chunk_vertex_data ) {
 // total number of chunkss
 #define CHUNKS_N 256
 
+static bool _dirty_chunks[CHUNKS_N];
 static mesh_t _chunk_meshes[CHUNKS_N];
 static chunk_t _chunks[CHUNKS_N];
 static mat4 _chunks_M[CHUNKS_N];
@@ -553,7 +554,12 @@ static int _chunks_w = 16, _chunks_h = 16;
 static float _voxel_scale = 0.2f;
 static bool _chunks_created;
 
-bool chunks_create( uint32_t seed ) {
+bool chunks_create( uint32_t seed, uint32_t chunks_wide, uint32_t chunks_deep ) {
+  assert( chunks_wide == chunks_deep ); // current limitation
+
+  _chunks_w = chunks_wide;
+  _chunks_h = chunks_deep;
+
   dsquare_heightmap_t dshm;
   {
     srand( seed );
@@ -562,8 +568,7 @@ bool chunks_create( uint32_t seed ) {
     const int noise_scale        = 64;
     const int feature_spread     = 64;
     const int feature_max_height = 64;
-    assert( _chunks_w == _chunks_h );
-    dshm = dsquare_heightmap_alloc( CHUNK_X * _chunks_w, default_height );
+    dshm                         = dsquare_heightmap_alloc( CHUNK_X * _chunks_w, default_height );
     dsquare_heightmap_gen( &dshm, noise_scale, feature_spread, feature_max_height );
   }
 
@@ -575,7 +580,7 @@ bool chunks_create( uint32_t seed ) {
         chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &_chunks[idx], 0, CHUNK_Y );
         _chunk_meshes[idx]              = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
           vertex_data.n_vpalidx_comps, vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.texcoords_ptr, vertex_data.n_vt_comps,
-          vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
+          vertex_data.normals_ptr, vertex_data.n_vn_comps, NULL, 0, vertex_data.n_vertices );
         chunk_free_vertex_data( &vertex_data );
       }
       _chunks_M[idx] = translate_mat4( ( vec3 ){ .x = cx * CHUNK_X * _voxel_scale, .z = cz * CHUNK_Z * _voxel_scale } );
@@ -599,8 +604,11 @@ bool chunks_create( uint32_t seed ) {
       "  v_st = a_vt;\n"
       "  v_n.xyz = (u_M * vec4( a_vn.xyz, 0.0 )).xyz;\n"
       "  v_n.w = a_vn.w;\n"
-      "  v_p_eye =  (u_V * u_M * vec4( a_vp * 0.1, 1.0 )).xyz;\n"
+      "  vec4 p_wor = u_M * vec4( a_vp * 0.1, 1.0 );\n"
+      "  v_p_eye =  ( u_V * p_wor ).xyz;\n"
       "  gl_Position = u_P * vec4( v_p_eye, 1.0 );\n"
+      // "  gl_ClipDistance[0] = dot( p_wor, vec4( 0.0, -1.0, 0.0, 5.0 ) );\n" // okay if below 10
+      // "  gl_ClipDistance[1] = dot( p_wor, vec4( 0.0, 1.0, 0.0, -2.0 ) );\n" // okay if above 2
       "}\n"
     };
     // heightmap 0 or 1 factor is stored in normal's w channel. used to disable sunlight for rooms/caves/overhangs (assumes sun is always _directly_ overhead,
@@ -624,7 +632,7 @@ bool chunks_create( uint32_t seed ) {
       "  float sun_dp       = clamp( dot( normalize( v_n.xyz ), normalize( -vec3( -0.3, -1.0, 0.2 ) ) ), 0.0 , 1.0 );\n"
       "  float fwd_dp       = clamp( dot( normalize( v_n.xyz ), -u_fwd ), 0.0, 1.0 );\n"
       "  float outdoors_fac = v_n.w;\n"
-      "  o_frag_colour      = vec4( sun_rgb * col * sun_dp * outdoors_fac * 0.9 + col * 0.1, 1.0f );\n"
+      "  o_frag_colour      = vec4(sun_rgb * col * sun_dp * outdoors_fac * 0.9 + (fwd_dp * 0.75 + 0.25) * col * 0.1, 1.0f );\n"
       "  o_frag_colour.rgb  = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );\n"
       "  o_frag_colour.rgb  = mix(o_frag_colour.rgb, fog_rgb, fog_fac);\n"
       "}\n"
@@ -796,7 +804,9 @@ bool chunks_picked_colour_to_voxel_idx( uint8_t r, uint8_t g, uint8_t b, uint8_t
 
 bool chunks_set_block_type_in_chunk( int chunk_id, int x, int y, int z, block_type_t type ) {
   assert( chunk_id >= 0 && chunk_id < CHUNKS_N );
-  return _set_block_type_in_chunk( &_chunks[chunk_id], x, y, z, type );
+  bool changed = _set_block_type_in_chunk( &_chunks[chunk_id], x, y, z, type );
+  if ( changed ) { _dirty_chunks[chunk_id] = true; }
+  return changed;
 }
 
 bool chunks_create_block_on_face( int picked_chunk_id, int picked_x, int picked_y, int picked_z, int picked_face, block_type_t type ) {
@@ -838,6 +848,7 @@ bool chunks_create_block_on_face( int picked_chunk_id, int picked_x, int picked_
   }
   const int chunk_id_to_modify = chunk_z * _chunks_w + chunk_x;
   bool changed                 = chunks_set_block_type_in_chunk( chunk_id_to_modify, xx, yy, zz, type );
+  if ( changed ) { _dirty_chunks[chunk_id_to_modify] = true; }
   return changed;
 }
 
@@ -850,6 +861,14 @@ void chunks_update_chunk_mesh( int chunk_id ) {
   delete_mesh( &_chunk_meshes[chunk_id] );
   _chunk_meshes[chunk_id] = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
     vertex_data.n_vpalidx_comps, vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.texcoords_ptr, vertex_data.n_vt_comps,
-    vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
+    vertex_data.normals_ptr, vertex_data.n_vn_comps, NULL, 0, vertex_data.n_vertices );
   chunk_free_vertex_data( &vertex_data );
+
+  _dirty_chunks[chunk_id] = false;
+}
+
+void chunks_update_dirty_chunk_meshes() {
+  for ( int i = 0; i < CHUNKS_N; i++ ) {
+    if ( _dirty_chunks[i] ) { chunks_update_chunk_mesh( i ); }
+  }
 }

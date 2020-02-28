@@ -6,7 +6,7 @@
 
 typedef enum block_type_t { BLOCK_TYPE_AIR = 0, BLOCK_TYPE_CRUST, BLOCK_TYPE_GRASS, BLOCK_TYPE_DIRT, BLOCK_TYPE_STONE } block_type_t;
 
-bool chunks_create( uint32_t seed );
+bool chunks_create( uint32_t seed, uint32_t chunks_wide, uint32_t chunks_deep );
 
 bool chunks_free();
 
@@ -28,7 +28,9 @@ returns false does nothing if coords are out of chunk bounds
 */
 bool chunks_set_block_type_in_chunk( int chunk_id, int x, int y, int z, block_type_t type );
 
-bool chunks_create_block_on_face( int picked_chunk_id, int picked_x, int picked_y, int picked_z, int picked_face,  block_type_t type );
+bool chunks_create_block_on_face( int picked_chunk_id, int picked_x, int picked_y, int picked_z, int picked_face, block_type_t type );
 
 /* PERFORMANCE: current impl calls malloc() and free() */
 void chunks_update_chunk_mesh( int chunk_id );
+
+void chunks_update_dirty_chunk_meshes();

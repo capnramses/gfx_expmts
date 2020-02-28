@@ -34,10 +34,23 @@ int main() {
   if ( !start_gl( "Voxedit by Anton Gerdelan" ) ) { return 1; }
   init_input();
 
+  
+  // face highlight box thing. slightly offset in y
+  float box_pos[] = {
+    1.0, -1.05, -1.0,  //
+    1.0, -1.05, 1.0,   //
+    -1.0, -1.05, 1.0,  //
+    -1.0, -1.05, 1.0,  //
+    -1.0, -1.05, -1.0, //
+    1.0, -1.05, -1.0   //
+  };                   //
+  float box_col[] = { 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1, 0.75, 0.1, 1 };
+  mesh_t box_mesh = create_mesh_from_mem( box_pos, 3, NULL, 0, NULL, 0, NULL, 0, NULL, 0, box_col, 3, 6 );
+
   uint32_t seed = time( NULL );
   printf( "seed = %u\n", seed );
-
-  chunks_create( seed );
+  uint32_t chunks_wide = 16, chunks_deep = 16;
+  chunks_create( seed, chunks_wide, chunks_deep );
 
   texture_t text_texture;
   {
@@ -130,6 +143,7 @@ int main() {
         } else if ( rmb_clicked() ) {
           changed = chunks_set_block_type_in_chunk( picked_chunk_id, picked_x, picked_y, picked_z, BLOCK_TYPE_AIR );
         }
+        if ( changed ) { chunks_update_dirty_chunk_meshes(); }
       }
       bool cam_fwd = false, cam_bk = false, cam_left = false, cam_rgt = false, turn_left = false, turn_right = false;
       {
@@ -190,6 +204,39 @@ int main() {
     chunks_draw( cam.forward, cam.P, cam.V );
     int chunks_drawn = chunks_get_drawn_count();
 
+    // draw box for selection
+    if ( picked ) {
+      mat4 R = identity_mat4();
+      switch ( picked_face ) {
+      case 0: R = mult_mat4_mat4( rot_y_deg_mat4( 90.0f ), rot_x_deg_mat4( 90.0f ) ); break;  // rgt
+      case 1: R = mult_mat4_mat4( rot_y_deg_mat4( 270.0f ), rot_x_deg_mat4( 90.0f ) ); break; // lft
+      case 2: break;                                                                          // from below
+      case 3: R = rot_x_deg_mat4( 180.0f ); break;                                            // from above
+      case 4: R = rot_x_deg_mat4( 90.0f ); break;                                             // behind
+      case 5: R = rot_x_deg_mat4( 270.0f ); break;                                            // ahead
+      default: assert( false ); break;
+      }
+
+      const int chunk_x       = picked_chunk_id % chunks_wide;
+      const int chunk_z       = picked_chunk_id / chunks_wide;
+      const float voxel_scale = 0.2f;
+      const float x_wor       = ( chunk_x * chunks_wide + picked_x ) * voxel_scale;
+      const float y_wor       = picked_y * voxel_scale;
+      const float z_wor       = ( chunk_z * chunks_wide + picked_z ) * voxel_scale;
+      mat4 T                  = translate_mat4( ( vec3 ){ x_wor, y_wor, z_wor } );
+      mat4 M                  = mult_mat4_mat4( T, R );
+
+      // disable_depth_testing();
+
+      enable_alpha_testing();
+      float pulse = sinf( 5.0f * get_time_s() ) * 0.5f + 0.5f;
+      uniform1f( g_default_shader, g_default_shader.u_alpha, 0.5f + pulse * 0.25f );
+      draw_mesh( g_default_shader, cam.P, cam.V, M, box_mesh.vao, box_mesh.n_vertices, NULL, 0 );
+      uniform1f( g_default_shader, g_default_shader.u_alpha, 1.0f );
+      disable_alpha_testing();
+      //  enable_depth_testing();
+    }
+
     // update FPS image every so often
     if ( text_timer > 0.1 ) {
       int w = 0, h = 0; // actual image writing area can be smaller than img dims
@@ -203,8 +250,8 @@ int main() {
       text_timer = 0.0;
       memset( fps_img_mem, 0x00, fps_img_w * fps_img_h * fps_n_channels );
 
-      sprintf( string, "FPS %.2f\n%s\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\nhovered voxel: %s\nchunks drawn: %i\nseed: %u", fps, gfx_renderer_str(),
-        win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, hovered_voxel_str, chunks_drawn, seed );
+      sprintf( string, "FPS %.2f\n%s\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\nhovered voxel: %s\nchunks drawn: %i\nseed: %u", fps,
+        gfx_renderer_str(), win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, hovered_voxel_str, chunks_drawn, seed );
 
       if ( APG_PIXFONT_FAILURE == apg_pixfont_image_size_for_str( string, &w, &h, thickness, outlines ) ) {
         fprintf( stderr, "ERROR apg_pixfont_image_size_for_str\n" );
@@ -254,6 +301,7 @@ int main() {
   }
 
   chunks_free();
+  delete_mesh( &box_mesh );
   free( fps_img_mem );
   stop_gl();
   printf( "HALT\n" );

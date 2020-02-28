@@ -18,7 +18,7 @@ static mesh_t _ss_quad_mesh;
 
 static void _init_ss_quad() {
   float ss_quad_pos[] = { -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0 };
-  _ss_quad_mesh       = create_mesh_from_mem( ss_quad_pos, 2, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 4 );
+  _ss_quad_mesh       = create_mesh_from_mem( ss_quad_pos, 2, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 4 );
 }
 
 static bool _recompile_shader_with_check( GLuint shader, const char* src_str ) {
@@ -202,9 +202,8 @@ bool start_gl( const char* window_title ) {
   glCullFace( GL_BACK );
   glFrontFace( GL_CCW );
   glEnable( GL_CULL_FACE );
-  // glEnable( GL_CLIP_DISTANCE0 ); // clip plane A
-  glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-  glDisable( GL_BLEND );
+  glEnable( GL_CLIP_DISTANCE0 ); // clip plane A
+  glEnable( GL_CLIP_DISTANCE1 ); // clip plane B
 
   glfwSwapInterval( 0 ); // vsync
 
@@ -216,14 +215,24 @@ void stop_gl() {
   glfwTerminate();
 }
 
+void enable_depth_testing() { glEnable( GL_DEPTH_TEST ); }
+
+void disable_depth_testing() { glDisable( GL_DEPTH_TEST ); }
+void enable_alpha_testing() {
+  glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+  glEnable( GL_BLEND );
+}
+void disable_alpha_testing() { glDisable( GL_BLEND ); }
+
 const char* gfx_renderer_str( void ) { return (const char*)glGetString( GL_RENDERER ); }
 
 mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, const uint32_t* pal_idx_buffer, int n_pal_idx_comps, const float* picking_buffer,
-  int n_picking_comps, const float* texcoords_buffer, int n_texcoord_comps, const float* normals_buffer, int n_normal_comps, int n_vertices ) {
+  int n_picking_comps, const float* texcoords_buffer, int n_texcoord_comps, const float* normals_buffer, int n_normal_comps, const float* vcolours_buffer,
+  int n_vcolour_comps, int n_vertices ) {
   assert( points_buffer && n_points_comps > 0 && n_vertices > 0 );
 
   GLuint vertex_array_gl;
-  GLuint points_buffer_gl = 0, colour_buffer_gl = 0, picking_buffer_gl = 0, texcoords_buffer_gl = 0, normals_buffer_gl = 0;
+  GLuint points_buffer_gl = 0, palidx_buffer_gl = 0, picking_buffer_gl = 0, texcoords_buffer_gl = 0, normals_buffer_gl = 0, vcolours_buffer_gl = 0;
   glGenVertexArrays( 1, &vertex_array_gl );
   glBindVertexArray( vertex_array_gl );
   {
@@ -235,8 +244,8 @@ mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, con
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
   }
   if ( pal_idx_buffer && n_pal_idx_comps > 0 ) {
-    glGenBuffers( 1, &colour_buffer_gl );
-    glBindBuffer( GL_ARRAY_BUFFER, colour_buffer_gl );
+    glGenBuffers( 1, &palidx_buffer_gl );
+    glBindBuffer( GL_ARRAY_BUFFER, palidx_buffer_gl );
     glBufferData( GL_ARRAY_BUFFER, sizeof( uint32_t ) * n_pal_idx_comps * n_vertices, pal_idx_buffer, GL_STATIC_DRAW );
     glEnableVertexAttribArray( SHADER_BINDING_VPAL_IDX );
     glVertexAttribIPointer( SHADER_BINDING_VPAL_IDX, 1, GL_UNSIGNED_INT, 0, NULL ); // NOTE(Anton) ...IPointer... variant
@@ -266,14 +275,23 @@ mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, con
     glVertexAttribPointer( SHADER_BINDING_VN, n_normal_comps, GL_FLOAT, GL_FALSE, 0, NULL );
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
   }
+  if ( vcolours_buffer && n_vcolour_comps > 0 ) {
+    glGenBuffers( 1, &vcolours_buffer_gl );
+    glBindBuffer( GL_ARRAY_BUFFER, vcolours_buffer_gl );
+    glBufferData( GL_ARRAY_BUFFER, sizeof( float ) * n_vcolour_comps * n_vertices, vcolours_buffer, GL_STATIC_DRAW );
+    glEnableVertexAttribArray( SHADER_BINDING_VC );
+    glVertexAttribPointer( SHADER_BINDING_VC, n_vcolour_comps, GL_FLOAT, GL_FALSE, 0, NULL );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+  }
   glBindVertexArray( 0 );
 
   mesh_t mesh = ( mesh_t ){ .vao = vertex_array_gl,
     .points_vbo                  = points_buffer_gl,
-    .colours_vbo                 = colour_buffer_gl,
+    .palidx_vbo                  = palidx_buffer_gl,
     .picking_vbo                 = picking_buffer_gl,
     .texcoords_vbo               = texcoords_buffer_gl,
     .normals_vbo                 = normals_buffer_gl,
+    .vcolours_vbo                = vcolours_buffer_gl,
     .n_vertices                  = n_vertices };
   return mesh;
 }
@@ -281,7 +299,11 @@ mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, con
 void delete_mesh( mesh_t* mesh ) {
   assert( mesh && mesh->vao > 0 && mesh->points_vbo > 0 );
 
-  if ( mesh->colours_vbo ) { glDeleteBuffers( 1, &mesh->colours_vbo ); }
+  if ( mesh->vcolours_vbo ) { glDeleteBuffers( 1, &mesh->vcolours_vbo ); }
+  if ( mesh->normals_vbo ) { glDeleteBuffers( 1, &mesh->normals_vbo ); }
+  if ( mesh->texcoords_vbo ) { glDeleteBuffers( 1, &mesh->texcoords_vbo ); }
+  if ( mesh->picking_vbo ) { glDeleteBuffers( 1, &mesh->picking_vbo ); }
+  if ( mesh->palidx_vbo ) { glDeleteBuffers( 1, &mesh->palidx_vbo ); }
   glDeleteBuffers( 1, &mesh->points_vbo );
   glDeleteVertexArrays( 1, &mesh->vao );
   memset( mesh, 0, sizeof( mesh_t ) );
