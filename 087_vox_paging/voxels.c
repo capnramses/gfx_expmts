@@ -388,9 +388,7 @@ static void _memcpy_face_palidx( block_type_t block_type, uint32_t* dest ) {
   case BLOCK_TYPE_STONE: {
     palidx = palette_stone;
   } break;
-  default: {
-    assert( false );
-  } break;
+  default: { assert( false ); } break;
   }
   // per the 6 vertices in this face
   for ( int v = 0; v < VOXEL_FACE_VERTS; v++ ) { *( dest + v ) = palidx; }
@@ -744,9 +742,8 @@ void chunks_sort_draw_queue( vec3 cam_pos ) {
 }
 
 static int _chunks_drawn;
-
-#define CHUNKS_MAX_DRAWN 64
-#define CHUNKS_MAX_DIST 16 * 0.2 * 10 // this is 10 chunks dist
+static int _chunks_max_drawn        = 128;
+static int _chunks_max_visible_dist = 10;
 
 int chunks_get_drawn_count() { return _chunks_drawn; }
 
@@ -754,17 +751,17 @@ void chunks_draw( vec3 cam_fwd, mat4 P, mat4 V ) {
   assert( _chunks_created );
   if ( !_chunks_created ) { return; }
 
-  _chunks_drawn = 0;
+  _chunks_drawn        = 0;
+  const float max_dist = (float)_chunks_max_visible_dist * 16 * _voxel_scale;
 
   uniform3f( _voxel_shader, _voxel_shader.u_fwd, cam_fwd.x, cam_fwd.y, cam_fwd.z );
   for ( int i = 0; i < CHUNKS_N; i++ ) {
     int idx = _chunk_draw_queue[i].idx;
-    /* TODO(Anton) visualise mins,maxs as it may be too big and forgiving */
-    if ( _chunk_draw_queue[i].sqdist > CHUNKS_MAX_DIST * CHUNKS_MAX_DIST ) { return; }
+    if ( _chunk_draw_queue[i].sqdist > max_dist * max_dist ) { return; }
     if ( !is_aabb_in_frustum( _chunk_draw_queue[i].mins, _chunk_draw_queue[i].maxs ) ) { continue; }
     draw_mesh( _voxel_shader, P, V, _chunks_M[idx], _chunk_meshes[idx].vao, _chunk_meshes[idx].n_vertices, &_array_texture, 1 );
     _chunks_drawn++;
-    if ( _chunks_drawn >= CHUNKS_MAX_DRAWN ) { return; }
+    if ( _chunks_drawn >= _chunks_max_drawn ) { return; }
   }
 }
 
@@ -772,15 +769,16 @@ void chunks_draw_colour_picking( mat4 offcentre_P, mat4 V ) {
   assert( _chunks_created );
   if ( !_chunks_created ) { return; }
 
-  int local_chunks_drawn = 0;
+  int local_chunks_drawn = 0; // needs to be a separate var from the one in chunks_draw
+  const float max_dist   = (float)_chunks_max_visible_dist * 16 * _voxel_scale;
 
   for ( uint32_t i = 0; i < CHUNKS_N; i++ ) {
     int idx = _chunk_draw_queue[i].idx;
-    if ( _chunk_draw_queue[i].sqdist > CHUNKS_MAX_DIST * CHUNKS_MAX_DIST ) { return; }
+    if ( _chunk_draw_queue[i].sqdist > max_dist * max_dist ) { return; }
     if ( !is_aabb_in_frustum( _chunk_draw_queue[i].mins, _chunk_draw_queue[i].maxs ) ) { continue; }
     uniform1f( _colour_picking_shader, _colour_picking_shader.u_chunk_id, (float)idx / 255.0f );
     draw_mesh( _colour_picking_shader, offcentre_P, V, _chunks_M[idx], _chunk_meshes[idx].vao, _chunk_meshes[idx].n_vertices, NULL, 0 );
-    if ( local_chunks_drawn >= CHUNKS_MAX_DRAWN ) { return; }
+    if ( local_chunks_drawn >= _chunks_max_drawn ) { return; }
     local_chunks_drawn++;
   }
 }
