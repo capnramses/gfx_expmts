@@ -34,11 +34,10 @@ int main() {
   if ( !start_gl( "Voxedit by Anton Gerdelan" ) ) { return 1; }
   init_input();
 
-  {
-    uint32_t seed = time( NULL );
-    printf( "seed = %u\n", seed );
-    chunks_create( seed );
-  }
+  uint32_t seed = time( NULL );
+  printf( "seed = %u\n", seed );
+
+  chunks_create( seed );
 
   texture_t text_texture;
   {
@@ -204,9 +203,8 @@ int main() {
       text_timer = 0.0;
       memset( fps_img_mem, 0x00, fps_img_w * fps_img_h * fps_n_channels );
 
-      sprintf( string,
-        "FPS %.2f\n%s\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\nhovered voxel: %s\nchunks drawn: %i\n", fps,
-        gfx_renderer_str(), win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, hovered_voxel_str, chunks_drawn );
+      sprintf( string, "FPS %.2f\n%s\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\nhovered voxel: %s\nchunks drawn: %i\nseed: %u", fps, gfx_renderer_str(),
+        win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, hovered_voxel_str, chunks_drawn, seed );
 
       if ( APG_PIXFONT_FAILURE == apg_pixfont_image_size_for_str( string, &w, &h, thickness, outlines ) ) {
         fprintf( stderr, "ERROR apg_pixfont_image_size_for_str\n" );
