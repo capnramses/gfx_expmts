@@ -16,6 +16,8 @@ void chunks_draw( vec3 cam_fwd, mat4 P, mat4 V );
 
 void chunks_draw_colour_picking( mat4 offcentre_P, mat4 V );
 
+int chunks_get_drawn_count();
+
 /* if b channel for face is > 5 then colour was not a voxel and function will return false */
 bool chunks_picked_colour_to_voxel_idx( uint8_t r, uint8_t g, uint8_t b, uint8_t a, int* x, int* y, int* z, int* face, int* chunk_id );
 

@@ -183,11 +183,13 @@ int main() {
       recalc_cam_V( &cam );
     }
 
+    re_extract_frustum_planes( cam.fovy_deg, cam.aspect, cam.neard, cam.fard, cam.pos, cam.V );
     clear_colour_and_depth_buffers( 0.5, 0.5, 0.9, 1.0 );
     viewport( 0, 0, fb_width, fb_height );
 
     chunks_sort_draw_queue( cam.pos );
     chunks_draw( cam.forward, cam.P, cam.V );
+    int chunks_drawn = chunks_get_drawn_count();
 
     // update FPS image every so often
     if ( text_timer > 0.1 ) {
@@ -203,8 +205,8 @@ int main() {
       memset( fps_img_mem, 0x00, fps_img_w * fps_img_h * fps_n_channels );
 
       sprintf( string,
-        "FPS %.2f\n%s\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\nhovered voxel: %s\n\nLMB,RMB   edit voxels\n1,2,3...     block type\n", fps,
-        gfx_renderer_str(), win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, hovered_voxel_str );
+        "FPS %.2f\n%s\nwin dims (%i,%i). fb dims (%i,%i)\nmouse xy (%.2f,%.2f)\nhovered voxel: %s\nchunks drawn: %i\n", fps,
+        gfx_renderer_str(), win_width, win_height, fb_width, fb_height, mouse_x, mouse_y, hovered_voxel_str, chunks_drawn );
 
       if ( APG_PIXFONT_FAILURE == apg_pixfont_image_size_for_str( string, &w, &h, thickness, outlines ) ) {
         fprintf( stderr, "ERROR apg_pixfont_image_size_for_str\n" );

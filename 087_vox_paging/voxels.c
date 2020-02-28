@@ -3,6 +3,7 @@
 #include "../common/include/apg_tga.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "../common/include/stb/stb_image.h"
+#include "camera.h"
 #include "diamond_square.h"
 #include "gl_utils.h"
 #include "glcontext.h" // some GL calls/data types not encapsulated by gl_utils yet
@@ -713,8 +714,9 @@ bool chunks_free() {
 }
 
 typedef struct chunk_queue_item_t {
-  int idx;
-  float sqdist;
+  float sqdist;    // used as key in sorting
+  int idx;         // index into chunks arrays
+  vec3 mins, maxs; // used in frustum culling
 } chunk_queue_item_t;
 
 static chunk_queue_item_t _chunk_draw_queue[CHUNKS_N];
@@ -728,24 +730,41 @@ static int _chunk_cmp( const void* a, const void* b ) {
 void chunks_sort_draw_queue( vec3 cam_pos ) {
   // sort chunks by distance from camera - render closest first
   for ( int i = 0; i < CHUNKS_N; i++ ) {
-    _chunk_draw_queue[i].idx    = i;
-    int chunk_x                 = i % _chunks_w;
-    int chunk_z                 = i / _chunks_w;
-    vec2 cam_centre             = ( vec2 ){ .x = cam_pos.x, .y = cam_pos.z };
-    vec2 chunk_centre           = ( vec2 ){ .x = chunk_x * CHUNK_X * _voxel_scale, .y = chunk_z * CHUNK_Z * _voxel_scale };
+    _chunk_draw_queue[i].idx = i;
+    int chunk_x              = i % _chunks_w;
+    int chunk_z              = i / _chunks_w;
+    vec2 cam_centre          = ( vec2 ){ .x = cam_pos.x, .y = cam_pos.z };
+    vec2 chunk_centre =
+      ( vec2 ){ .x = chunk_x * CHUNK_X * _voxel_scale + CHUNK_X * _voxel_scale * 0.5f, .y = chunk_z * CHUNK_Z * _voxel_scale + CHUNK_Z * _voxel_scale * 0.5f };
     _chunk_draw_queue[i].sqdist = length2_vec2( sub_vec2_vec2( cam_centre, chunk_centre ) );
+    _chunk_draw_queue[i].mins   = ( vec3 ){ chunk_centre.x - CHUNK_X * _voxel_scale * 0.5f, 0.0f, chunk_centre.y - CHUNK_Z * _voxel_scale * 0.5f };
+    _chunk_draw_queue[i].maxs = ( vec3 ){ chunk_centre.x + CHUNK_X * _voxel_scale * 0.5f, CHUNK_Y * _voxel_scale, chunk_centre.y + CHUNK_Z * _voxel_scale * 0.5f };
   }
   qsort( _chunk_draw_queue, CHUNKS_N, sizeof( chunk_queue_item_t ), _chunk_cmp );
 }
+
+static int _chunks_drawn;
+
+#define CHUNKS_MAX_DRAWN 64
+#define CHUNKS_MAX_DIST 16 * 0.2 * 10 // this is 10 chunks dist
+
+int chunks_get_drawn_count() { return _chunks_drawn; }
 
 void chunks_draw( vec3 cam_fwd, mat4 P, mat4 V ) {
   assert( _chunks_created );
   if ( !_chunks_created ) { return; }
 
+  _chunks_drawn = 0;
+
   uniform3f( _voxel_shader, _voxel_shader.u_fwd, cam_fwd.x, cam_fwd.y, cam_fwd.z );
   for ( int i = 0; i < CHUNKS_N; i++ ) {
     int idx = _chunk_draw_queue[i].idx;
+    /* TODO(Anton) visualise mins,maxs as it may be too big and forgiving */
+    if ( _chunk_draw_queue[i].sqdist > CHUNKS_MAX_DIST * CHUNKS_MAX_DIST ) { return; }
+    if ( !is_aabb_in_frustum( _chunk_draw_queue[i].mins, _chunk_draw_queue[i].maxs ) ) { continue; }
     draw_mesh( _voxel_shader, P, V, _chunks_M[idx], _chunk_meshes[idx].vao, _chunk_meshes[idx].n_vertices, &_array_texture, 1 );
+    _chunks_drawn++;
+    if ( _chunks_drawn >= CHUNKS_MAX_DRAWN ) { return; }
   }
 }
 
@@ -753,10 +772,16 @@ void chunks_draw_colour_picking( mat4 offcentre_P, mat4 V ) {
   assert( _chunks_created );
   if ( !_chunks_created ) { return; }
 
+  int local_chunks_drawn = 0;
+
   for ( uint32_t i = 0; i < CHUNKS_N; i++ ) {
     int idx = _chunk_draw_queue[i].idx;
+    if ( _chunk_draw_queue[i].sqdist > CHUNKS_MAX_DIST * CHUNKS_MAX_DIST ) { return; }
+    if ( !is_aabb_in_frustum( _chunk_draw_queue[i].mins, _chunk_draw_queue[i].maxs ) ) { continue; }
     uniform1f( _colour_picking_shader, _colour_picking_shader.u_chunk_id, (float)idx / 255.0f );
     draw_mesh( _colour_picking_shader, offcentre_P, V, _chunks_M[idx], _chunk_meshes[idx].vao, _chunk_meshes[idx].n_vertices, NULL, 0 );
+    if ( local_chunks_drawn >= CHUNKS_MAX_DRAWN ) { return; }
+    local_chunks_drawn++;
   }
 }
 

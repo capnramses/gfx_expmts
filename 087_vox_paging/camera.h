@@ -49,7 +49,7 @@ void recalc_cam_P( camera_t* cam, float aspect );
 // =================================================================================================------------------
 // FRUSTUM
 // =================================================================================================------------------
-void re_extract_frustum_planes( float fovy_deg, float aspect, float near, float far, vec3 cam_pos, mat4 V );
+void re_extract_frustum_planes( float fovy_deg, float aspect, float neard, float fard, vec3 cam_pos, mat4 V );
 bool is_sphere_in_frustum( vec3 centre, float radius );
 bool is_aabb_in_frustum( vec3 mins, vec3 maxs );
 
