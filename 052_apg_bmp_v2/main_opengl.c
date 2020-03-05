@@ -13,7 +13,9 @@ gcc -o demo .\main_opengl.c ..\common\src\GL\glew.c apg_bmp.c -lpthread -I ..\co
 GNU/Linux:
 gcc -o demo main_opengl.c apg_bmp.c ../common/src/GL/glew.c -I ../common/include/ -lglfw -lpthread -lGL
 
-HOW TO RUN: Just drag the .BMP file onto demo.exe, or run with the path to the file as the first command line argument.
+HOW TO RUN:
+-Make sure a glfw3.dll is in the same folder and
+-Just drag the .BMP file onto demo.exe, or run with the path to the file as the first command line argument.
 
 clang-format on */
 
@@ -143,7 +145,6 @@ int main( int argc, char** argv ) {
     "out vec2 v_st;"
     "void main () {"
     "  v_st = a_vp * 0.5 + 0.5;"
-    "  v_st.t = 1.0 - v_st.t;"
     "  gl_Position = vec4( a_vp.x, a_vp.y, 0.0, 1.0 );"
     "}";
   const char* fragment_shader =
