@@ -25,7 +25,6 @@ Current Limitations:
 
 #ifndef _APG_BMP_H_
 #define _APG_BMP_H_
-#include <stddef.h>
 
 /*
 Reads a Microsoft BMP from the given filename, and allocates and fills a buffer of pixels.
@@ -50,7 +49,7 @@ RETURNS:
 */
 int apg_write_bmp( const char* filename, const unsigned char* pixel_data, int w, int h, int n_chans );
 
-#endif
+#endif /*_APG_BMP_H_ */
 
 /*
 -------------------------------------------------------------------------------------

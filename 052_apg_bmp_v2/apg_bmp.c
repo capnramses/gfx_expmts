@@ -111,7 +111,7 @@ static bool _validate_bmp_dib_header( struct bmp_dib_BITMAPINFOHEADER_t* dib_hea
 unsigned char* apg_read_bmp( const char* filename, int* w, int* h, int* n_chans, int vertical_flip ) {
   if ( !filename || !w || !h || !n_chans ) { return NULL; }
 
-  bool vertically_flip = (bool)vertical_flip;
+  bool vertically_flip = (bool)!vertical_flip;
 
   // read in the whole file into memory first - much faster than parsing on-the-fly
   struct entire_file_t record;
