@@ -407,7 +407,7 @@ int apg_write_bmp( const char* filename, const unsigned char* pixel_data, int w,
           bgra[2] = rgba[1];
           bgra[3] = rgba[0]; // alpha
         }
-        memcpy( curr_ptr, bgra, n_dst_chans );
+        memcpy( curr_ptr, bgra, n_dst_chans ); // warning C6386: Buffer overrun while writing to 'curr_ptr':  the writable size is 'pixels_padded_sz' bytes, but '3' bytes might be written.
         curr_ptr += n_dst_chans;
       }
       if ( row_padding > 0 ) {
