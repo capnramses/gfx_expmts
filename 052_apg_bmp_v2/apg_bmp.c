@@ -240,7 +240,7 @@ unsigned char* apg_read_bmp( const char* filename, int* w, int* h, int* n_chans,
     for ( uint32_t c = 0; c < width; c++ ) {
       //  == 32-bpp -> 32-bit RGBA. == 32-bit and 16-bit require bitmasks
       if ( 32 == dib_header_ptr->bpp ) {
-        uint32_t pixel = *(uint32_t*)&src_pixels_ptr[src_pixels_idx];
+        uint32_t pixel = *(uint32_t*)&src_pixels_ptr[src_pixels_idx]; // WARNING ASAN runtime error: load of misaligned address 0x6140000000ca for type 'uint32_t' (aka 'unsigned int'), which requires 4 byte alignment
         // NOTE(Anton) the below assumes 32-bits is always RGBA 1 byte per channel. 10,10,10 RGB exists though and isn't handled.
         dst_pixels_ptr[dst_pixels_idx++] = ( uint8_t )( ( pixel & dib_header_ptr->bitmask_r ) >> bitshift_rgba[0] );
         dst_pixels_ptr[dst_pixels_idx++] = ( uint8_t )( ( pixel & dib_header_ptr->bitmask_g ) >> bitshift_rgba[1] );
