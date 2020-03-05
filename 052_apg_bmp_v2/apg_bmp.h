@@ -26,6 +26,10 @@ Current Limitations:
 #ifndef _APG_BMP_H_
 #define _APG_BMP_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
 Reads a Microsoft BMP from the given filename, and allocates and fills a buffer of pixels.
 Width w, height h, and number of colour channels n_chans will all be set by the function based on the file's properties.
@@ -48,6 +52,10 @@ RETURNS:
 0 (false) on any failure, or 1 (true) on success.
 */
 int apg_write_bmp( const char* filename, const unsigned char* pixel_data, int w, int h, int n_chans );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /*_APG_BMP_H_ */
 
