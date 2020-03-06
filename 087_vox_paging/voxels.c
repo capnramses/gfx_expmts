@@ -627,7 +627,7 @@ bool chunks_create( uint32_t seed, uint32_t chunks_wide, uint32_t chunks_deep ) 
       "vec3 fog_rgb = vec3( 0.5, 0.5, 0.9 );\n"
       "void main () {\n"
       "  vec3 texel_rgb    = texture( u_palette_texture, vec3( v_st.s, 1.0 - v_st.t, v_vpal_idx ) ).rgb;\n"
-      "  float fog_fac      = clamp( v_p_eye.z * v_p_eye.z / 1000.0, 0.0, 1.0 );\n"
+      "  float fog_fac      = clamp( v_p_eye.z * v_p_eye.z / 500.0, 0.0, 1.0 );\n"
       "  vec3 col           = pow( texel_rgb, vec3( 2.2 ) ); \n" // tga image load is linear colour space already w/o gamma
       "  float sun_dp       = clamp( dot( normalize( v_n.xyz ), normalize( -vec3( -0.3, -1.0, 0.2 ) ) ), 0.0 , 1.0 );\n"
       "  float fwd_dp       = clamp( dot( normalize( v_n.xyz ), -u_fwd ), 0.0, 1.0 );\n"
