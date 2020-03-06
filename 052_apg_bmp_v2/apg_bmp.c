@@ -92,7 +92,7 @@ static bool _validate_bmp_file_header( struct bmp_file_header_t* file_header_ptr
 }
 
 static bool _validate_bmp_dib_header( struct bmp_dib_BITMAPINFOHEADER_t* dib_header_ptr, struct entire_file_t record ) {
-  if ( dib_header_ptr->this_header_sz + APG_BMP_FILE_HDR_SZ + APG_BMP_MIN_DATA_WIDTH > record.sz ) {}
+  if ( APG_BMP_FILE_HDR_SZ + dib_header_ptr->this_header_sz + APG_BMP_MIN_DATA_WIDTH > record.sz ) {}
   if ( 0 == dib_header_ptr->w || 0 == dib_header_ptr->h ) { return false; }
   if ( ( 32 == dib_header_ptr->bpp || 16 == dib_header_ptr->bpp ) &&
        ( BI_BITFIELDS != dib_header_ptr->compression_method && BI_ALPHABITFIELDS != dib_header_ptr->compression_method ) ) {
@@ -198,10 +198,11 @@ unsigned char* apg_read_bmp( const char* filename, int* w, int* h, int* n_chans,
   uint32_t row_padding = 0 == unpadded_row % 4 ? 0 : 4 - ( unpadded_row % 4 ); // didn't expect operator precidence of - over %
 
   uint8_t* file_data_ptr  = (uint8_t*)record.data;
-  uint8_t* src_pixels_ptr = &file_data_ptr[file_header_ptr->image_data_offset];
+  uint8_t* src_pixels_ptr = &file_data_ptr[file_header_ptr->image_data_offset]; // TODO check that this block has enough mem in it to fit width * height *
+                                                                                // nchans pixels (24,32bit) or *1(4,8-bit)
   uint32_t src_pixels_idx = 0;
 
-  // another file size integrity check
+  // another file size integrity check: partially validate source image data size
   // 'image_data_offset' is by row padded to 4 bytes and is either colour data or palette indices.
   if ( file_header_ptr->image_data_offset + ( unpadded_row + row_padding ) * height > record.sz ) {
     free( record.data );
@@ -240,7 +241,13 @@ unsigned char* apg_read_bmp( const char* filename, int* w, int* h, int* n_chans,
     for ( uint32_t c = 0; c < width; c++ ) {
       //  == 32-bpp -> 32-bit RGBA. == 32-bit and 16-bit require bitmasks
       if ( 32 == dib_header_ptr->bpp ) {
-        uint32_t pixel = *(uint32_t*)&src_pixels_ptr[src_pixels_idx]; // WARNING ASAN runtime error: load of misaligned address 0x6140000000ca for type 'uint32_t' (aka 'unsigned int'), which requires 4 byte alignment
+        if ( file_header_ptr->image_data_offset + src_pixels_idx + sizeof( uint32_t ) > record.sz ) {
+          free( record.data );
+					free( dst_pixels_ptr );
+          return NULL;
+        }
+        uint32_t pixel = *(uint32_t*)&src_pixels_ptr[src_pixels_idx]; // WARNING ASAN runtime error: load of misaligned address 0x6140000000ca for type
+                                                                      // 'uint32_t' (aka 'unsigned int'), which requires 4 byte alignment
         // NOTE(Anton) the below assumes 32-bits is always RGBA 1 byte per channel. 10,10,10 RGB exists though and isn't handled.
         dst_pixels_ptr[dst_pixels_idx++] = ( uint8_t )( ( pixel & dib_header_ptr->bitmask_r ) >> bitshift_rgba[0] );
         dst_pixels_ptr[dst_pixels_idx++] = ( uint8_t )( ( pixel & dib_header_ptr->bitmask_g ) >> bitshift_rgba[1] );
@@ -250,6 +257,11 @@ unsigned char* apg_read_bmp( const char* filename, int* w, int* h, int* n_chans,
 
         // == 8-bpp -> 24-bit RGB ==
       } else if ( 8 == dib_header_ptr->bpp && has_palette ) {
+        if ( file_header_ptr->image_data_offset + src_pixels_idx > record.sz ) {
+          free( record.data );
+					free( dst_pixels_ptr );
+          return NULL;
+        }
         // "most palettes are 4 bytes in RGB0 order but 3 for..." - it was actually BRG0 in old images -- Anton
         uint8_t index = src_pixels_ptr[src_pixels_idx]; // 8-bit index value per pixel
 
@@ -258,12 +270,17 @@ unsigned char* apg_read_bmp( const char* filename, int* w, int* h, int* n_chans,
           return dst_pixels_ptr;
         }
         dst_pixels_ptr[dst_pixels_idx++] = palette_data_ptr[index * 4 + 2];
-        dst_pixels_ptr[dst_pixels_idx++] = palette_data_ptr[index * 4 + 1];
+        dst_pixels_ptr[dst_pixels_idx++] = palette_data_ptr[index * 4 + 1]; // TODO HEAP OVERFLOW
         dst_pixels_ptr[dst_pixels_idx++] = palette_data_ptr[index * 4 + 0];
         src_pixels_idx++;
 
         // == 4-bpp (16-colour) -> 24-bit RGB ==
       } else if ( 4 == dib_header_ptr->bpp && has_palette ) {
+        if ( file_header_ptr->image_data_offset + src_pixels_idx > record.sz ) {
+          free( record.data );
+					free( dst_pixels_ptr );
+          return NULL;
+        }
         // handle 2 pixels at a time
         uint8_t pixel_duo = src_pixels_ptr[src_pixels_idx];
         uint8_t a_index   = ( 0xFF & pixel_duo ) >> 4;
@@ -308,6 +325,11 @@ unsigned char* apg_read_bmp( const char* filename, int* w, int* h, int* n_chans,
           src_pixels_idx++;
           bit_idx = 0;
         }
+        if ( file_header_ptr->image_data_offset + src_pixels_idx > record.sz ) {
+          free( record.data );
+					free( dst_pixels_ptr );
+          return NULL;
+        }
         uint8_t pixel_oct   = src_pixels_ptr[src_pixels_idx];
         uint8_t bit         = 128 >> bit_idx;
         uint8_t masked      = pixel_oct & bit;
@@ -325,6 +347,11 @@ unsigned char* apg_read_bmp( const char* filename, int* w, int* h, int* n_chans,
         // == 24-bpp -> 24-bit RGB ==
       } else {
         // NOTE(Anton) this only supports 1 byte per channel
+        if ( file_header_ptr->image_data_offset + src_pixels_idx + n_dst_chans > record.sz ) {
+          free( record.data );
+					free( dst_pixels_ptr );
+          return NULL;
+        }
         if ( n_dst_chans > 3 ) { dst_pixels_ptr[dst_pixels_idx++] = src_pixels_ptr[src_pixels_idx + 3]; }
         if ( n_dst_chans > 2 ) { dst_pixels_ptr[dst_pixels_idx++] = src_pixels_ptr[src_pixels_idx + 2]; }
         if ( n_dst_chans > 1 ) { dst_pixels_ptr[dst_pixels_idx++] = src_pixels_ptr[src_pixels_idx + 1]; }
@@ -407,7 +434,8 @@ int apg_write_bmp( const char* filename, const unsigned char* pixel_data, int w,
           bgra[2] = rgba[1];
           bgra[3] = rgba[0]; // alpha
         }
-        memcpy( curr_ptr, bgra, n_dst_chans ); // warning C6386: Buffer overrun while writing to 'curr_ptr':  the writable size is 'pixels_padded_sz' bytes, but '3' bytes might be written.
+        memcpy( curr_ptr, bgra, n_dst_chans ); // warning C6386: Buffer overrun while writing to 'curr_ptr':  the writable size is 'pixels_padded_sz' bytes, but
+                                               // '3' bytes might be written.
         curr_ptr += n_dst_chans;
       }
       if ( row_padding > 0 ) {
