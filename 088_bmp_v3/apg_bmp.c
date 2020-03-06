@@ -1,5 +1,8 @@
-/* apg_bmp.c V3
+/*
+BMP File Reader/Writer Implementation
 Anton Gerdelan
+Version: 3
+Licence: see apg_bmp.h
 C99
 */
 
