@@ -26,6 +26,7 @@ int main( int argc, const char** argv ) {
     fprintf( stderr, "ERROR: writing out PNG\n" );
     return 1;
   }
+  printf( "wrote image of w %u h %u n_chans %u\n", w, h, n_chans );
 
   free( img_mem );
   printf( "done\n" );

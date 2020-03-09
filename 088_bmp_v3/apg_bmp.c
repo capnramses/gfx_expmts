@@ -155,6 +155,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
   // bitmaps can have negative dims to indicate the image should be flipped
   uint32_t width = *w = abs( dib_hdr_ptr->w );
   uint32_t height = *h = abs( dib_hdr_ptr->h );
+
   // TODO(Anton) flip image memory at the end if this is true. because doing it per row was making me write bugs.
   // bool vertically_flip = dib_hdr_ptr->h > 0 ? false : true;
 
@@ -186,6 +187,8 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
   *n_chans = n_dst_chans;
   // NOTE(Anton) some image formats are not allowed a palette - could check for a bad header spec here also
   if ( dib_hdr_ptr->n_colours_in_palette > 0 ) { has_palette = true; }
+
+	printf("db: w = %u h = %u n_src_chans = %u, n_dst_chans = %u \n", *w, *h, n_src_chans, n_dst_chans );
 
   uint32_t palette_offset = _BMP_FILE_HDR_SZ + dib_hdr_ptr->this_header_sz;
   bool has_bitmasks       = false;
@@ -283,7 +286,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
     }
     uint32_t src_byte_idx = 0;
     for ( uint32_t r = 0; r < height; r++ ) {
-      int dst_pixels_idx = r * dst_stride_sz;
+      int dst_pixels_idx = ( height - 1 - r ) * dst_stride_sz;
       for ( uint32_t c = 0; c < width; c++ ) {
         // "most palettes are 4 bytes in RGB0 order but 3 for..." - it was actually BRG0 in old images -- Anton
         uint8_t index = src_img_ptr[src_byte_idx]; // 8-bit index value per pixel
@@ -304,8 +307,8 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
   } else if ( 4 == dib_hdr_ptr->bpp && has_palette ) {
     uint32_t src_byte_idx = 0;
     for ( uint32_t r = 0; r < height; r++ ) {
-      int dst_pixels_idx = r * dst_stride_sz;
-      for ( uint32_t c = 0; c < width; c++ ) {
+      int dst_pixels_idx = ( height - 1 - r ) * dst_stride_sz;
+      for ( uint32_t c = 0; c < width; c++ ) { // Note: w/2 because 2 pixels out per column in
         if ( file_hdr_ptr->image_data_offset + src_byte_idx > record.sz ) {
           free( record.data );
           free( dst_img_ptr );
@@ -357,7 +360,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
     uint32_t src_byte_idx = 0;
     for ( uint32_t r = 0; r < height; r++ ) {
       uint8_t bit_idx    = 0; // used in monochrome
-      int dst_pixels_idx = r * dst_stride_sz;
+      int dst_pixels_idx = ( height - 1 - r ) * dst_stride_sz;
       for ( uint32_t c = 0; c < width; c++ ) {
         if ( 8 == bit_idx ) { // start reading from the next byte
           src_byte_idx++;
@@ -394,7 +397,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
     }
     uint32_t src_byte_idx = 0;
     for ( uint32_t r = 0; r < height; r++ ) {
-      uint32_t dst_pixels_idx = r * dst_stride_sz;
+      uint32_t dst_pixels_idx = ( height - 1 - r ) * dst_stride_sz;
       for ( uint32_t c = 0; c < width; c++ ) {
         // re-orders from BGR to RGB
         if ( n_dst_chans > 3 ) { dst_img_ptr[dst_pixels_idx++] = src_img_ptr[src_byte_idx + 3]; }
