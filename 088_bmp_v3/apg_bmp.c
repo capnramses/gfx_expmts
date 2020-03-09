@@ -7,6 +7,7 @@ C99
 */
 
 #include "apg_bmp.h"
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -108,7 +109,10 @@ static bool _validate_dib_hdr( _bmp_dib_BITMAPINFOHEADER_t* dib_hdr_ptr, size_t 
     return false;
   }
   // 8k * 16 seems like a reasonable 'hey this is probably an accident' size
-  if ( 0 == dib_hdr_ptr->w || 0 == dib_hdr_ptr->h || abs( dib_hdr_ptr->w ) > 7182 * 10 || abs( dib_hdr_ptr->h ) > 7182 * 16 ) { return false; }
+  uint32_t absw = abs( dib_hdr_ptr->w ); // NOTE(Anton) if i put the abs() expression directly into the if-clause it doesn't work as I expected. not sure why...
+  uint32_t absh = abs( dib_hdr_ptr->h );
+  if ( 0 == dib_hdr_ptr->w || 0 == dib_hdr_ptr->h || absw > 7182 * 10 || absh > 7182 * 16 ) { return false; }
+
   /* NOTE(Anton) if images reliably used n_colours_in_palette we could have done a palette/file size integrity check here.
   because some always set 0 then we have to check every palette indexing as we read them */
   return true;
@@ -151,7 +155,8 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
   // bitmaps can have negative dims to indicate the image should be flipped
   uint32_t width = *w = abs( dib_hdr_ptr->w );
   uint32_t height = *h = abs( dib_hdr_ptr->h );
-  bool vertically_flip = dib_hdr_ptr->h > 0 ? false : true;
+  // TODO(Anton) flip image memory at the end if this is true. because doing it per row was making me write bugs.
+  // bool vertically_flip = dib_hdr_ptr->h > 0 ? false : true;
 
   // channel count and palette are not well defined in the header so we make a good guess here
   int n_dst_chans = 3, n_src_chans = 3;
@@ -248,7 +253,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
     }
     uint32_t src_byte_idx = 0;
     for ( uint32_t r = 0; r < height; r++ ) {
-      int dst_pixels_idx = vertically_flip ? ( height - 1 - r ) * dst_stride_sz : r * dst_stride_sz;
+      int dst_pixels_idx = r * dst_stride_sz;
       for ( uint32_t c = 0; c < width; c++ ) {
         uint32_t pixel;
         memcpy( &pixel, &src_img_ptr[src_byte_idx], 4 );
@@ -278,7 +283,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
     }
     uint32_t src_byte_idx = 0;
     for ( uint32_t r = 0; r < height; r++ ) {
-      int dst_pixels_idx = vertically_flip ? ( height - 1 - r ) * dst_stride_sz : r * dst_stride_sz;
+      int dst_pixels_idx = r * dst_stride_sz;
       for ( uint32_t c = 0; c < width; c++ ) {
         // "most palettes are 4 bytes in RGB0 order but 3 for..." - it was actually BRG0 in old images -- Anton
         uint8_t index = src_img_ptr[src_byte_idx]; // 8-bit index value per pixel
@@ -299,7 +304,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
   } else if ( 4 == dib_hdr_ptr->bpp && has_palette ) {
     uint32_t src_byte_idx = 0;
     for ( uint32_t r = 0; r < height; r++ ) {
-      int dst_pixels_idx = vertically_flip ? ( height - 1 - r ) * dst_stride_sz : r * dst_stride_sz;
+      int dst_pixels_idx = r * dst_stride_sz;
       for ( uint32_t c = 0; c < width; c++ ) {
         if ( file_hdr_ptr->image_data_offset + src_byte_idx > record.sz ) {
           free( record.data );
@@ -352,7 +357,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
     uint32_t src_byte_idx = 0;
     for ( uint32_t r = 0; r < height; r++ ) {
       uint8_t bit_idx    = 0; // used in monochrome
-      int dst_pixels_idx = vertically_flip ? ( height - 1 - r ) * dst_stride_sz : r * dst_stride_sz;
+      int dst_pixels_idx = r * dst_stride_sz;
       for ( uint32_t c = 0; c < width; c++ ) {
         if ( 8 == bit_idx ) { // start reading from the next byte
           src_byte_idx++;
@@ -389,12 +394,20 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
     }
     uint32_t src_byte_idx = 0;
     for ( uint32_t r = 0; r < height; r++ ) {
-      int dst_pixels_idx = vertically_flip ? ( height - 1 - r ) * dst_stride_sz : r * dst_stride_sz;
+      uint32_t dst_pixels_idx = r * dst_stride_sz;
       for ( uint32_t c = 0; c < width; c++ ) {
         // re-orders from BGR to RGB
         if ( n_dst_chans > 3 ) { dst_img_ptr[dst_pixels_idx++] = src_img_ptr[src_byte_idx + 3]; }
         if ( n_dst_chans > 2 ) { dst_img_ptr[dst_pixels_idx++] = src_img_ptr[src_byte_idx + 2]; }
-        if ( n_dst_chans > 1 ) { dst_img_ptr[dst_pixels_idx++] = src_img_ptr[src_byte_idx + 1]; }
+        if ( n_dst_chans > 1 ) {
+          if ( dst_pixels_idx >= width * height * n_dst_chans ) {
+            printf( "width=%u height=%u, n_dst_chans=%u\n", width, height, n_dst_chans );
+            fprintf( stderr, "ERROR: dist_pixel_idx %u at row,col %u,%u is >= max image bytes %u\n", dst_pixels_idx, r, c, width * height * n_dst_chans );
+          }
+          assert( dst_pixels_idx < width * height * n_dst_chans ); // assert fail here
+          assert( src_byte_idx + 1 < width * height * n_dst_chans );
+          dst_img_ptr[dst_pixels_idx++] = src_img_ptr[src_byte_idx + 1];
+        }
         dst_img_ptr[dst_pixels_idx++] = src_img_ptr[src_byte_idx];
         src_byte_idx += n_src_chans;
       }
