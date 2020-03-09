@@ -377,7 +377,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
         dst_img_ptr[dst_pixels_idx++] = palette_data_ptr[palette_idx * 4 + 0];
         bit_idx++;
       }
-      src_byte_idx += row_padding_sz;
+			src_byte_idx += ( row_padding_sz + 1 ); // 1bpp is special here
     }
 
     // == 24-bpp -> 24-bit RGB == (but also should handle some other n_chans cases)
