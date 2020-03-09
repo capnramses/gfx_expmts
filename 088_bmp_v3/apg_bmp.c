@@ -187,7 +187,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
   // NOTE(Anton) some image formats are not allowed a palette - could check for a bad header spec here also
   if ( dib_hdr_ptr->n_colours_in_palette > 0 ) { has_palette = true; }
 
-  // printf( "db: w = %u h = %u n_src_chans = %u, n_dst_chans = %u \n", *w, *h, n_src_chans, n_dst_chans );
+  //printf( "db: w = %u h = %u bpp =%u n_src_chans = %u, n_dst_chans = %u \n", *w, *h, dib_hdr_ptr->bpp, n_src_chans, n_dst_chans );
 
   uint32_t palette_offset = _BMP_FILE_HDR_SZ + dib_hdr_ptr->this_header_sz;
   bool has_bitmasks       = false;
@@ -271,12 +271,6 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
 
     // == 8-bpp -> 24-bit RGB ==
   } else if ( 8 == dib_hdr_ptr->bpp && has_palette ) {
-    // validate palette fits in file. palette is always RGBA 4 byte aligned it looks like. should come before image_data_offset
-    if ( palette_offset + height * width * 4 > record.sz || palette_offset + height * width * 4 > file_hdr_ptr->image_data_offset ) {
-      free( record.data );
-      free( dst_img_ptr );
-      return NULL;
-    }
     // validate indices (body of image data) fits in file
     if ( file_hdr_ptr->image_data_offset + height * width > record.sz ) {
       free( record.data );
