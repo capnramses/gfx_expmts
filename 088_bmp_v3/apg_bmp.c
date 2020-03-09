@@ -109,9 +109,8 @@ static bool _validate_dib_hdr( _bmp_dib_BITMAPINFOHEADER_t* dib_hdr_ptr, size_t 
     return false;
   }
   // 8k * 16 seems like a reasonable 'hey this is probably an accident' size
-  uint32_t absw = abs( dib_hdr_ptr->w ); // NOTE(Anton) if i put the abs() expression directly into the if-clause it doesn't work as I expected. not sure why...
-  uint32_t absh = abs( dib_hdr_ptr->h );
-  if ( 0 == dib_hdr_ptr->w || 0 == dib_hdr_ptr->h || absw > 7182 * 10 || absh > 7182 * 16 ) { return false; }
+  // NOTE(Anton) using abs() in the if-statement was blowing up on large negative numbers. switched to labs()
+  if ( 0 == dib_hdr_ptr->w || 0 == dib_hdr_ptr->h || labs( dib_hdr_ptr->w ) > 7182 * 10 || labs( dib_hdr_ptr->h ) > 7182 * 16 ) { return false; }
 
   /* NOTE(Anton) if images reliably used n_colours_in_palette we could have done a palette/file size integrity check here.
   because some always set 0 then we have to check every palette indexing as we read them */
@@ -188,7 +187,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
   // NOTE(Anton) some image formats are not allowed a palette - could check for a bad header spec here also
   if ( dib_hdr_ptr->n_colours_in_palette > 0 ) { has_palette = true; }
 
-	printf("db: w = %u h = %u n_src_chans = %u, n_dst_chans = %u \n", *w, *h, n_src_chans, n_dst_chans );
+  // printf( "db: w = %u h = %u n_src_chans = %u, n_dst_chans = %u \n", *w, *h, n_src_chans, n_dst_chans );
 
   uint32_t palette_offset = _BMP_FILE_HDR_SZ + dib_hdr_ptr->this_header_sz;
   bool has_bitmasks       = false;
@@ -402,15 +401,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
         // re-orders from BGR to RGB
         if ( n_dst_chans > 3 ) { dst_img_ptr[dst_pixels_idx++] = src_img_ptr[src_byte_idx + 3]; }
         if ( n_dst_chans > 2 ) { dst_img_ptr[dst_pixels_idx++] = src_img_ptr[src_byte_idx + 2]; }
-        if ( n_dst_chans > 1 ) {
-          if ( dst_pixels_idx >= width * height * n_dst_chans ) {
-            printf( "width=%u height=%u, n_dst_chans=%u\n", width, height, n_dst_chans );
-            fprintf( stderr, "ERROR: dist_pixel_idx %u at row,col %u,%u is >= max image bytes %u\n", dst_pixels_idx, r, c, width * height * n_dst_chans );
-          }
-          assert( dst_pixels_idx < width * height * n_dst_chans ); // assert fail here
-          assert( src_byte_idx + 1 < width * height * n_dst_chans );
-          dst_img_ptr[dst_pixels_idx++] = src_img_ptr[src_byte_idx + 1];
-        }
+        if ( n_dst_chans > 1 ) { dst_img_ptr[dst_pixels_idx++] = src_img_ptr[src_byte_idx + 1]; }
         dst_img_ptr[dst_pixels_idx++] = src_img_ptr[src_byte_idx];
         src_byte_idx += n_src_chans;
       }
