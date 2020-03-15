@@ -100,34 +100,6 @@ typedef struct chunk_vertex_data_t {
   size_t vpicking_buffer_sz;
 } chunk_vertex_data_t;
 
-chunk_t chunk_generate( const uint8_t* heightmap, int hm_w, int hm_h, int x_offset, int z_offset );
-chunk_t chunk_generate_flat();
-
-// warning: if chunk was already loaded or generated, then call chunk_free() first!
-bool chunk_load_from_file( const char* filename, chunk_t* chunk );
-
-bool chunk_save_to_file( const char* filename, const chunk_t* chunk );
-
-void chunk_free( chunk_t* chunk );
-
-bool chunk_write_heightmap( const char* filename, const chunk_t* chunk );
-
-// as chunk_gen_vertex_data but for just 1 vertical level in the chunk. y range params can default to: 0, CHUNK_Y for an entire chunk
-chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk, int from_y_inclusive, int to_y_exclusive );
-
-void chunk_free_vertex_data( chunk_vertex_data_t* chunk_vertex_data );
-
-bool _get_block_type_in_chunk( const chunk_t* chunk, int x, int y, int z, block_type_t* block_type );
-
-// return true if x,y,z is out of bounds of chunk
-// returns true if y > heightmap at (x,z). if equal returns false.
-bool is_voxel_above_surface( const chunk_t* chunk, int x, int y, int z );
-
-bool is_voxel_face_exposed_to_sun( const chunk_t* chunk, int x, int y, int z, int face_idx );
-
-/* creates vertex data for a cube made from 6 individual faces */
-chunk_vertex_data_t _test_cube_from_faces();
-
 // clang-format off
 //                                     x   y   z   x   y   z   x   y   z | x   y   z   x   y   z   x   y   z
 static const float _west_face[]   = { -1,  1, -1, -1, -1, -1, -1,  1,  1, -1,  1,  1, -1, -1, -1, -1, -1,  1 };
@@ -143,6 +115,8 @@ static const int palette_stone = 1;
 static const int palette_dirt  = 2;
 static const int palette_crust = 3;
 
+
+/* creates vertex data for a cube made from 6 individual faces */
 chunk_vertex_data_t _test_cube_from_faces() {
   chunk_vertex_data_t cube = ( chunk_vertex_data_t ){
     .n_vp_comps = VOXEL_VP_COMPS, .n_vt_comps = VOXEL_VT_COMPS, .n_vpalidx_comps = VOXEL_VPALIDX_COMPS, .n_vn_comps = VOXEL_VN_COMPS, .n_vpicking_comps = VOXEL_VPICKING_COMPS
@@ -253,7 +227,7 @@ uint8_t noisei( int x, int z, int max_height ) {
 }
 
 // todo ifdef write_heightmap img
-chunk_t chunk_generate( const uint8_t* heightmap, int hm_w, int hm_h, int x_offset, int z_offset ) {
+chunk_t _chunk_generate( const uint8_t* heightmap, int hm_w, int hm_h, int x_offset, int z_offset ) {
   assert( heightmap );
 
   chunk_t chunk;
@@ -283,7 +257,7 @@ chunk_t chunk_generate( const uint8_t* heightmap, int hm_w, int hm_h, int x_offs
   return chunk;
 }
 
-chunk_t chunk_generate_flat() {
+chunk_t _chunk_generate_flat() {
   chunk_t chunk;
 
   memset( &chunk, 0, sizeof( chunk_t ) );
@@ -300,7 +274,7 @@ chunk_t chunk_generate_flat() {
   return chunk;
 }
 
-bool chunk_load_from_file( const char* filename, chunk_t* chunk ) {
+bool _chunk_load_from_file( const char* filename, chunk_t* chunk ) {
   assert( filename && chunk );
 
   memset( chunk, 0, sizeof( chunk_t ) );
@@ -328,7 +302,7 @@ bool chunk_load_from_file( const char* filename, chunk_t* chunk ) {
   return true;
 }
 
-bool chunk_save_to_file( const char* filename, const chunk_t* chunk ) {
+bool _chunk_save_to_file( const char* filename, const chunk_t* chunk ) {
   assert( filename && chunk && chunk->voxels );
   FILE* fptr = fopen( filename, "wb" );
   if ( !fptr ) { return false; }
@@ -577,7 +551,7 @@ bool chunks_create( uint32_t seed, uint32_t chunks_wide, uint32_t chunks_deep ) 
   for ( int cz = 0; cz < _chunks_h; cz++ ) {
     for ( int cx = 0; cx < _chunks_w; cx++ ) {
       const int idx = cz * _chunks_w + cx;
-      _chunks[idx]  = chunk_generate( dshm.filtered_heightmap, dshm.w, dshm.h, cx * CHUNK_X, cz * CHUNK_Z );
+      _chunks[idx]  = _chunk_generate( dshm.filtered_heightmap, dshm.w, dshm.h, cx * CHUNK_X, cz * CHUNK_Z );
       {
         chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &_chunks[idx], 0, CHUNK_Y );
         _chunk_meshes[idx]              = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
@@ -808,6 +782,14 @@ bool chunks_get_block_type_in_chunk( int chunk_id, int x, int y, int z, block_ty
   assert( chunk_id >= 0 && chunk_id < CHUNKS_N );
 
   bool ret = _get_block_type_in_chunk( &_chunks[chunk_id], x, y, z, block_type );
+  return ret;
+}
+
+
+bool chunks_set_block_type_in_chunk( int chunk_id, int x, int y, int z, block_type_t block_type ) {
+  assert( chunk_id >= 0 && chunk_id < CHUNKS_N );
+
+  bool ret = _set_block_type_in_chunk( &_chunks[chunk_id], x, y, z, block_type );
   return ret;
 }
 
