@@ -388,7 +388,9 @@ static void _memcpy_face_palidx( block_type_t block_type, uint32_t* dest ) {
   case BLOCK_TYPE_STONE: {
     palidx = palette_stone;
   } break;
-  default: { assert( false ); } break;
+  default: {
+    assert( false );
+  } break;
   }
   // per the 6 vertices in this face
   for ( int v = 0; v < VOXEL_FACE_VERTS; v++ ) { *( dest + v ) = palidx; }
