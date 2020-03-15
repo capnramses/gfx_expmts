@@ -117,7 +117,7 @@ chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk, int from_y_incl
 
 void chunk_free_vertex_data( chunk_vertex_data_t* chunk_vertex_data );
 
-bool get_block_type_in_chunk( const chunk_t* chunk, int x, int y, int z, block_type_t* block_type );
+bool _get_block_type_in_chunk( const chunk_t* chunk, int x, int y, int z, block_type_t* block_type );
 
 // return true if x,y,z is out of bounds of chunk
 // returns true if y > heightmap at (x,z). if equal returns false.
@@ -138,10 +138,10 @@ static const float _north_face[]  = {  1,  1, -1,  1, -1, -1, -1,  1, -1, -1,  1
 static const float _south_face[]  = { -1,  1,  1, -1, -1,  1,  1,  1,  1,  1,  1,  1, -1, -1,  1,  1, -1,  1 };
 // clang-format on
 
-static int palette_grass = 0;
-static int palette_stone = 1;
-static int palette_dirt  = 2;
-static int palette_crust = 3;
+static const int palette_grass = 0;
+static const int palette_stone = 1;
+static const int palette_dirt  = 2;
+static const int palette_crust = 3;
 
 chunk_vertex_data_t _test_cube_from_faces() {
   chunk_vertex_data_t cube = ( chunk_vertex_data_t ){
@@ -210,7 +210,7 @@ bool _set_block_type_in_chunk( chunk_t* chunk, int x, int y, int z, block_type_t
   return changed;
 }
 
-bool get_block_type_in_chunk( const chunk_t* chunk, int x, int y, int z, block_type_t* block_type ) {
+bool _get_block_type_in_chunk( const chunk_t* chunk, int x, int y, int z, block_type_t* block_type ) {
   assert( chunk && chunk->voxels && block_type );
   if ( x < 0 || x >= CHUNK_X || y < 0 || y >= CHUNK_Y || z < 0 || z >= CHUNK_Z ) { return false; }
 
@@ -465,7 +465,7 @@ chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk, int from_y_incl
     for ( int z = 0; z < CHUNK_Z; z++ ) {
       for ( int x = 0; x < CHUNK_X; x++ ) {
         block_type_t our_block_type = 0;
-        bool ret                    = get_block_type_in_chunk( chunk, x, y, z, &our_block_type );
+        bool ret                    = _get_block_type_in_chunk( chunk, x, y, z, &our_block_type );
         int floats_added_this_block = 0;
         assert( ret );
         if ( our_block_type == BLOCK_TYPE_AIR ) { continue; }
@@ -480,7 +480,7 @@ chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk, int from_y_incl
           const float* faces[6] = { _west_face, _east_face, _bottom_face, _top_face, _north_face, _south_face };
           block_type_t neighbour_block_type;
           for ( int face_idx = 0; face_idx < 6; face_idx++ ) {
-            bool ret = get_block_type_in_chunk( chunk, x + xs[face_idx], y + ys[face_idx], z + zs[face_idx], &neighbour_block_type );
+            bool ret = _get_block_type_in_chunk( chunk, x + xs[face_idx], y + ys[face_idx], z + zs[face_idx], &neighbour_block_type );
             // if face is valid then add one face's worth of vertex data to the buffer
             if ( !ret || neighbour_block_type == BLOCK_TYPE_AIR ) {
               memcpy( &data.positions_ptr[total_vp_floats + floats_added_this_block], faces[face_idx], VOXEL_FACE_VP_BYTES );
@@ -542,7 +542,7 @@ void chunk_free_vertex_data( chunk_vertex_data_t* chunk_vertex_data ) {
 
 /*-------------------------------------------------CHUNKS ORGANISATION-----------------------------------------------------*/
 
-// total number of chunkss
+// total number of chunks
 #define CHUNKS_N 256
 
 static bool _dirty_chunks[CHUNKS_N];
@@ -804,11 +804,11 @@ bool chunks_picked_colour_to_voxel_idx( uint8_t r, uint8_t g, uint8_t b, uint8_t
   return true;
 }
 
-bool chunks_set_block_type_in_chunk( int chunk_id, int x, int y, int z, block_type_t type ) {
+bool chunks_get_block_type_in_chunk( int chunk_id, int x, int y, int z, block_type_t* block_type ) {
   assert( chunk_id >= 0 && chunk_id < CHUNKS_N );
-  bool changed = _set_block_type_in_chunk( &_chunks[chunk_id], x, y, z, type );
-  if ( changed ) { _dirty_chunks[chunk_id] = true; }
-  return changed;
+
+  bool ret = _get_block_type_in_chunk( &_chunks[chunk_id], x, y, z, block_type );
+  return ret;
 }
 
 bool chunks_create_block_on_face( int picked_chunk_id, int picked_x, int picked_y, int picked_z, int picked_face, block_type_t type ) {
@@ -874,3 +874,5 @@ void chunks_update_dirty_chunk_meshes() {
     if ( _dirty_chunks[i] ) { chunks_update_chunk_mesh( i ); }
   }
 }
+
+void chunks_slice_view_mode( bool enable ) {}

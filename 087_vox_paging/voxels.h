@@ -1,3 +1,10 @@
+/* TODO
+
+* slice view mode
+* frustum culling
+
+*/
+
 #pragma once
 
 #include "apg_maths.h"
@@ -25,6 +32,11 @@ int chunks_get_drawn_count();
 bool chunks_picked_colour_to_voxel_idx( uint8_t r, uint8_t g, uint8_t b, uint8_t a, int* x, int* y, int* z, int* face, int* chunk_id );
 
 /*
+block_type must not be NULL and chunk_id must be valid
+RETURNS false if xyz is out of bounds */
+bool chunks_get_block_type_in_chunk( int chunk_id, int x, int y, int z, block_type_t* block_type );
+
+/*
 RETURNS
 - true if block was changed
 - false if no change was required since type is the same as before
@@ -40,3 +52,5 @@ void chunks_update_chunk_mesh( int chunk_id );
 /* call once per update tick to regenerate geometry for any chunks that were modified since last call
 calls chunks_update_chunk_mesh() */
 void chunks_update_dirty_chunk_meshes();
+
+void chunks_slice_view_mode( bool enable );
