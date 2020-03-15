@@ -1,11 +1,3 @@
-wadrend
-test
-shaders
-demo
-raycaster
-cubemap
-shads
-
 # build files
 *.out
 *.o
@@ -13,6 +5,7 @@ shads
 *.gcda
 *.gcno
 *.dSYM/
+*.exp
 vs2017/
 build/
 .vscode/
@@ -27,8 +20,18 @@ output.png
 out.*
 *.xyz
 
+# other program names
+wadrend
+test
+shaders
+demo
+raycaster
+cubemap
+shads
 vox
 bye
+
+# sample inpits
 vox.ply
 *.ttf
 *.zip
