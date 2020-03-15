@@ -115,9 +115,10 @@ static const int palette_stone = 1;
 static const int palette_dirt  = 2;
 static const int palette_crust = 3;
 
-
+// might be handy to keep as a reference
+#if 0
 /* creates vertex data for a cube made from 6 individual faces */
-chunk_vertex_data_t _test_cube_from_faces() {
+static chunk_vertex_data_t _test_cube_from_faces() {
   chunk_vertex_data_t cube = ( chunk_vertex_data_t ){
     .n_vp_comps = VOXEL_VP_COMPS, .n_vt_comps = VOXEL_VT_COMPS, .n_vpalidx_comps = VOXEL_VPALIDX_COMPS, .n_vn_comps = VOXEL_VN_COMPS, .n_vpicking_comps = VOXEL_VPICKING_COMPS
   };
@@ -146,8 +147,9 @@ chunk_vertex_data_t _test_cube_from_faces() {
 
   return cube;
 }
+#endif
 
-bool _set_block_type_in_chunk( chunk_t* chunk, int x, int y, int z, block_type_t type ) {
+static bool _set_block_type_in_chunk( chunk_t* chunk, int x, int y, int z, block_type_t type ) {
   assert( chunk && chunk->voxels );
 
   bool changed = false;
@@ -184,7 +186,7 @@ bool _set_block_type_in_chunk( chunk_t* chunk, int x, int y, int z, block_type_t
   return changed;
 }
 
-bool _get_block_type_in_chunk( const chunk_t* chunk, int x, int y, int z, block_type_t* block_type ) {
+static bool _get_block_type_in_chunk( const chunk_t* chunk, int x, int y, int z, block_type_t* block_type ) {
   assert( chunk && chunk->voxels && block_type );
   if ( x < 0 || x >= CHUNK_X || y < 0 || y >= CHUNK_Y || z < 0 || z >= CHUNK_Z ) { return false; }
 
@@ -193,7 +195,7 @@ bool _get_block_type_in_chunk( const chunk_t* chunk, int x, int y, int z, block_
   return true;
 }
 
-bool is_voxel_above_surface( const chunk_t* chunk, int x, int y, int z ) {
+static bool _is_voxel_above_surface( const chunk_t* chunk, int x, int y, int z ) {
   assert( chunk && chunk->voxels );
   // edges of chunk will be lit by sunlight
   if ( x < 0 || x >= CHUNK_X || y < 0 || y >= CHUNK_Y || z < 0 || z >= CHUNK_Z ) { return true; }
@@ -204,30 +206,25 @@ bool is_voxel_above_surface( const chunk_t* chunk, int x, int y, int z ) {
   return false;
 }
 
-bool is_voxel_face_exposed_to_sun( const chunk_t* chunk, int x, int y, int z, int face_idx ) {
+static bool _is_voxel_face_exposed_to_sun( const chunk_t* chunk, int x, int y, int z, int face_idx ) {
   assert( chunk && chunk->voxels );
 
   switch ( face_idx ) {
-  case 0: return is_voxel_above_surface( chunk, x - 1, y, z );
-  case 1: return is_voxel_above_surface( chunk, x + 1, y, z );
-  case 2: return is_voxel_above_surface( chunk, x, y - 1, z );
-  case 3: return is_voxel_above_surface( chunk, x, y + 1, z );
-  case 4: return is_voxel_above_surface( chunk, x, y, z - 1 );
-  case 5: return is_voxel_above_surface( chunk, x, y, z + 1 );
+  case 0: return _is_voxel_above_surface( chunk, x - 1, y, z );
+  case 1: return _is_voxel_above_surface( chunk, x + 1, y, z );
+  case 2: return _is_voxel_above_surface( chunk, x, y - 1, z );
+  case 3: return _is_voxel_above_surface( chunk, x, y + 1, z );
+  case 4: return _is_voxel_above_surface( chunk, x, y, z - 1 );
+  case 5: return _is_voxel_above_surface( chunk, x, y, z + 1 );
   default: assert( false ); break;
   }
   return false;
 }
 
-// generate a y from an x and a z
-uint8_t noisei( int x, int z, int max_height ) {
-  int val = x * x * z + x; // TODO diamond square
-  val %= max_height;
-  return (uint8_t)CLAMP( val, 0, max_height ); // TODO can this limit be a problem?
-}
-
-// todo ifdef write_heightmap img
-chunk_t _chunk_generate( const uint8_t* heightmap, int hm_w, int hm_h, int x_offset, int z_offset ) {
+// TODO ifdef write_heightmap img
+// PARAMS
+// - hm_dims - square heightmap so use width or height in pixels here
+static chunk_t _chunk_generate( const uint8_t* heightmap, int hm_dims, int x_offset, int z_offset ) {
   assert( heightmap );
 
   chunk_t chunk;
@@ -237,11 +234,11 @@ chunk_t _chunk_generate( const uint8_t* heightmap, int hm_w, int hm_h, int x_off
 
   for ( int z = 0; z < CHUNK_Z; z++ ) {
     for ( int x = 0; x < CHUNK_X; x++ ) {
-      // uint8_t height = noisei( x, z, CHUNK_Y - 1 ); // TODO add position of chunk to x and y for continuous/infinite map
+      // uint8_t height = _noisei( x, z, CHUNK_Y - 1 ); // TODO add position of chunk to x and y for continuous/infinite map
 
       int xx                       = x_offset + x;
       int zz                       = z_offset + z;
-      int idx                      = hm_w * zz + xx; // uses offsets and width/height of map
+      int idx                      = hm_dims * zz + xx; // uses offsets and width/height of map
       const int underground_height = 16;
       const int heightmap_sample   = heightmap[idx]; // uint8_t to int to avoid overflow when adding a hm sample of 255 to underground height > 0
 
@@ -257,7 +254,8 @@ chunk_t _chunk_generate( const uint8_t* heightmap, int hm_w, int hm_h, int x_off
   return chunk;
 }
 
-chunk_t _chunk_generate_flat() {
+#if 0
+static chunk_t _chunk_generate_flat() {
   chunk_t chunk;
 
   memset( &chunk, 0, sizeof( chunk_t ) );
@@ -274,58 +272,7 @@ chunk_t _chunk_generate_flat() {
   return chunk;
 }
 
-bool _chunk_load_from_file( const char* filename, chunk_t* chunk ) {
-  assert( filename && chunk );
-
-  memset( chunk, 0, sizeof( chunk_t ) );
-  chunk->voxels = calloc( CHUNK_X * CHUNK_Y * CHUNK_Z, sizeof( voxel_t ) );
-  assert( chunk->voxels );
-
-  FILE* fptr = fopen( filename, "rb" );
-  if ( !fptr ) { return false; }
-  int n = fread( chunk->voxels, sizeof( voxel_t ) * CHUNK_X * CHUNK_Y * CHUNK_Z, 1, fptr );
-  if ( 1 != n ) {
-    fclose( fptr );
-    return false;
-  }
-  n = fread( chunk->heightmap, sizeof( int ) * CHUNK_X * CHUNK_Z, 1, fptr );
-  if ( 1 != n ) {
-    fclose( fptr );
-    return false;
-  }
-  n = fread( &chunk->n_non_air_voxels, sizeof( uint32_t ), 1, fptr );
-  if ( 1 != n ) {
-    fclose( fptr );
-    return false;
-  }
-  fclose( fptr );
-  return true;
-}
-
-bool _chunk_save_to_file( const char* filename, const chunk_t* chunk ) {
-  assert( filename && chunk && chunk->voxels );
-  FILE* fptr = fopen( filename, "wb" );
-  if ( !fptr ) { return false; }
-  int n = fwrite( chunk->voxels, sizeof( voxel_t ) * CHUNK_X * CHUNK_Y * CHUNK_Z, 1, fptr );
-  if ( 1 != n ) {
-    fclose( fptr );
-    return false;
-  }
-  n = fwrite( chunk->heightmap, sizeof( int ) * CHUNK_X * CHUNK_Z, 1, fptr );
-  if ( 1 != n ) {
-    fclose( fptr );
-    return false;
-  }
-  n = fwrite( &chunk->n_non_air_voxels, sizeof( uint32_t ), 1, fptr );
-  if ( 1 != n ) {
-    fclose( fptr );
-    return false;
-  }
-  fclose( fptr );
-  return true;
-}
-
-bool chunk_write_heightmap( const char* filename, const chunk_t* chunk ) {
+static bool chunk_write_heightmap( const char* filename, const chunk_t* chunk ) {
   assert( filename && chunk && chunk->voxels );
   uint8_t* img = malloc( CHUNK_X * CHUNK_Z * 3 );
   for ( int z = 0; z < CHUNK_Z; z++ ) {
@@ -337,8 +284,9 @@ bool chunk_write_heightmap( const char* filename, const chunk_t* chunk ) {
   free( img );
   return result;
 }
+#endif
 
-void chunk_free( chunk_t* chunk ) {
+static void chunk_free( chunk_t* chunk ) {
   assert( chunk && chunk->voxels );
 
   free( chunk->voxels );
@@ -401,13 +349,13 @@ static void _memcpy_face_normals( const chunk_t* chunk, int x, int y, int z, int
   case 5: buff[2] = 1.0f; break;
   default: assert( false ); break;
   }
-  bool sunlit = is_voxel_face_exposed_to_sun( chunk, x, y, z, face_idx );
+  bool sunlit = _is_voxel_face_exposed_to_sun( chunk, x, y, z, face_idx );
   if ( sunlit ) { buff[3] = 1.0f; }
   assert( curr_float + VOXEL_VN_COMPS * VOXEL_FACE_VERTS < max_floats );
   for ( int v = 0; v < VOXEL_FACE_VERTS; v++ ) { memcpy( &dest[curr_float + v * VOXEL_VN_COMPS], buff, sizeof( float ) * VOXEL_VN_COMPS ); }
 }
 
-chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk, int from_y_inclusive, int to_y_exclusive ) {
+static chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk, int from_y_inclusive, int to_y_exclusive ) {
   assert( chunk );
   assert( from_y_inclusive >= 0 && to_y_exclusive <= CHUNK_Y );
 
@@ -503,7 +451,7 @@ chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk, int from_y_incl
   return data;
 }
 
-void chunk_free_vertex_data( chunk_vertex_data_t* chunk_vertex_data ) {
+static void chunk_free_vertex_data( chunk_vertex_data_t* chunk_vertex_data ) {
   assert( chunk_vertex_data && chunk_vertex_data->positions_ptr );
 
   free( chunk_vertex_data->positions_ptr );
@@ -518,23 +466,35 @@ void chunk_free_vertex_data( chunk_vertex_data_t* chunk_vertex_data ) {
 
 // total number of chunks
 #define CHUNKS_N 256
+#define VOXEL_SCALE 0.2f
 
+// generated graphics stuff that doesn't persist between save/load
 static bool _dirty_chunks[CHUNKS_N];
 static mesh_t _chunk_meshes[CHUNKS_N];
-static chunk_t _chunks[CHUNKS_N];
 static mat4 _chunks_M[CHUNKS_N];
 static shader_t _voxel_shader;
 static shader_t _colour_picking_shader;
 static texture_t _array_texture;
-static int _chunks_w = 16, _chunks_h = 16;
-static float _voxel_scale = 0.2f;
-static bool _chunks_created;
+
+// struct of world state that would be saved/loaded from a file
+typedef struct chunks_world_t {
+  chunk_t _chunks[CHUNKS_N];
+  int _chunks_w, _chunks_h;
+  uint32_t seed;
+  bool chunks_created;
+  bool slice_view_mode;
+} chunks_world_t;
+
+static chunks_world_t _g_chunks_world;
 
 bool chunks_create( uint32_t seed, uint32_t chunks_wide, uint32_t chunks_deep ) {
   assert( chunks_wide == chunks_deep ); // current limitation
 
-  _chunks_w = chunks_wide;
-  _chunks_h = chunks_deep;
+  if ( _g_chunks_world.chunks_created ) { return false; } // free first
+
+  _g_chunks_world._chunks_w = chunks_wide;
+  _g_chunks_world._chunks_h = chunks_deep;
+  _g_chunks_world.seed      = seed;
 
   dsquare_heightmap_t dshm;
   {
@@ -544,22 +504,22 @@ bool chunks_create( uint32_t seed, uint32_t chunks_wide, uint32_t chunks_deep ) 
     const int noise_scale        = 64;
     const int feature_spread     = 64;
     const int feature_max_height = 64;
-    dshm                         = dsquare_heightmap_alloc( CHUNK_X * _chunks_w, default_height );
+    dshm                         = dsquare_heightmap_alloc( CHUNK_X * _g_chunks_world._chunks_w, default_height );
     dsquare_heightmap_gen( &dshm, noise_scale, feature_spread, feature_max_height );
   }
 
-  for ( int cz = 0; cz < _chunks_h; cz++ ) {
-    for ( int cx = 0; cx < _chunks_w; cx++ ) {
-      const int idx = cz * _chunks_w + cx;
-      _chunks[idx]  = _chunk_generate( dshm.filtered_heightmap, dshm.w, dshm.h, cx * CHUNK_X, cz * CHUNK_Z );
+  for ( int cz = 0; cz < _g_chunks_world._chunks_h; cz++ ) {
+    for ( int cx = 0; cx < _g_chunks_world._chunks_w; cx++ ) {
+      const int idx                = cz * _g_chunks_world._chunks_w + cx;
+      _g_chunks_world._chunks[idx] = _chunk_generate( dshm.filtered_heightmap, dshm.w, cx * CHUNK_X, cz * CHUNK_Z );
       {
-        chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &_chunks[idx], 0, CHUNK_Y );
+        chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &_g_chunks_world._chunks[idx], 0, CHUNK_Y );
         _chunk_meshes[idx]              = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
           vertex_data.n_vpalidx_comps, vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.texcoords_ptr, vertex_data.n_vt_comps,
           vertex_data.normals_ptr, vertex_data.n_vn_comps, NULL, 0, vertex_data.n_vertices );
         chunk_free_vertex_data( &vertex_data );
       }
-      _chunks_M[idx] = translate_mat4( ( vec3 ){ .x = cx * CHUNK_X * _voxel_scale, .z = cz * CHUNK_Z * _voxel_scale } );
+      _chunks_M[idx] = translate_mat4( ( vec3 ){ .x = cx * CHUNK_X * VOXEL_SCALE, .z = cz * CHUNK_Z * VOXEL_SCALE } );
     }
   }
 
@@ -673,24 +633,24 @@ bool chunks_create( uint32_t seed, uint32_t chunks_wide, uint32_t chunks_deep ) 
   }
 
   dsquare_heightmap_free( &dshm );
-  _chunks_created = true;
+  _g_chunks_world.chunks_created = true;
 
   return true;
 }
 
 bool chunks_free() {
-  assert( _chunks_created );
-  if ( !_chunks_created ) { return false; }
+  assert( _g_chunks_world.chunks_created );
+  if ( !_g_chunks_world.chunks_created ) { return false; }
 
   delete_shader_program( &_voxel_shader );
   delete_shader_program( &_colour_picking_shader );
   delete_texture( &_array_texture );
 
   for ( int i = 0; i < CHUNKS_N; i++ ) {
-    chunk_free( &_chunks[i] );
+    chunk_free( &_g_chunks_world._chunks[i] );
     delete_mesh( &_chunk_meshes[i] );
   }
-  _chunks_created = false;
+  _g_chunks_world.chunks_created = false;
 
   return true;
 }
@@ -713,14 +673,14 @@ void chunks_sort_draw_queue( vec3 cam_pos ) {
   // sort chunks by distance from camera - render closest first
   for ( int i = 0; i < CHUNKS_N; i++ ) {
     _chunk_draw_queue[i].idx = i;
-    int chunk_x              = i % _chunks_w;
-    int chunk_z              = i / _chunks_w;
+    int chunk_x              = i % _g_chunks_world._chunks_w;
+    int chunk_z              = i / _g_chunks_world._chunks_w;
     vec2 cam_centre          = ( vec2 ){ .x = cam_pos.x, .y = cam_pos.z };
     vec2 chunk_centre =
-      ( vec2 ){ .x = chunk_x * CHUNK_X * _voxel_scale + CHUNK_X * _voxel_scale * 0.5f, .y = chunk_z * CHUNK_Z * _voxel_scale + CHUNK_Z * _voxel_scale * 0.5f };
+      ( vec2 ){ .x = chunk_x * CHUNK_X * VOXEL_SCALE + CHUNK_X * VOXEL_SCALE * 0.5f, .y = chunk_z * CHUNK_Z * VOXEL_SCALE + CHUNK_Z * VOXEL_SCALE * 0.5f };
     _chunk_draw_queue[i].sqdist = length2_vec2( sub_vec2_vec2( cam_centre, chunk_centre ) );
-    _chunk_draw_queue[i].mins   = ( vec3 ){ chunk_centre.x - CHUNK_X * _voxel_scale * 0.5f, 0.0f, chunk_centre.y - CHUNK_Z * _voxel_scale * 0.5f };
-    _chunk_draw_queue[i].maxs = ( vec3 ){ chunk_centre.x + CHUNK_X * _voxel_scale * 0.5f, CHUNK_Y * _voxel_scale, chunk_centre.y + CHUNK_Z * _voxel_scale * 0.5f };
+    _chunk_draw_queue[i].mins   = ( vec3 ){ chunk_centre.x - CHUNK_X * VOXEL_SCALE * 0.5f, 0.0f, chunk_centre.y - CHUNK_Z * VOXEL_SCALE * 0.5f };
+    _chunk_draw_queue[i].maxs = ( vec3 ){ chunk_centre.x + CHUNK_X * VOXEL_SCALE * 0.5f, CHUNK_Y * VOXEL_SCALE, chunk_centre.y + CHUNK_Z * VOXEL_SCALE * 0.5f };
   }
   qsort( _chunk_draw_queue, CHUNKS_N, sizeof( chunk_queue_item_t ), _chunk_cmp );
 }
@@ -732,11 +692,11 @@ static int _chunks_max_visible_dist = 10;
 int chunks_get_drawn_count() { return _chunks_drawn; }
 
 void chunks_draw( vec3 cam_fwd, mat4 P, mat4 V ) {
-  assert( _chunks_created );
-  if ( !_chunks_created ) { return; }
+  assert( _g_chunks_world.chunks_created );
+  if ( !_g_chunks_world.chunks_created ) { return; }
 
   _chunks_drawn        = 0;
-  const float max_dist = (float)_chunks_max_visible_dist * 16 * _voxel_scale;
+  const float max_dist = (float)_chunks_max_visible_dist * 16 * VOXEL_SCALE;
 
   uniform3f( _voxel_shader, _voxel_shader.u_fwd, cam_fwd.x, cam_fwd.y, cam_fwd.z );
   for ( int i = 0; i < CHUNKS_N; i++ ) {
@@ -750,11 +710,11 @@ void chunks_draw( vec3 cam_fwd, mat4 P, mat4 V ) {
 }
 
 void chunks_draw_colour_picking( mat4 offcentre_P, mat4 V ) {
-  assert( _chunks_created );
-  if ( !_chunks_created ) { return; }
+  assert( _g_chunks_world.chunks_created );
+  if ( !_g_chunks_world.chunks_created ) { return; }
 
   int local_chunks_drawn = 0; // needs to be a separate var from the one in chunks_draw
-  const float max_dist   = (float)_chunks_max_visible_dist * 16 * _voxel_scale;
+  const float max_dist   = (float)_chunks_max_visible_dist * 16 * VOXEL_SCALE;
 
   for ( uint32_t i = 0; i < CHUNKS_N; i++ ) {
     int idx = _chunk_draw_queue[i].idx;
@@ -781,15 +741,14 @@ bool chunks_picked_colour_to_voxel_idx( uint8_t r, uint8_t g, uint8_t b, uint8_t
 bool chunks_get_block_type_in_chunk( int chunk_id, int x, int y, int z, block_type_t* block_type ) {
   assert( chunk_id >= 0 && chunk_id < CHUNKS_N );
 
-  bool ret = _get_block_type_in_chunk( &_chunks[chunk_id], x, y, z, block_type );
+  bool ret = _get_block_type_in_chunk( &_g_chunks_world._chunks[chunk_id], x, y, z, block_type );
   return ret;
 }
-
 
 bool chunks_set_block_type_in_chunk( int chunk_id, int x, int y, int z, block_type_t block_type ) {
   assert( chunk_id >= 0 && chunk_id < CHUNKS_N );
 
-  bool ret = _set_block_type_in_chunk( &_chunks[chunk_id], x, y, z, block_type );
+  bool ret = _set_block_type_in_chunk( &_g_chunks_world._chunks[chunk_id], x, y, z, block_type );
   return ret;
 }
 
@@ -807,8 +766,8 @@ bool chunks_create_block_on_face( int picked_chunk_id, int picked_x, int picked_
   default: assert( false ); break;
   }
 
-  int chunk_x = picked_chunk_id % _chunks_w;
-  int chunk_z = picked_chunk_id / _chunks_w;
+  int chunk_x = picked_chunk_id % _g_chunks_world._chunks_w;
+  int chunk_z = picked_chunk_id / _g_chunks_world._chunks_w;
 
   if ( xx < 0 ) {
     assert( chunk_x > 0 );
@@ -816,7 +775,7 @@ bool chunks_create_block_on_face( int picked_chunk_id, int picked_x, int picked_
     chunk_x--;
   }
   if ( xx > 15 ) {
-    assert( chunk_x < _chunks_w );
+    assert( chunk_x < _g_chunks_world._chunks_w );
     xx = 0;
     chunk_x++;
   }
@@ -826,11 +785,11 @@ bool chunks_create_block_on_face( int picked_chunk_id, int picked_x, int picked_
     chunk_z--;
   }
   if ( zz > 15 ) {
-    assert( chunk_z < _chunks_h );
+    assert( chunk_z < _g_chunks_world._chunks_h );
     zz = 0;
     chunk_z++;
   }
-  const int chunk_id_to_modify = chunk_z * _chunks_w + chunk_x;
+  const int chunk_id_to_modify = chunk_z * _g_chunks_world._chunks_w + chunk_x;
   bool changed                 = chunks_set_block_type_in_chunk( chunk_id_to_modify, xx, yy, zz, type );
   if ( changed ) { _dirty_chunks[chunk_id_to_modify] = true; }
   return changed;
@@ -840,7 +799,7 @@ void chunks_update_chunk_mesh( int chunk_id ) {
   assert( chunk_id >= 0 && chunk_id < CHUNKS_N );
 
   // TODO(Anton) reuse a scratch buffer to avoid mallocs
-  chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &_chunks[chunk_id], 0, CHUNK_Y ); // TODO(Anton) also only load the changed slices
+  chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &_g_chunks_world._chunks[chunk_id], 0, CHUNK_Y ); // TODO(Anton) also only load the changed slices
   // TODO(Anton) and reuse the previous VBOs
   delete_mesh( &_chunk_meshes[chunk_id] );
   _chunk_meshes[chunk_id] = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr,
@@ -857,4 +816,4 @@ void chunks_update_dirty_chunk_meshes() {
   }
 }
 
-void chunks_slice_view_mode( bool enable ) {}
+void chunks_slice_view_mode( bool enable ) { _g_chunks_world.slice_view_mode = enable; }

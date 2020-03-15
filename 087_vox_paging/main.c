@@ -243,7 +243,7 @@ int main() {
       int thickness = 1;
       bool outlines = true;
       bool vflip    = false;
-      char string[256];
+      char string[2048];
       if ( elapsed_s == 0.0 ) { elapsed_s = 0.00001; }
       double fps = 1.0 / elapsed_s;
 

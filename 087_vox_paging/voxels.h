@@ -2,7 +2,17 @@
 
 * slice view mode
 * frustum culling
-
+* world save/load
+  save format
+  -chunk dims
+  -n chunks w,h
+  -m voxels in chunk
+  -m voxel types
+  -m voxels in chunk...
+  load
+  -deserialise into structs
+  -similar to create() function otherwise
+  -still need to regen model matrices, textures, etc.
 */
 
 #pragma once

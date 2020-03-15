@@ -5,18 +5,28 @@ demo
 raycaster
 cubemap
 shads
-a.out
-*.plist
-*.log
-*.tlog
+
+# build files
 *.out
-*.WAD
+*.o
+*.plist
 *.gcda
 *.gcno
+*.dSYM/
+vs2017/
+build/
+.vscode/
+Debug/
+
+# runtime outputs
+*.log
+*.tlog
+*.WAD
 .DS_Store
 output.png
 out.*
 *.xyz
+
 vox
 bye
 vox.ply
@@ -27,11 +37,6 @@ afl-in
 afl-out
 id_*
 id:*
-*.dSYM/
-.vscode/
-Debug/
-vs2017/
-build/
 tmp/
 036_pano2cubemap/pano2cube
 036_pano2cubemap/guinness_kegs
