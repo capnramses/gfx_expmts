@@ -188,7 +188,8 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
   if ( dib_hdr_ptr->n_colours_in_palette > 0 ) { has_palette = true; }
 
 #ifdef APG_BMP_DEBUG_OUTPUT
-  printf( "apg_bmp_debug: reading image\n|-filename `%s`\n|-dims %ux%u pixels\n|-bpp %u\n|-n_src_chans %u\n|-n_dst_chans %u\n", filename, *w, *h, dib_hdr_ptr->bpp, n_src_chans, n_dst_chans );
+  printf( "apg_bmp_debug: reading image\n|-filename `%s`\n|-dims %ux%u pixels\n|-bpp %u\n|-n_src_chans %u\n|-n_dst_chans %u\n", filename, *w, *h,
+    dib_hdr_ptr->bpp, n_src_chans, n_dst_chans );
 #endif
 
   uint32_t palette_offset = _BMP_FILE_HDR_SZ + dib_hdr_ptr->this_header_sz;
@@ -328,6 +329,10 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
         if ( ++c >= width ) { // advance a column
           c = 0;
           r++;
+          if ( r >= height ) { // done. no need to get second pixel. eg a 1x1 pixel image.
+            free( record.data );
+            return dst_img_ptr;
+          }
           dst_pixels_idx = ( height - 1 - r ) * dst_stride_sz;
         }
 
@@ -335,7 +340,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
           free( record.data );
           return dst_img_ptr;
         }
-        if ( dst_pixels_idx + 3 > width * height * n_dst_chans ) { // done
+        if ( dst_pixels_idx + 3 > width * height * n_dst_chans ) { // done. probably redundant check since checking r >= height.
           free( record.data );
           return dst_img_ptr;
         }
