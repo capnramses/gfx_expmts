@@ -17,7 +17,7 @@ C99
 /* Maximum pixel dimensions of width or height of an image. Should accommodate max used in graphics APIs.
    NOTE: 65536*65536 is the biggest number storable in 32 bits.
    This needs to be multiplied by n_channels so actual memory indices are not uint32 but size_t to avoid overflow.
-	 Note this will crash stb_image_write et al at maximum size which use 32bits, so reduce max size to accom. */
+   Note this will crash stb_image_write et al at maximum size which use 32bits, so reduce max size to accom. */
 #define _BMP_MAX_DIMS 65536
 #define _BMP_FILE_HDR_SZ 14
 #define _BMP_MIN_DIB_HDR_SZ 40
@@ -36,16 +36,16 @@ typedef struct _bmp_file_header_t {
 /* Following the file header is the BMP type header. this is the most commonly used format */
 typedef struct _bmp_dib_BITMAPINFOHEADER_t {
   uint32_t this_header_sz;
-  int32_t w; // in older headers w & h these are shorts and may be unsigned
-  int32_t h;
-  uint16_t n_planes; // must be 1
-  uint16_t bpp;
-  uint32_t compression_method; // 16 and 32-bit images must have a value of 3 here
-  uint32_t image_uncompressed_sz;
-  int32_t horiz_pixels_per_meter;
-  int32_t vert_pixels_per_meter;
-  uint32_t n_colours_in_palette;
-  uint32_t n_important_colours;
+  int32_t w;                      // in older headers w & h these are shorts and may be unsigned
+  int32_t h;                      //
+  uint16_t n_planes;              // must be 1
+  uint16_t bpp;                   // bits per pixel. 1,4,8,16,24,32.
+  uint32_t compression_method;    // 16 and 32-bit images must have a value of 3 here
+  uint32_t image_uncompressed_sz; // not consistently used in the wild, so ignored here.
+  int32_t horiz_pixels_per_meter; // not used.
+  int32_t vert_pixels_per_meter;  // not used.
+  uint32_t n_colours_in_palette;  //
+  uint32_t n_important_colours;   // not used.
   /* NOTE(Anton) a DIB header may end here at 40-bytes. be careful using sizeof() */
   /* if 'compression' value, above, is set to 3 ie the image is 16 or 32-bit, then these colour channel masks follow the headers.
   these are big-endian order bit masks to assign bits of each pixel to different colours. bits used must be contiguous and not overlap. */
@@ -96,14 +96,14 @@ static bool _read_entire_file( const char* filename, _entire_file_t* record ) {
 }
 
 static bool _validate_file_hdr( _bmp_file_header_t* file_hdr_ptr, size_t file_sz ) {
-  if ( !file_hdr_ptr ) { return NULL; }
+  if ( !file_hdr_ptr ) { return false; }
   if ( file_hdr_ptr->file_type[0] != 'B' || file_hdr_ptr->file_type[1] != 'M' ) { return false; }
   if ( file_hdr_ptr->image_data_offset > file_sz ) { return false; }
   return true;
 }
 
 static bool _validate_dib_hdr( _bmp_dib_BITMAPINFOHEADER_t* dib_hdr_ptr, size_t file_sz ) {
-  if ( !dib_hdr_ptr ) { return NULL; }
+  if ( !dib_hdr_ptr ) { return false; }
   if ( _BMP_FILE_HDR_SZ + dib_hdr_ptr->this_header_sz > file_sz ) { return false; }
   if ( ( 32 == dib_hdr_ptr->bpp || 16 == dib_hdr_ptr->bpp ) && ( BI_BITFIELDS != dib_hdr_ptr->compression_method && BI_ALPHABITFIELDS != dib_hdr_ptr->compression_method ) ) {
     return false;
@@ -292,9 +292,8 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
           free( record.data );
           return dst_img_ptr;
         }
-        if ( ( dst_pixels_idx + 3 ) > height * width * n_dst_chans ) { printf( "dst_pixels_idx %lu (+3 > h*w*n)\n", (uint64_t)dst_pixels_idx ); }
         dst_img_ptr[dst_pixels_idx++] = palette_data_ptr[index * 4 + 2];
-        dst_img_ptr[dst_pixels_idx++] = palette_data_ptr[index * 4 + 1]; // TODO HEAP OVERFLOW
+        dst_img_ptr[dst_pixels_idx++] = palette_data_ptr[index * 4 + 1];
         dst_img_ptr[dst_pixels_idx++] = palette_data_ptr[index * 4 + 0];
         src_byte_idx++;
       }
