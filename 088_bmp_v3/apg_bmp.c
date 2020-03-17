@@ -187,7 +187,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
   // NOTE(Anton) some image formats are not allowed a palette - could check for a bad header spec here also
   if ( dib_hdr_ptr->n_colours_in_palette > 0 ) { has_palette = true; }
 
-  //printf( "db: w = %u h = %u bpp =%u n_src_chans = %u, n_dst_chans = %u \n", *w, *h, dib_hdr_ptr->bpp, n_src_chans, n_dst_chans );
+  // printf( "db: w = %u h = %u bpp =%u n_src_chans = %u, n_dst_chans = %u \n", *w, *h, dib_hdr_ptr->bpp, n_src_chans, n_dst_chans );
 
   uint32_t palette_offset = _BMP_FILE_HDR_SZ + dib_hdr_ptr->this_header_sz;
   bool has_bitmasks       = false;
@@ -300,8 +300,8 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
   } else if ( 4 == dib_hdr_ptr->bpp && has_palette ) {
     uint32_t src_byte_idx = 0;
     for ( uint32_t r = 0; r < height; r++ ) {
-      int dst_pixels_idx = ( height - 1 - r ) * dst_stride_sz;
-      for ( uint32_t c = 0; c < width; c++ ) { // Note: w/2 because 2 pixels out per column in
+      uint32_t dst_pixels_idx = ( height - 1 - r ) * dst_stride_sz;
+      for ( uint32_t c = 0; c < width; c++ ) {
         if ( file_hdr_ptr->image_data_offset + src_byte_idx > record.sz ) {
           free( record.data );
           free( dst_img_ptr );
@@ -312,7 +312,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
         uint8_t a_index   = ( 0xFF & pixel_duo ) >> 4;
         uint8_t b_index   = 0xF & pixel_duo;
 
-        if ( palette_offset + a_index * 4 + 2 >= record.sz ) {
+        if ( palette_offset + a_index * 4 + 2 >= record.sz ) { // invalid src image
           free( record.data );
           return dst_img_ptr;
         }
@@ -325,7 +325,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
           dst_pixels_idx = ( height - 1 - r ) * dst_stride_sz;
         }
 
-        if ( palette_offset + b_index * 4 + 2 >= record.sz ) {
+        if ( palette_offset + b_index * 4 + 2 >= record.sz ) { // invalid src image
           free( record.data );
           return dst_img_ptr;
         }
@@ -377,7 +377,7 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
         dst_img_ptr[dst_pixels_idx++] = palette_data_ptr[palette_idx * 4 + 0];
         bit_idx++;
       }
-			src_byte_idx += ( row_padding_sz + 1 ); // 1bpp is special here
+      src_byte_idx += ( row_padding_sz + 1 ); // 1bpp is special here
     }
 
     // == 24-bpp -> 24-bit RGB == (but also should handle some other n_chans cases)
