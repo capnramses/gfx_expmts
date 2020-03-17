@@ -108,6 +108,8 @@ unfiltered_heightmap_out.png
 052_apg_bmp_v2/vs/apg_bmp_vs/
 052_apg_bmp_v2/fuzz_readwritetest
 052_apg_bmp_v2/fuzz_test_outputs/
-088_bmp_v3/tests_fuzzing/fuzz_24bpp_outputs/
-088_bmp_v3/tests_fuzzing/fuzz_24bpp
 088_bmp_v3/test_read_bmp
+088_bmp_v3/tests_fuzzing/fuzz_24bpp
+088_bmp_v3/tests_fuzzing/fuzz_32bpp
+088_bmp_v3/tests_fuzzing/fuzz_24bpp_outputs/
+088_bmp_v3/tests_fuzzing/fuzz_32bpp_outputs/
