@@ -9,6 +9,8 @@ Contributors:
 - Anton Gerdelan - initial code
 - Saija Sorsa - fuzz testing
 
+- to get debug printouts during parsing define APG_BMP_DEBUG_OUTPUT.
+
 Current Limitations:
 - 16-bit images not supported (yet). 1,4,8,24, and 32-bit images can be read.
 - No support for interleaved channel bit layouts eg RGB101010 RGB555 RGB565

@@ -187,7 +187,9 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
   // NOTE(Anton) some image formats are not allowed a palette - could check for a bad header spec here also
   if ( dib_hdr_ptr->n_colours_in_palette > 0 ) { has_palette = true; }
 
-  // printf( "db: w = %u h = %u bpp =%u n_src_chans = %u, n_dst_chans = %u \n", *w, *h, dib_hdr_ptr->bpp, n_src_chans, n_dst_chans );
+#ifdef APG_BMP_DEBUG_OUTPUT
+  printf( "apg_bmp_debug: reading image\n|-filename `%s`\n|-dims %ux%u pixels\n|-bpp %u\n|-n_src_chans %u\n|-n_dst_chans %u\n", filename, *w, *h, dib_hdr_ptr->bpp, n_src_chans, n_dst_chans );
+#endif
 
   uint32_t palette_offset = _BMP_FILE_HDR_SZ + dib_hdr_ptr->this_header_sz;
   bool has_bitmasks       = false;
@@ -316,6 +318,10 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
           free( record.data );
           return dst_img_ptr;
         }
+        if ( dst_pixels_idx + 3 > width * height * n_dst_chans ) { // done
+          free( record.data );
+          return dst_img_ptr;
+        }
         dst_img_ptr[dst_pixels_idx++] = palette_data_ptr[a_index * 4 + 2];
         dst_img_ptr[dst_pixels_idx++] = palette_data_ptr[a_index * 4 + 1];
         dst_img_ptr[dst_pixels_idx++] = palette_data_ptr[a_index * 4 + 0];
@@ -326,6 +332,10 @@ unsigned char* apg_bmp_read( const char* filename, int* w, int* h, int* n_chans 
         }
 
         if ( palette_offset + b_index * 4 + 2 >= record.sz ) { // invalid src image
+          free( record.data );
+          return dst_img_ptr;
+        }
+        if ( dst_pixels_idx + 3 > width * height * n_dst_chans ) { // done
           free( record.data );
           return dst_img_ptr;
         }
