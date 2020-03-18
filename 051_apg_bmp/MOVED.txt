@@ -1,0 +1,3 @@
+This project has been moved to my `apg` repository under `apg_bmp`.
+This folder is kept as a placeholder for convenience for git history.
+https://github.com/capnramses/apg/tree/master/apg_bmp
