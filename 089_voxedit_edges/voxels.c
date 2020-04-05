@@ -46,8 +46,9 @@ static int palette_dirt  = 3;
 static int palette_crust = 5;
 
 chunk_vertex_data_t _test_cube_from_faces() {
-  chunk_vertex_data_t cube =
-    ( chunk_vertex_data_t ){ .n_vp_comps = VOXEL_VP_COMPS, .n_vpalidx_comps = VOXEL_VPALIDX_COMPS, .n_vn_comps = VOXEL_VN_COMPS, .n_vpicking_comps = VOXEL_VPICKING_COMPS };
+  chunk_vertex_data_t cube = ( chunk_vertex_data_t ){
+    .n_vp_comps = VOXEL_VP_COMPS, .n_vpalidx_comps = VOXEL_VPALIDX_COMPS, .n_vn_comps = VOXEL_VN_COMPS, .n_vpicking_comps = VOXEL_VPICKING_COMPS, .n_vedge_comps = VOXEL_VEDGE_COMPS
+  };
   cube.positions_ptr = malloc( VOXEL_CUBE_VP_BYTES );
   if ( !cube.positions_ptr ) { return cube; }
   cube.palette_indices_ptr = malloc( VOXEL_CUBE_VPALIDX_BYTES );
@@ -275,7 +276,9 @@ static void _memcpy_face_palidx( block_type_t block_type, uint32_t* dest ) {
   case BLOCK_TYPE_STONE: {
     palidx = palette_stone;
   } break;
-  default: { assert( false ); } break;
+  default: {
+    assert( false );
+  } break;
   }
   // per the 6 vertices in this face
   for ( int v = 0; v < VOXEL_FACE_VERTS; v++ ) { *( dest + v ) = palidx; }
@@ -310,14 +313,68 @@ static void _memcpy_face_normals( const chunk_t* chunk, int x, int y, int z, int
   for ( int v = 0; v < VOXEL_FACE_VERTS; v++ ) { memcpy( &dest[curr_float + v * VOXEL_VN_COMPS], buff, sizeof( float ) * VOXEL_VN_COMPS ); }
 }
 
+static void _memcpy_face_edges( const chunk_t* chunk, int x, int y, int z, int face_idx, float* dest, size_t curr_float, size_t max_floats ) {
+  assert( chunk );
+
+  // TODO 1) get type of 4 surrounding faces, where valid, or indicate edge of map
+
+  float buff[] = {
+    -1, 1,  // top-left
+    -1, -1, // bottom-left
+    1, 1,   // top-right
+    1, 1,   // top-right
+    -1, -1, // bottom-left
+    1, -1   // bottom-right
+  };
+  memcpy( &dest[curr_float], buff, sizeof( float ) * VOXEL_VEDGE_COMPS * 6 );
+  // TODO -- for each of 6 verts work out edge distance in fixed order.
+  /* E.G.
+  0,5    4    --affected by up face
+
+
+  1     2,3   --affected by down face
+
+  |      |
+  left   right
+  */
+
+  /*
+    TODO check for edges here with a function similar to is_voxel_face_exposed_to_sun(chunk,x,y,z,face_idx)
+
+
+  for ( int v = 0; v < VOXEL_FACE_VERTS; v++ ) {memcpy( &dest[curr_float + v * VOXEL_VEDGE_COMPS], buff, sizeof( float ) * VOXEL_VEDGE_COMPS ); }
+
+    for ( face in 4 adjacent faces (same face_idx in surrounding voxels) )
+      edge_factor = vec2(0,0)
+      if ( face is from voxel of different type eg air )
+        edge_factor.x = 1 if l/r or .y=1 for u/d
+
+    switch ( face_idx ) {
+    case 0: buff[0] = -1.0f; break;
+    case 1: buff[0] = 1.0f; break;
+    case 2: buff[1] = -1.0f; break;
+    case 3: buff[1] = 1.0f; break;
+    case 4: buff[2] = -1.0f; break;
+    case 5: buff[2] = 1.0f; break;
+    default: assert( false ); break;
+    }
+    bool sunlit = is_voxel_face_exposed_to_sun( chunk, x, y, z, face_idx );
+    if ( sunlit ) { buff[3] = 1.0f; }
+    assert( curr_float + VOXEL_VN_COMPS * VOXEL_FACE_VERTS < max_floats );
+    */
+}
+
 chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk ) {
-  chunk_vertex_data_t data =
-    ( chunk_vertex_data_t ){ .n_vp_comps = VOXEL_VP_COMPS, .n_vpicking_comps = VOXEL_VPICKING_COMPS, .n_vn_comps = VOXEL_VN_COMPS, .n_vpalidx_comps = VOXEL_VPALIDX_COMPS };
+  chunk_vertex_data_t data = ( chunk_vertex_data_t ){
+    .n_vp_comps = VOXEL_VP_COMPS, .n_vpicking_comps = VOXEL_VPICKING_COMPS, .n_vn_comps = VOXEL_VN_COMPS, .n_vpalidx_comps = VOXEL_VPALIDX_COMPS, .n_vedge_comps = VOXEL_VEDGE_COMPS
+  };
   data.vp_buffer_sz       = VOXEL_CUBE_VP_BYTES * chunk->n_non_air_voxels;
   data.vn_buffer_sz       = VOXEL_CUBE_VN_BYTES * chunk->n_non_air_voxels;
   data.vpicking_buffer_sz = VOXEL_CUBE_VPICKING_BYTES * chunk->n_non_air_voxels;
   data.vpalidx_buffer_sz  = VOXEL_CUBE_VPALIDX_BYTES * chunk->n_non_air_voxels;
-  data.positions_ptr      = malloc( data.vp_buffer_sz );
+  data.vedge_buffer_sz    = VOXEL_CUBE_VEDGE_BYTES * chunk->n_non_air_voxels;
+
+  data.positions_ptr = malloc( data.vp_buffer_sz );
   assert( data.positions_ptr );
   data.palette_indices_ptr = malloc( data.vpalidx_buffer_sz );
   assert( data.palette_indices_ptr );
@@ -325,10 +382,13 @@ chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk ) {
   assert( data.picking_ptr );
   data.normals_ptr = malloc( data.vn_buffer_sz );
   assert( data.normals_ptr );
+  data.edges_ptr = malloc( data.vedge_buffer_sz );
+  assert( data.edges_ptr );
 
-  uint32_t total_vp_floats  = 0;
-  uint32_t total_vn_floats  = 0;
-  uint32_t total_palindices = 0;
+  uint32_t total_vp_floats    = 0;
+  uint32_t total_vn_floats    = 0;
+  uint32_t total_palindices   = 0;
+  uint32_t total_vedge_floats = 0;
 
   for ( int y = 0; y < CHUNK_Y; y++ ) {
     for ( int z = 0; z < CHUNK_Z; z++ ) {
@@ -356,9 +416,11 @@ chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk ) {
               _memcpy_face_palidx( our_block_type, &data.palette_indices_ptr[total_palindices] );
               _memcpy_face_picking( x, y, z, face_idx, data.picking_ptr, total_vp_floats + floats_added_this_block, VOXEL_CUBE_VPICKING_FLOATS * chunk->n_non_air_voxels );
               _memcpy_face_normals( chunk, x, y, z, face_idx, data.normals_ptr, total_vn_floats, VOXEL_CUBE_VN_FLOATS * chunk->n_non_air_voxels );
+              _memcpy_face_edges( chunk, x, y, z, face_idx, data.edges_ptr, total_vedge_floats, VOXEL_CUBE_VEDGE_FLOATS * chunk->n_non_air_voxels );
               floats_added_this_block += VOXEL_FACE_VP_FLOATS;
               total_vn_floats += VOXEL_FACE_VN_FLOATS;
               total_palindices += VOXEL_FACE_VPALIDX_UINTS;
+              total_vedge_floats += VOXEL_FACE_VEDGE_FLOATS;
             }
           }
         }
@@ -380,7 +442,9 @@ chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk ) {
   data.vn_buffer_sz       = total_vn_floats * sizeof( float );
   data.vpicking_buffer_sz = total_vp_floats * sizeof( float ); // NOTE(Anton) same as vp
   data.vpalidx_buffer_sz  = total_palindices * sizeof( uint32_t );
-  data.positions_ptr      = realloc( data.positions_ptr, data.vp_buffer_sz );
+  data.vedge_buffer_sz    = total_vedge_floats * sizeof( float );
+
+  data.positions_ptr = realloc( data.positions_ptr, data.vp_buffer_sz );
   assert( data.positions_ptr );
   data.palette_indices_ptr = realloc( data.palette_indices_ptr, data.vpalidx_buffer_sz );
   assert( data.palette_indices_ptr );
@@ -388,6 +452,8 @@ chunk_vertex_data_t chunk_gen_vertex_data( const chunk_t* chunk ) {
   assert( data.picking_ptr );
   data.normals_ptr = realloc( data.normals_ptr, data.vn_buffer_sz );
   assert( data.normals_ptr );
+  data.edges_ptr = realloc( data.edges_ptr, data.vedge_buffer_sz );
+  assert( data.edges_ptr );
 
   return data;
 }
@@ -399,6 +465,7 @@ void chunk_free_vertex_data( chunk_vertex_data_t* chunk_vertex_data ) {
   free( chunk_vertex_data->palette_indices_ptr );
   free( chunk_vertex_data->picking_ptr );
   free( chunk_vertex_data->normals_ptr );
+  free( chunk_vertex_data->edges_ptr );
   memset( chunk_vertex_data, 0, sizeof( chunk_vertex_data_t ) );
 }
 

@@ -44,7 +44,7 @@ bool start_gl( const char* window_title );
 void stop_gl();
 
 mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, const uint32_t* pal_idx_buffer, int n_pal_idx_comps, const float* picking_buffer,
-  int n_picking_comps, const float* normals_buffer, int n_normal_comps, int n_vertices );
+  int n_picking_comps, const float* normals_buffer, int n_normal_comps, const float* edges_buffer, int n_edge_comps, int n_vertices );
 void delete_mesh( mesh_t* mesh );
 
 texture_t create_texture_from_mem( const uint8_t* img_buffer, int w, int h, int n_channels, bool srgb, bool is_depth, bool bgr );

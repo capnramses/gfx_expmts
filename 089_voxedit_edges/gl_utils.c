@@ -9,6 +9,7 @@
 #define SHADER_BINDING_VC 2
 #define SHADER_BINDING_VPAL_IDX 2
 #define SHADER_BINDING_VPICKING 3 /* special colours to help picking algorithm */
+#define SHADER_BINDING_VEDGE 4
 
 static int g_win_width = 1920, g_win_height = 1080;
 GLFWwindow* g_window;
@@ -17,7 +18,7 @@ static mesh_t _ss_quad_mesh;
 
 static void _init_ss_quad() {
   float ss_quad_pos[] = { -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0 };
-  _ss_quad_mesh       = create_mesh_from_mem( ss_quad_pos, 2, NULL, 0, NULL, 0, NULL, 0, 4 );
+  _ss_quad_mesh       = create_mesh_from_mem( ss_quad_pos, 2, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 4 );
 }
 
 static bool _recompile_shader_with_check( GLuint shader, const char* src_str ) {
@@ -53,6 +54,7 @@ shader_t create_shader_program_from_strings( const char* vert_shader_str, const 
   glBindAttribLocation( shader.program_gl, SHADER_BINDING_VC, "a_vc" );
   glBindAttribLocation( shader.program_gl, SHADER_BINDING_VPAL_IDX, "a_vpal_idx" );
   glBindAttribLocation( shader.program_gl, SHADER_BINDING_VPICKING, "a_vpicking" );
+  glBindAttribLocation( shader.program_gl, SHADER_BINDING_VEDGE, "a_vedge" );
   glLinkProgram( shader.program_gl );
   glDeleteShader( vs );
   glDeleteShader( fs );
@@ -215,11 +217,11 @@ void stop_gl() {
 }
 
 mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, const uint32_t* pal_idx_buffer, int n_pal_idx_comps, const float* picking_buffer,
-  int n_picking_comps, const float* normals_buffer, int n_normal_comps, int n_vertices ) {
+  int n_picking_comps, const float* normals_buffer, int n_normal_comps, const float* edges_buffer, int n_edge_comps, int n_vertices ) {
   assert( points_buffer && n_points_comps > 0 && n_vertices > 0 );
 
   GLuint vertex_array_gl;
-  GLuint points_buffer_gl = 0, colour_buffer_gl = 0, picking_buffer_gl = 0, normals_buffer_gl = 0;
+  GLuint points_buffer_gl = 0, colour_buffer_gl = 0, picking_buffer_gl = 0, normals_buffer_gl = 0, edges_buffer_gl = 0;
   glGenVertexArrays( 1, &vertex_array_gl );
   glBindVertexArray( vertex_array_gl );
   {
@@ -252,6 +254,14 @@ mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, con
     glBufferData( GL_ARRAY_BUFFER, sizeof( float ) * n_normal_comps * n_vertices, normals_buffer, GL_STATIC_DRAW );
     glEnableVertexAttribArray( SHADER_BINDING_VN );
     glVertexAttribPointer( SHADER_BINDING_VN, n_normal_comps, GL_FLOAT, GL_FALSE, 0, NULL );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+  }
+  if ( edges_buffer && n_edge_comps > 0 ) {
+    glGenBuffers( 1, &edges_buffer_gl );
+    glBindBuffer( GL_ARRAY_BUFFER, edges_buffer_gl );
+    glBufferData( GL_ARRAY_BUFFER, sizeof( float ) * n_edge_comps * n_vertices, edges_buffer, GL_STATIC_DRAW );
+    glEnableVertexAttribArray( SHADER_BINDING_VEDGE );
+    glVertexAttribPointer( SHADER_BINDING_VEDGE, n_edge_comps, GL_FLOAT, GL_FALSE, 0, NULL );
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
   }
   glBindVertexArray( 0 );

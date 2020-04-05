@@ -93,7 +93,8 @@ int main() {
   {
     chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunk_b );
     chunk_mesh = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr, vertex_data.n_vpalidx_comps,
-      vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
+      vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.edges_ptr, vertex_data.n_vedge_comps,
+      vertex_data.n_vertices );
     chunk_free_vertex_data( &vertex_data );
   }
 
@@ -124,16 +125,19 @@ int main() {
       "in vec3 a_vp;\n"
       "in vec4 a_vn;\n"
       "in uint a_vpal_idx;\n"
+      "in vec2 a_vedge;\n"
       "uniform sampler2D u_palette_texture;\n"
       "uniform mat4 u_P, u_V, u_M;\n"
       "out vec3 v_c;\n"
       "out vec4 v_n;\n"
+      "out vec2 v_edge;\n"
       "void main () {\n"
       "  vec2 pal_st = vec2( float(a_vpal_idx) / 16.0, 1.0 );\n"
       //  "  pal_st.t = 1.0 - pal_st.t;\n"
       "  v_c = texture( u_palette_texture, pal_st ).rgb;\n"
       "  v_n.xyz = (u_M * vec4( a_vn.xyz, 0.0 )).xyz;\n"
       "  v_n.w = a_vn.w;\n"
+      "  v_edge = a_vedge;\n"
       "  gl_Position = u_P * u_V * u_M * vec4( a_vp * 0.1, 1.0 );\n"
       "}\n"
     };
@@ -143,6 +147,7 @@ int main() {
       "#version 410\n"
       "in vec3 v_c;\n"
       "in vec4 v_n;\n"
+      "in vec2 v_edge;\n"
       "uniform vec3 u_fwd;\n"
       "out vec4 o_frag_colour;\n"
       "vec3 sun_rgb = vec3( 1.0, 1.0, 1.0 );"
@@ -154,6 +159,10 @@ int main() {
       "  float outdoors_fac = v_n.w;\n"
       "  o_frag_colour      = vec4( sun_rgb * col * sun_dp * outdoors_fac * 0.7 + col * 0.2 + fwd_dp * col * 0.1, 1.0f );\n"
       "  o_frag_colour.rgb  = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );\n"
+      "  float edge_max = max( abs( v_edge.x ), abs( v_edge.y ) );\n"
+      "  const float outline_dist = 0.95;\n"
+      "  float outline_f = clamp((edge_max - outline_dist) * (1.0 / (1.0 - outline_dist)), 0.0, 1.0);\n"
+      "  o_frag_colour.rgb *= ( 1.0 - outline_f);\n"
       "}\n"
     };
     voxel_shader = create_shader_program_from_strings( vert_shader_str, frag_shader_str );
@@ -256,7 +265,8 @@ int main() {
         {
           chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( &chunk_b );
           chunk_mesh = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr, vertex_data.n_vpalidx_comps,
-            vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
+            vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.edges_ptr,
+            vertex_data.n_vedge_comps, vertex_data.n_vertices );
           chunk_free_vertex_data( &vertex_data );
         }
       }
@@ -284,7 +294,8 @@ int main() {
           // TODO(Anton) and reuse the previous VBOs
           delete_mesh( &chunk_mesh );
           chunk_mesh = create_mesh_from_mem( vertex_data.positions_ptr, vertex_data.n_vp_comps, vertex_data.palette_indices_ptr, vertex_data.n_vpalidx_comps,
-            vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.n_vertices );
+            vertex_data.picking_ptr, vertex_data.n_vpicking_comps, vertex_data.normals_ptr, vertex_data.n_vn_comps, vertex_data.edges_ptr,
+            vertex_data.n_vedge_comps, vertex_data.n_vertices );
           chunk_free_vertex_data( &vertex_data );
         }
       }

@@ -11,10 +11,13 @@
 #define CHUNK_Z 16 // 32
 
 #define VOXEL_FACE_VERTS 6
+
 #define VOXEL_VP_COMPS 3
 #define VOXEL_VN_COMPS 4
 #define VOXEL_VPICKING_COMPS 3
 #define VOXEL_VPALIDX_COMPS 1
+#define VOXEL_VEDGE_COMPS 2
+
 #define VOXEL_FACE_VP_FLOATS ( VOXEL_FACE_VERTS * VOXEL_VP_COMPS )
 #define VOXEL_FACE_VP_BYTES ( VOXEL_FACE_VP_FLOATS * sizeof( float ) )
 #define VOXEL_FACE_VN_FLOATS ( VOXEL_FACE_VERTS * VOXEL_VN_COMPS )
@@ -23,14 +26,19 @@
 #define VOXEL_FACE_VPICKING_BYTES ( VOXEL_FACE_VPICKING_FLOATS * sizeof( float ) )
 #define VOXEL_FACE_VPALIDX_UINTS ( VOXEL_FACE_VERTS * VOXEL_VPALIDX_COMPS )
 #define VOXEL_FACE_VPALIDX_BYTES ( VOXEL_FACE_VPALIDX_UINTS * sizeof( uint32_t ) )
+#define VOXEL_FACE_VEDGE_FLOATS ( VOXEL_FACE_VERTS * VOXEL_VEDGE_COMPS )
+#define VOXEL_FACE_VEDGE_BYTES ( VOXEL_FACE_VEDGE_FLOATS * sizeof( float ) )
+
 #define VOXEL_CUBE_VP_FLOATS ( VOXEL_FACE_VP_FLOATS * 6 )
 #define VOXEL_CUBE_VP_BYTES ( VOXEL_FACE_VP_BYTES * 6 )
 #define VOXEL_CUBE_VN_FLOATS ( VOXEL_FACE_VN_FLOATS * 6 )
-#define VOXEL_CUBE_VN_BYTES ( VOXEL_CUBE_VN_FLOATS * sizeof( float ) )
+#define VOXEL_CUBE_VN_BYTES ( VOXEL_FACE_VN_BYTES * 6 )
 #define VOXEL_CUBE_VPICKING_FLOATS ( VOXEL_FACE_VPICKING_FLOATS * 6 )
 #define VOXEL_CUBE_VPICKING_BYTES ( VOXEL_FACE_VPICKING_BYTES * 6 )
 #define VOXEL_CUBE_VPALIDX_UINTS ( VOXEL_FACE_VPALIDX_UINTS * 6 )
 #define VOXEL_CUBE_VPALIDX_BYTES ( VOXEL_FACE_VPALIDX_BYTES * 6 )
+#define VOXEL_CUBE_VEDGE_FLOATS ( VOXEL_FACE_VEDGE_FLOATS * 6 )
+#define VOXEL_CUBE_VEDGE_BYTES ( VOXEL_FACE_VEDGE_BYTES * 6 )
 
 typedef enum block_type_t { BLOCK_TYPE_AIR = 0, BLOCK_TYPE_CRUST, BLOCK_TYPE_GRASS, BLOCK_TYPE_DIRT, BLOCK_TYPE_STONE } block_type_t;
 
@@ -51,15 +59,21 @@ typedef struct chunk_vertex_data_t {
   float* picking_ptr; // only needs 3 bytes
   float* normals_ptr;
   uint32_t* palette_indices_ptr;
+  float* edges_ptr;
+
   size_t n_vertices;
+
   size_t n_vp_comps;
   size_t n_vpalidx_comps;
   size_t n_vpicking_comps;
   size_t n_vn_comps;
+  size_t n_vedge_comps;
+
   size_t vp_buffer_sz;
   size_t vn_buffer_sz;
   size_t vpalidx_buffer_sz;
   size_t vpicking_buffer_sz;
+  size_t vedge_buffer_sz;
 } chunk_vertex_data_t;
 
 chunk_t chunk_generate();
