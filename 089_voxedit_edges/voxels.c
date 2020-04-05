@@ -345,6 +345,19 @@ static void _memcpy_face_edges( const chunk_t* chunk, int x, int y, int z, int f
     if ( !get_block_type_in_chunk( chunk, x, y - 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
       buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
     }
+    // cave sides
+    if ( get_block_type_in_chunk( chunk, x - 1, y, z - 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x - 1, y, z + 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x - 1, y + 1, z, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x - 1, y - 1, z, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
   } break;
   case 1: { // +x
     if ( !get_block_type_in_chunk( chunk, x, y, z + 1, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
@@ -357,6 +370,19 @@ static void _memcpy_face_edges( const chunk_t* chunk, int x, int y, int z, int f
       buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
     }
     if ( !get_block_type_in_chunk( chunk, x, y - 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
+    // cave sides
+    if ( get_block_type_in_chunk( chunk, x + 1, y, z + 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x + 1, y, z - 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x + 1, y + 1, z, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x + 1, y - 1, z, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
       buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
     }
   } break;
@@ -373,6 +399,19 @@ static void _memcpy_face_edges( const chunk_t* chunk, int x, int y, int z, int f
     if ( !get_block_type_in_chunk( chunk, x, y, z - 1, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
       buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
     }
+    // cave sides
+    if ( get_block_type_in_chunk( chunk, x - 1, y - 1, z, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x + 1, y - 1, z, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x, y - 1, z + 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x, y - 1, z - 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
   } break;
   case 3: { // +y
     if ( !get_block_type_in_chunk( chunk, x - 1, y, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
@@ -385,6 +424,19 @@ static void _memcpy_face_edges( const chunk_t* chunk, int x, int y, int z, int f
       buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
     }
     if ( !get_block_type_in_chunk( chunk, x, y, z + 1, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
+    // cave sides
+    if ( get_block_type_in_chunk( chunk, x - 1, y + 1, z, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x + 1, y + 1, z, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x, y + 1, z - 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x, y + 1, z + 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
       buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
     }
   } break;
@@ -401,6 +453,19 @@ static void _memcpy_face_edges( const chunk_t* chunk, int x, int y, int z, int f
     if ( !get_block_type_in_chunk( chunk, x, y - 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
       buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
     }
+    // cave sides
+    if ( get_block_type_in_chunk( chunk, x + 1, y, z - 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x - 1, y, z - 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x, y + 1, z - 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x, y - 1, z - 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
   } break;
   case 5: { // +z
     if ( !get_block_type_in_chunk( chunk, x - 1, y, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
@@ -413,6 +478,19 @@ static void _memcpy_face_edges( const chunk_t* chunk, int x, int y, int z, int f
       buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
     }
     if ( !get_block_type_in_chunk( chunk, x, y - 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
+    // cave sides
+    if ( get_block_type_in_chunk( chunk, x - 1, y, z + 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x + 1, y, z + 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x, y + 1, z + 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( get_block_type_in_chunk( chunk, x, y - 1, z + 1, &neighbour_block_type ) && neighbour_block_type != BLOCK_TYPE_AIR ) {
       buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
     }
   } break;
