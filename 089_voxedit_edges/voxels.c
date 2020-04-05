@@ -318,15 +318,109 @@ static void _memcpy_face_edges( const chunk_t* chunk, int x, int y, int z, int f
 
   // TODO 1) get type of 4 surrounding faces, where valid, or indicate edge of map
 
+  // [left, right, down, up]
   float buff[] = {
-    -1, 1,  // top-left
-    -1, -1, // bottom-left
-    1, 1,   // top-right
-    1, 1,   // top-right
-    -1, -1, // bottom-left
-    1, -1   // bottom-right
+    0, 0, 0, 0, // top-left
+    0, 0, 0, 0, // bottom-left
+    0, 0, 0, 0, // top-right
+    0, 0, 0, 0, // top-right
+    0, 0, 0, 0, // bottom-left
+    0, 0, 0, 0  // bottom-right
   };
+
+  block_type_t our_block_type = BLOCK_TYPE_AIR, neighbour_block_type = BLOCK_TYPE_AIR;
+  get_block_type_in_chunk( chunk, x, y, z, &our_block_type );
+
+  switch ( face_idx ) {
+  case 0: { // -x
+    if ( !get_block_type_in_chunk( chunk, x, y, z - 1, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y, z + 1, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y + 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y - 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
+  } break;
+  case 1: { // +x
+    if ( !get_block_type_in_chunk( chunk, x, y, z + 1, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y, z - 1, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y + 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y - 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
+  } break;
+  case 2: { // -y
+    if ( !get_block_type_in_chunk( chunk, x - 1, y, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x + 1, y, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y, z + 1, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y, z - 1, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
+  } break;
+  case 3: { // +y
+    if ( !get_block_type_in_chunk( chunk, x - 1, y, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x + 1, y, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y, z - 1, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y, z + 1, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
+  } break;
+  case 4: { // -z
+    if ( !get_block_type_in_chunk( chunk, x + 1, y, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x - 1, y, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y + 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y - 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
+  } break;
+  case 5: { // +z
+    if ( !get_block_type_in_chunk( chunk, x - 1, y, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0] = buff[4] = buff[16] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x + 1, y, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[8 + 1] = buff[12 + 1] = buff[20 + 1] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y + 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[0 + 2] = buff[8 + 2] = buff[12 + 2] = 1.0f;
+    }
+    if ( !get_block_type_in_chunk( chunk, x, y - 1, z, &neighbour_block_type ) || neighbour_block_type != our_block_type ) {
+      buff[4 + 3] = buff[16 + 3] = buff[20 + 3] = 1.0f;
+    }
+  } break;
+  default: assert( false ); break;
+  } // endswitch
+
   memcpy( &dest[curr_float], buff, sizeof( float ) * VOXEL_VEDGE_COMPS * 6 );
+
   // TODO -- for each of 6 verts work out edge distance in fixed order.
   /* E.G.
   0,5    4    --affected by up face
