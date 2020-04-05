@@ -4,7 +4,9 @@ TODO
 - vert attrib for d to edge xy (shader and buffer/ptr)
 - vert shader use d to edge
 - function that finds edges for each box.
-  if (
+  if (...)
+- display
+- export the x,y either as a custom mesh format or by eg using the texcoords in ply/obj
 */
 
 #include "apg_maths.h"
@@ -46,9 +48,11 @@ bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
     vertex_data.positions_ptr[v * 3] *= scale;
     vertex_data.positions_ptr[v * 3 + 1] *= scale;
     vertex_data.positions_ptr[v * 3 + 2] *= scale;
-  }
 
-  // TODO(Anton) also write out normals? yes?
+    // TODO(Anton) write out xy for edge factor/distance
+
+    // TODO(Anton) also write out normals? yes?
+  }
 
   // write
   uint32_t r = apg_ply_write( "out.ply", ( apg_ply_t ){ .n_positions_comps = 3,
