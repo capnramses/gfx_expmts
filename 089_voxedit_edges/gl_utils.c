@@ -206,7 +206,7 @@ bool start_gl( const char* window_title ) {
   glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
   glDisable( GL_BLEND );
 
-  glfwSwapInterval( 1 );
+  glfwSwapInterval( 0 );
 
   return true;
 }
