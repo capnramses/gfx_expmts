@@ -160,9 +160,10 @@ int main() {
       "  o_frag_colour      = vec4( sun_rgb * col * sun_dp * outdoors_fac * 0.7 + col * 0.2 + fwd_dp * col * 0.1, 1.0f );\n"
       "  o_frag_colour.rgb  = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );\n"
       "  float edge_max = max( abs( v_edge.x ), abs( v_edge.y ) );\n"
-      "  const float outline_dist = 0.95;\n"
-      "  float outline_f = clamp((edge_max - outline_dist) * (1.0 / (1.0 - outline_dist)), 0.0, 1.0);\n"
-      "  o_frag_colour.rgb *= ( 1.0 - outline_f);\n"
+      "  const float outline_dist = 0.9;\n"
+      "  float outline_f = smoothstep( outline_dist, 1.0, edge_max );\n" // could be nicer anti-aliasing than a linear
+      //      "  float outline_f = clamp((edge_max - outline_dist) * (1.0 / (1.0 - outline_dist)), 0.0, 1.0);\n"
+      "  o_frag_colour.rgb *= ( 1.0 - outline_f);\n" // smoothstep( 0.97, 0.99, radius );
       "}\n"
     };
     voxel_shader = create_shader_program_from_strings( vert_shader_str, frag_shader_str );
