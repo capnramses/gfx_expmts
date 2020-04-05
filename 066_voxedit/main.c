@@ -126,7 +126,7 @@ int main() {
       "out vec4 v_n;\n"
       "void main () {\n"
       "  vec2 pal_st = vec2( float(a_vpal_idx) / 16.0, 1.0 );\n"
-    //  "  pal_st.t = 1.0 - pal_st.t;\n"
+      //  "  pal_st.t = 1.0 - pal_st.t;\n"
       "  v_c = texture( u_palette_texture, pal_st ).rgb;\n"
       "  v_n.xyz = (u_M * vec4( a_vn.xyz, 0.0 )).xyz;\n"
       "  v_n.w = a_vn.w;\n"
@@ -347,7 +347,7 @@ int main() {
       int thickness = 1;
       bool outlines = true;
       bool vflip    = false;
-      char string[256];
+      char string[1024];
       if ( elapsed_s == 0.0 ) { elapsed_s = 0.00001; }
       double fps = 1.0 / elapsed_s;
 
