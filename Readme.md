@@ -75,7 +75,7 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 064     | `offcentre_perspective`     | Perspective correct subwindow rendering                                    | working             |
 | 065     | `vox_colour_pick`           | Using colour buffer 1 frame later with 3x3 window                          | working             |
 | 066     | `voxedit`                   | A quick-to-use voxel mesh creator and exporter                             | working             |
-| 067     | `multichunk`                | Voxel world made from several chunks                                       | started             |
+| 067     | `multichunk`                | Voxel world made from several chunks                                       | working             |
 | 068     | `winmain`                   | Win32 program with a WinMain (prelude to D3D code)                         | working             |
 | 069     | `d3d_device`                | Start a Direct3D 11 Device and Context                                     | removed / teaching  |
 | 070     | `d3d_device_ii`             | Fresh start based on MS docs. Also clear the viewport.                     | removed / teaching  |
