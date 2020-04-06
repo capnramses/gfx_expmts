@@ -1,6 +1,5 @@
 #include "voxels.h"
-#define APG_TGA_IMPLEMENTATION
-#include "../common/include/apg_tga.h"
+#include "apg_tga.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>

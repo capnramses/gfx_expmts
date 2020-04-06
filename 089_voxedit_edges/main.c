@@ -12,6 +12,7 @@ TODO
 #include "apg_maths.h"
 #include "apg_pixfont.h"
 #include "apg_ply.h"
+#define APG_TGA_IMPLEMENTATION
 #include "apg_tga.h"
 #include "camera.h"
 #include "gl_utils.h"
@@ -26,8 +27,8 @@ bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
   assert( filename && chunk );
 
   // load latest v of palette
-  int w, h, n;
-  uint8_t* palette_img = apg_tga_read_file( "palette.tga", &w, &h, &n, 1 ); // vertically flip
+  uint32_t w, h, n;
+  uint8_t* palette_img = apg_tga_read_file( "palette.tga", &w, &h, &n, 0 );
   if ( !palette_img ) { return false; }
 
   // fetch buffers of vertex data
@@ -136,7 +137,7 @@ int main() {
       "pos.x += sin( a_vp.z * a_vp.y ) * wobble_amount;\n"
       "pos.y += sin( a_vp.x * a_vp.z ) * wobble_amount;\n"
       "pos.z += sin( a_vp.y * a_vp.z * a_vp.z ) * wobble_amount;\n"
-      "  vec2 pal_st = vec2( float(a_vpal_idx) / 16.0, 1.0 );\n"
+      "  vec2 pal_st = vec2( float(a_vpal_idx) / 16.0, 0.0 );\n" // note 0.0 used for t because only using first row currently
       //  "  pal_st.t = 1.0 - pal_st.t;\n"
       "  v_c = texture( u_palette_texture, pal_st ).rgb;\n"
       "  v_n.xyz = (u_M * vec4( a_vn.xyz, 0.0 )).xyz;\n"
