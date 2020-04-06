@@ -30,6 +30,7 @@ History:
 09/09/2019 - first version.
 24/09/2019 - published to apg repository.
 14/11/2019 - fixes for MSVC warnings (CPP compat)
+06/04/2020 - minor tidy-up of versions between repos
 ==============================================================*/
 
 #ifndef APG_TGA_H

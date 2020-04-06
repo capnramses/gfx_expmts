@@ -27,25 +27,25 @@ bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
 
   // load latest v of palette
   int w, h, n;
-  uint8_t* palette_img = apg_tga_read_file( "palette.tga", &w, &h, &n, 0 ); // vertically flip
+  uint8_t* palette_img = apg_tga_read_file( "palette.tga", &w, &h, &n, 1 ); // vertically flip
   if ( !palette_img ) { return false; }
 
   // fetch buffers of vertex data
   chunk_vertex_data_t vertex_data = chunk_gen_vertex_data( chunk );
 
   // create colours buffer from palette indices buffer
-  float* colours_buffer = malloc( sizeof( float ) * 3 * vertex_data.n_vertices );
+  uint8_t* colours_buffer = malloc( sizeof( uint8_t ) * 3 * vertex_data.n_vertices );
 
   // scale down the size
   const float scale = 0.1f;
 
   for ( uint32_t v = 0; v < vertex_data.n_vertices; v++ ) {
     uint32_t pal_idx          = vertex_data.palette_indices_ptr[v];
-    colours_buffer[v * 3 + 0] = (float)palette_img[pal_idx * 3 + 2] / 255.0f;
-    colours_buffer[v * 3 + 1] = (float)palette_img[pal_idx * 3 + 1] / 255.0f;
-    colours_buffer[v * 3 + 2] = (float)palette_img[pal_idx * 3 + 0] / 255.0f; // pal in BGR
+    colours_buffer[v * 3 + 0] = palette_img[pal_idx * n + 2];
+    colours_buffer[v * 3 + 1] = palette_img[pal_idx * n + 1];
+    colours_buffer[v * 3 + 2] = palette_img[pal_idx * n + 0]; // pal in BGR
 
-    vertex_data.positions_ptr[v * 3] *= scale;
+    vertex_data.positions_ptr[v * 3 + 0] *= scale;
     vertex_data.positions_ptr[v * 3 + 1] *= scale;
     vertex_data.positions_ptr[v * 3 + 2] *= scale;
 
@@ -60,8 +60,7 @@ bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
                                            .n_normals_comps                = vertex_data.n_vn_comps,
                                            .positions_ptr                  = vertex_data.positions_ptr,
                                            .colours_ptr                    = colours_buffer,
-                                           .n_vertices                     = vertex_data.n_vertices,
-                                           .loaded                         = true } );
+                                           .n_vertices                     = vertex_data.n_vertices } );
 
   // free mem
   free( colours_buffer );
@@ -132,7 +131,7 @@ int main() {
       "out vec4 v_n;\n"
       "out vec4 v_edge;\n"
       "void main () {\n"
-      "const float wobble_amount = 0.1;\n"
+      "const float wobble_amount = 0.0;\n"
       "vec3 pos = a_vp;\n"
       "pos.x += sin( a_vp.z * a_vp.y ) * wobble_amount;\n"
       "pos.y += sin( a_vp.x * a_vp.z ) * wobble_amount;\n"

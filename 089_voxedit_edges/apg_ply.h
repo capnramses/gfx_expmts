@@ -16,14 +16,21 @@
 typedef struct apg_ply_t {
   float* positions_ptr;
   float* normals_ptr;
-  float* colours_ptr;
-	float* texcoords_ptr;
-  int n_vertices;
-  int n_positions_comps;
-  int n_normals_comps;
-  int n_colours_comps;
-	int n_texcoords_comps;
-  int loaded; // 1 if there were no errors
+  unsigned char* colours_ptr;
+  float* texcoords_ptr;
+  float* edges_ptr; // custom attrib for Anton's voxel outlines
+  unsigned int n_vertices;
+  unsigned int n_positions_comps;
+  unsigned int n_normals_comps;
+  unsigned int n_colours_comps;
+  unsigned int n_texcoords_comps;
+  unsigned int n_edges_comps; // custom attrib for Anton's voxel outlines
 } apg_ply_t;
 
+/*
+PARAMS
+  filename - Must not be NULL.
+  ply      - Struct must be fully filled-out. Fields may be 0 or NULL.
+RETURNS - 0 on failure, or 1 on success.
+*/
 unsigned int apg_ply_write( const char* filename, apg_ply_t ply );
