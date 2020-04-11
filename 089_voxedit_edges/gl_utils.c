@@ -266,8 +266,14 @@ mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, con
   }
   glBindVertexArray( 0 );
 
-  mesh_t mesh = ( mesh_t ){
-    .vao = vertex_array_gl, .points_vbo = points_buffer_gl, .colours_vbo = colour_buffer_gl, .picking_vbo = picking_buffer_gl, .normals_vbo = normals_buffer_gl, .n_vertices = n_vertices
+  mesh_t mesh = ( mesh_t ){         //
+    .vao         = vertex_array_gl, //
+    .points_vbo  = points_buffer_gl,
+    .colours_vbo = colour_buffer_gl,
+    .picking_vbo = picking_buffer_gl,
+    .normals_vbo = normals_buffer_gl,
+    .vedges_vbo  = edges_buffer_gl,
+    .n_vertices  = n_vertices
   };
   return mesh;
 }
@@ -275,6 +281,7 @@ mesh_t create_mesh_from_mem( const float* points_buffer, int n_points_comps, con
 void delete_mesh( mesh_t* mesh ) {
   assert( mesh && mesh->vao > 0 && mesh->points_vbo > 0 );
 
+  if ( mesh->vedges_vbo ) { glDeleteBuffers( 1, &mesh->vedges_vbo ); }
   if ( mesh->colours_vbo ) { glDeleteBuffers( 1, &mesh->colours_vbo ); }
   glDeleteBuffers( 1, &mesh->points_vbo );
   glDeleteVertexArrays( 1, &mesh->vao );

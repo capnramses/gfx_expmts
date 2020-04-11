@@ -7,7 +7,7 @@
 
 typedef struct mesh_t {
   uint32_t vao;
-  uint32_t points_vbo, colours_vbo, picking_vbo, normals_vbo;
+  uint32_t points_vbo, colours_vbo, picking_vbo, normals_vbo, vedges_vbo;
   size_t n_vertices;
 } mesh_t;
 
