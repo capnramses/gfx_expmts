@@ -85,7 +85,7 @@ static void _mouse_button_cb( GLFWwindow* window, int button, int action, int mo
   APG_UNUSED( mods );
 
   int idx = button - GLFW_MOUSE_BUTTON_LEFT;
-  assert( idx >= 0 && idx < INPUT_N_MBUTTONS );
+  if ( idx < 0 || idx >= INPUT_N_MBUTTONS ) { return false; }
   _g_mouse_locked_state[idx] = GLFW_RELEASE == action ? false : _g_mouse_locked_state[idx];
   _g_mouse_held_state[idx]   = (bool)action; // GLFW_PRESS 1, GLFW_RELEASE 0
 }
