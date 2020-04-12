@@ -1,6 +1,12 @@
 #pragma once
 
-/* Limitations
+/*
+
+History
+12 Apr 2020 - Reduced float precision to 2dp.
+xx Apr 2020 - Added edges to output.
+
+Limitations
 * Components are optional, but the order is fixed.
   The following is valid:
   x, y, s, t, red, green, blue.

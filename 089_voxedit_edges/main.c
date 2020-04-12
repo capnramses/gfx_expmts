@@ -50,6 +50,10 @@ bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
     colours_buffer[v * 3 + 1] = palette_img[pal_idx * n + 1];
     colours_buffer[v * 3 + 2] = palette_img[pal_idx * n + 0]; // pal in BGR
 
+    vertex_data.positions_ptr[v * 3 + 0] -= 15.0f;
+    vertex_data.positions_ptr[v * 3 + 1] += 1.0f; // y origin at bottom of mesh
+    vertex_data.positions_ptr[v * 3 + 2] -= 15.0f;
+
     vertex_data.positions_ptr[v * 3 + 0] *= scale;
     vertex_data.positions_ptr[v * 3 + 1] *= scale;
     vertex_data.positions_ptr[v * 3 + 2] *= scale;
@@ -60,12 +64,17 @@ bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
   }
 
   // write
-  uint32_t r = apg_ply_write( "out.ply", ( apg_ply_t ){ .n_positions_comps = 3,
-                                           .n_colours_comps                = 3,
-                                           .n_normals_comps                = vertex_data.n_vn_comps,
-                                           .positions_ptr                  = vertex_data.positions_ptr,
-                                           .colours_ptr                    = colours_buffer,
-                                           .n_vertices                     = vertex_data.n_vertices } );
+  uint32_t r = apg_ply_write( "out.ply", ( apg_ply_t ){ //
+                                           .positions_ptr     = vertex_data.positions_ptr,
+                                           .n_normals_comps   = vertex_data.n_vn_comps,
+                                           .colours_ptr       = colours_buffer,
+                                           .texcoords_ptr     = NULL,
+                                           .edges_ptr         = vertex_data.edges_ptr,
+                                           .n_vertices        = vertex_data.n_vertices,
+                                           .n_positions_comps = 3,
+                                           .n_colours_comps   = 3,
+                                           .n_texcoords_comps = 0,
+                                           .n_edges_comps     = 4 } );
 
   // free mem
   free( colours_buffer );

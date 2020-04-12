@@ -29,8 +29,8 @@ unsigned int apg_ply_write( const char* filename, apg_ply_t ply ) {
   { // BODY
     // vertices
     for ( int v = 0; v < ply.n_vertices; v++ ) {
-      fprintf( fptr, "%f %f %f", ply.positions_ptr[v * 3 + 0], ply.positions_ptr[v * 3 + 1], ply.positions_ptr[v * 3 + 2] );
-      if ( 3 == ply.n_normals_comps ) { fprintf( fptr, " %f %f %f", ply.normals_ptr[v * 3 + 0], ply.normals_ptr[v * 3 + 1], ply.normals_ptr[v * 3 + 2] ); }
+      fprintf( fptr, "%.2f %.2f %.2f", ply.positions_ptr[v * 3 + 0], ply.positions_ptr[v * 3 + 1], ply.positions_ptr[v * 3 + 2] );
+      if ( 3 == ply.n_normals_comps ) { fprintf( fptr, " %.2f %.2f %.2f", ply.normals_ptr[v * 3 + 0], ply.normals_ptr[v * 3 + 1], ply.normals_ptr[v * 3 + 2] ); }
       if ( 4 == ply.n_colours_comps ) {
         fprintf( fptr, " %u %u %u %u", ply.colours_ptr[v * 3 + 0], ply.colours_ptr[v * 3 + 1], ply.colours_ptr[v * 3 + 2], ply.colours_ptr[v * 3 + 3] );
       } else if ( 3 == ply.n_colours_comps ) {
@@ -38,7 +38,7 @@ unsigned int apg_ply_write( const char* filename, apg_ply_t ply ) {
       }
       if ( 2 == ply.n_texcoords_comps ) { fprintf( fptr, " %f %f", ply.texcoords_ptr[v * 2 + 0], ply.texcoords_ptr[v * 2 + 1] ); }
       if ( 4 == ply.n_edges_comps ) {
-        fprintf( fptr, " %f %f %f %f", ply.edges_ptr[v * 4 + 0], ply.edges_ptr[v * 4 + 1], ply.edges_ptr[v * 4 + 2], ply.edges_ptr[v * 4 + 3] );
+        fprintf( fptr, " %.2f %.2f %.2f %.2f", ply.edges_ptr[v * 4 + 0], ply.edges_ptr[v * 4 + 1], ply.edges_ptr[v * 4 + 2], ply.edges_ptr[v * 4 + 3] );
       }
       fprintf( fptr, "\n" );
     }
