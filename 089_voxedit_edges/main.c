@@ -2,6 +2,9 @@
 
 TODO
 --> on export adjust origin to be in centre, at base.
+--> on export write edges out
+--> allow import or save/load in some format
+
 - vert attrib for d to edge xy (shader and buffer/ptr)
 - vert shader use d to edge
 - function that finds edges for each box.
