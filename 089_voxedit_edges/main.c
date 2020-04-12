@@ -1,6 +1,7 @@
 /* demo motivations - a version of 066_voxedit with single-pass outline rendering
 
 TODO
+--> on export adjust origin to be in centre, at base.
 - vert attrib for d to edge xy (shader and buffer/ptr)
 - vert shader use d to edge
 - function that finds edges for each box.
