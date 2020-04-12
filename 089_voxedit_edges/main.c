@@ -1,9 +1,9 @@
 /* demo motivations - a version of 066_voxedit with single-pass outline rendering
 
 TODO
---> on export adjust origin to be in centre, at base.
---> on export write edges out
 --> allow import or save/load in some format
+    - maybe rotate ply to z-up before export
+    - and also save a .apgvox file or so
 
 - vert attrib for d to edge xy (shader and buffer/ptr)
 - vert shader use d to edge
