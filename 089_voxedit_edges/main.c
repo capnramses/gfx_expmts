@@ -4,13 +4,6 @@ TODO
 --> allow import or save/load in some format
     - maybe rotate ply to z-up before export
     - and also save a .apgvox file or so
-
-- vert attrib for d to edge xy (shader and buffer/ptr)
-- vert shader use d to edge
-- function that finds edges for each box.
-  if (...)
-- display
-- export the x,y either as a custom mesh format or by eg using the texcoords in ply/obj
 */
 
 #include "apg_maths.h"
