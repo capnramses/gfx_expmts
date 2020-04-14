@@ -3,6 +3,7 @@
 /*
 
 History
+13 Apr 2020 - Restored apg_ply_read()
 12 Apr 2020 - Reduced float precision to 2dp.
 xx Apr 2020 - Added edges to output.
 
@@ -33,10 +34,7 @@ typedef struct apg_ply_t {
   unsigned int n_edges_comps; // custom attrib for Anton's voxel outlines
 } apg_ply_t;
 
-/*
-PARAMS
-  filename - Must not be NULL.
-  ply      - Struct must be fully filled-out. Fields may be 0 or NULL.
-RETURNS - 0 on failure, or 1 on success.
-*/
 unsigned int apg_ply_write( const char* filename, apg_ply_t ply );
+
+// not a generic reader. only handles some vertex properties. assumes mesh has only 2 body sections - vertex list, followed by face list.
+unsigned int apg_ply_read( const char* filename, apg_ply_t* ply );
