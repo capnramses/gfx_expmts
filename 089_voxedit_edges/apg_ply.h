@@ -34,7 +34,12 @@ typedef struct apg_ply_t {
   unsigned int n_edges_comps; // custom attrib for Anton's voxel outlines
 } apg_ply_t;
 
+/*
+RETURNS - 0 on failure, 1 on success */
 unsigned int apg_ply_write( const char* filename, apg_ply_t ply );
 
-// not a generic reader. only handles some vertex properties. assumes mesh has only 2 body sections - vertex list, followed by face list.
+/* not a generic reader. only handles some vertex properties. assumes mesh has only 2 body sections - vertex list, followed by face list.
+RETURNS - 0 on failure, 1 on success */
 unsigned int apg_ply_read( const char* filename, apg_ply_t* ply );
+
+void apg_ply_free( apg_ply_t* ply );

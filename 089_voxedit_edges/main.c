@@ -18,6 +18,7 @@ TODO
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 // exports to a PLY, baking the correct colours from the palette
 bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
@@ -57,17 +58,17 @@ bool export_voxel_ply( const char* filename, const chunk_t* chunk ) {
   }
 
   // write
-  uint32_t r = apg_ply_write( "out.ply", ( apg_ply_t ){ //
-                                           .positions_ptr     = vertex_data.positions_ptr,
-                                           .n_normals_comps   = vertex_data.n_vn_comps,
-                                           .colours_ptr       = colours_buffer,
-                                           .texcoords_ptr     = NULL,
-                                           .edges_ptr         = vertex_data.edges_ptr,
-                                           .n_vertices        = vertex_data.n_vertices,
-                                           .n_positions_comps = 3,
-                                           .n_colours_comps   = 3,
-                                           .n_texcoords_comps = 0,
-                                           .n_edges_comps     = 4 } );
+  uint32_t r = apg_ply_write( filename, ( apg_ply_t ){ //
+                                          .positions_ptr     = vertex_data.positions_ptr,
+                                          .n_normals_comps   = vertex_data.n_vn_comps,
+                                          .colours_ptr       = colours_buffer,
+                                          .texcoords_ptr     = NULL,
+                                          .edges_ptr         = vertex_data.edges_ptr,
+                                          .n_vertices        = vertex_data.n_vertices,
+                                          .n_positions_comps = 3,
+                                          .n_colours_comps   = 3,
+                                          .n_texcoords_comps = 0,
+                                          .n_edges_comps     = 4 } );
 
   // free mem
   free( colours_buffer );
@@ -266,8 +267,10 @@ int main() {
       }
 
       if ( was_key_pressed( g_export_mesh_key ) ) {
-        printf( "exporting out.ply...\n" );
-        bool ret = export_voxel_ply( "out.ply", &chunk_b );
+        char filename[1024];
+        sprintf( filename, "out_%ld.ply", time( NULL ) );
+        bool ret = export_voxel_ply( filename, &chunk_b );
+        printf( "exporting `%s`...\n", filename );
         if ( !ret ) { fprintf( stderr, "ERROR exporting out.ply\n" ); }
       }
 
