@@ -113,3 +113,4 @@ unfiltered_heightmap_out.png
 088_bmp_v3/tests_fuzzing/fuzz_32bpp
 088_bmp_v3/tests_fuzzing/fuzz_24bpp_outputs/
 088_bmp_v3/tests_fuzzing/fuzz_32bpp_outputs/
+089_voxedit_edges/out_*

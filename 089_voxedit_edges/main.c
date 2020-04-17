@@ -397,7 +397,7 @@ int main() {
         fprintf( stderr, "ERROR apg_pixfont_image_size_for_str\n" );
         return 1;
       }
-      text_texture = create_texture_from_mem( fps_img_mem, w, h, fps_n_channels, false, false, false );
+      update_texture( &text_texture, fps_img_mem, w, h, fps_n_channels, false, false, false );
       text_scale.x = (float)w / fb_width * 2.0f;
       text_scale.y = (float)h / fb_height * 2.0f;
       text_pos.x   = -1.0f + text_scale.x;
