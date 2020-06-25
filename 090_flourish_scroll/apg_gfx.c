@@ -579,7 +579,7 @@ void gfx_update_texture( gfx_texture_t* texture, const uint8_t* img_buffer, int 
   switch ( texture->n_channels ) {
   case 4: {
     internal_format = texture->properties.is_srgb ? GL_SRGB_ALPHA : GL_RGBA;
-    format          = GL_RGBA;
+    format          = texture->properties.is_bgr ? GL_BGRA : GL_RGBA;
   } break;
   case 3: {
     internal_format = texture->properties.is_srgb ? GL_SRGB : GL_RGB;

@@ -7,7 +7,7 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 ## Contents
 
 | numerus | titulus                     | descriptio                                                                 | status              |
-| ------- | --------------------------- | -------------------------------------------------------------------------- | ------------------- |
+|---------|-----------------------------|----------------------------------------------------------------------------|---------------------|
 | 000     | `video_modus`               | find and list all video modes on troublesome hardware                      | working             |
 | 001     | `cube_map_depth`            | depth writing to cube maps for omni-direc. shadows                         | abandoned           |
 | 002     | `bezier_curve`              | demo from splines and curves lecture last year                             | working             |
@@ -98,6 +98,7 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 087     | `vox_paging`                | Paging chunks of voxel terrain to/from disk.                               | started             |
 | 088     | `apg_bmp_v3`                | Rewrite and refuzz of BMP reader.                                          | moved to `apg` repo |
 | 089     | `voxedit_edges`             | Single-pass outline rendering based on `066_voxedit`.                      | working             |
+| 090     | `flourish_scroll`           | Study of a cool menu title animation I saw on Empire of Sin.               | working             |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed            |
