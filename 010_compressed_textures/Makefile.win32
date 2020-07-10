@@ -1,0 +1,10 @@
+BIN = test.exe
+CC = gcc
+FLAGS = -Wall -pedantic -std=c99 -DGLEW_STATIC
+INC = -I ../common/include
+LOC_LIB = ../common/win32/glfw3dll.a
+SYS_LIB = -lOpenGL32 -L ./ -lglfw3 -lm
+SRC = main.c ../common/src/GL/glew.c
+
+all:
+	${CC} ${FLAGS} -o ${BIN} ${SRC} ${INC} ${LOC_LIB} ${SYS_LIB}
