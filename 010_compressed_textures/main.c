@@ -175,17 +175,17 @@ int main() {
     "#version 410\n"
     "in vec2 vp;"
     "out vec2 st;"
-    "void main () {"
+    "void main() {"
     "  st = vp * 0.5 + 0.5;"
-    "  gl_Position = vec4 (vp, 0.0, 1.0);"
+    "  gl_Position = vec4( vp, 0.0, 1.0 );"
     "}";
   const char* fs_str =
     "#version 410\n"
     "in vec2 st;"
     "uniform sampler2D tex;"
     "out vec4 frag_colour;"
-    "void main () {"
-    "  frag_colour = texture (tex, st);"
+    "void main() {"
+    "  frag_colour = texture( tex, st );"
     "}";
   GLuint vs = glCreateShader( GL_VERTEX_SHADER );
   glShaderSource( vs, 1, &vs_str, NULL );
