@@ -50,8 +50,15 @@ void particle_system_start( particle_system_t* particle_system ) {
   assert( particle_system );
 
   particle_system->system_elapsed_s = 0.0;
+  particle_system->is_running       = true;
 
   // TODO(Anton) reset positions and velocities based on emitter type
+}
+
+void particle_system_stop( particle_system_t* particle_system ) {
+  assert( particle_system );
+
+  particle_system->is_running = false;
 }
 
 /*
@@ -81,8 +88,10 @@ void particle_system_draw( particle_system_t* particle_system, mat4 P, mat4 V ) 
   // TODO(Anton) bounding radius and distance check for system
 
   // TODO(Anton) number of instances should exclude particles not launched yet etc.
-  gfx_draw_mesh_instanced( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao,
-    particle_system->particle_mesh.n_vertices, particle_system->n_particles, NULL, 0 );
+ // gfx_draw_mesh_instanced( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao,
+  //  particle_system->particle_mesh.n_vertices, particle_system->n_particles, NULL, 0 );
+
+  gfx_draw_mesh( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao, particle_system->particle_mesh.n_vertices, NULL, 0 );
 }
 
 int main() {
@@ -96,15 +105,17 @@ int main() {
     return 1;
   }
 
-  gfx_shader_t ps_shader = gfx_create_shader_program_from_files( "particles.vert", "particles.frag" );
-  gfx_mesh_t ps_mesh     = gfx_create_mesh_from_mem( particle_ply.positions_ptr, particle_ply.n_positions_comps, NULL, 0, NULL, 0, particle_ply.texcoords_ptr,
-    particle_ply.n_texcoords_comps, particle_ply.normals_ptr, particle_ply.n_normals_comps, particle_ply.colours_ptr, particle_ply.n_colours_comps, NULL, 0,
-    particle_ply.n_vertices, false );
-  particle_system_t ps   = particle_system_create( ps_shader, ps_mesh, 32, ( vec3 ){ 0, 0, 0 }, 10.0, true );
+  gfx_shader_t ps_shader = gfx_create_shader_program_from_files( "particle.vert", "particle.frag" );
+  gfx_mesh_t ps_mesh     = gfx_create_mesh_from_mem( particle_ply.positions_ptr, particle_ply.n_positions_comps, NULL, 0, NULL, 0, NULL, 0,
+    particle_ply.normals_ptr, particle_ply.n_normals_comps, NULL, 0, NULL, 0, particle_ply.n_vertices, false );
+  apg_ply_free( &particle_ply );
+  particle_system_t ps = particle_system_create( ps_shader, ps_mesh, 1, ( vec3 ){ 0, 0, 0 }, 10.0, true );
 
   // TODO gfx_mesh_t particle_mesh = gfx_create_mesh_from_mem();
   // TODO gfx_mesh_gen_instanced_buffer(
   // TODO particle_system_t p = ( particle_system_t ){ .particle_mesh = particle_mesh, .n_particles = n_particles };
+
+  particle_system_start( &ps );
 
   while ( !gfx_should_window_close() ) {
     gfx_poll_events();
@@ -115,9 +126,15 @@ int main() {
     mat4 P = perspective( 67.0f, (float)w / (float)h, 0.01f, 1000.0f );
     mat4 V = look_at( ( vec3 ){ 0, 0, 10 }, ( vec3 ){ 0 }, ( vec3 ){ 0, 1, 0 } );
 
+    particle_system_draw( &ps, P, V );
+
     gfx_swap_buffer();
   }
 
+  particle_system_stop( &ps );
+
+  gfx_delete_mesh( &ps_mesh );
+  gfx_delete_shader_program( &ps_shader );
   gfx_stop();
   printf( "HALT\n" );
   return 0;
