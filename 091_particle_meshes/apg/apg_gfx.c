@@ -6,7 +6,7 @@ C99
 
 #include "apg_gfx.h"
 #include "apg_glcontext.h"
-#define STB_IMAGE_WRITE_IMPLEMENATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb/stb_image_write.h"
 #include <assert.h>
 #include <string.h>
