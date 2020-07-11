@@ -8,7 +8,7 @@ REM Compile main program with strict warnings
 gcc -o a.exe ^
 -Wall -Wextra -Wfatal-errors -pedantic -g -std=c99 ^
 -D_CRT_SECURE_NO_WARNINGS ^
-main.c apg/apg_gfx.c apg/apg_ply.c ^
+main.c apg/apg_gfx.c apg/apg_ply.c apg/apg_rand.c ^
 -I apg/ -I glad/include/ -I stb/ -I . ^
 ../common/win64_gcc/libglfw3dll.a glad/src/glad.o ^
 -L ../common/win64_gcc/ ^

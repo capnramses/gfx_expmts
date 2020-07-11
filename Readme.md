@@ -99,7 +99,7 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 088     | `apg_bmp_v3`                | Rewrite and refuzz of BMP reader.                                          | moved to `apg` repo |
 | 089     | `voxedit_edges`             | Single-pass outline rendering based on `066_voxedit`.                      | working             |
 | 090     | `flourish_scroll`           | Study of a cool menu title animation I saw on Empire of Sin.               | working             |
-| 091     | `particle_meshes`           | Particle system demo using instanced meshes for particles.                 | started             |
+| 091     | `particle_meshes`           | Particle system demo using instanced meshes for particles.                 | working             |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed            |

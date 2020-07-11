@@ -3,9 +3,13 @@
 
 #include "apg/apg_gfx.h"
 #include "apg/apg_ply.h"
+#include "apg/apg_rand.h"
 #include <stdio.h>
 
 #define PARTICLES_MAX 128
+
+const int n_particles    = 128;
+const double system_time = 1.5;
 
 // instanced particle system properties
 typedef struct particle_system_t {
@@ -40,7 +44,10 @@ particle_system_t particle_system_create( gfx_shader_t shader, gfx_mesh_t partic
 
   for ( int i = 0; i < ps.n_particles; i++ ) {
     ps.particles_pos_loc[i] = ( vec3 ){ 0, 0, 0 };
-    ps.particles_vel_loc[i] = ( vec3 ){ 0, 10, 0 };
+    float x                 = ( apg_randf() * 2.0f - 1.0f ) * 2.0f;
+    float y                 = ( apg_randf() * 2.0f - 1.0f ) + 7.5f;
+    float z                 = ( apg_randf() * 2.0f - 1.0f ) * 2.0f;
+    ps.particles_vel_loc[i] = ( vec3 ){ x, y, z };
   }
 
   gfx_mesh_gen_instanced_buffer( &particle_mesh );
@@ -95,6 +102,7 @@ void particle_system_draw( particle_system_t* particle_system, mat4 P, mat4 V ) 
 
 int main() {
   printf( "Anton's particle thing\n" );
+  apg_srand( 0 );
   gfx_start( "Anton's particle thing", false );
 
   apg_ply_t particle_ply = ( apg_ply_t ){ .n_vertices = 0 };
@@ -109,7 +117,7 @@ int main() {
     particle_ply.normals_ptr, particle_ply.n_normals_comps, NULL, 0, NULL, 0, particle_ply.n_vertices, false );
   apg_ply_free( &particle_ply );
 
-  particle_system_t ps = particle_system_create( ps_shader, ps_mesh, 1, ( vec3 ){ 0, 0, 0 }, 10.0, true );
+  particle_system_t ps = particle_system_create( ps_shader, ps_mesh, n_particles, ( vec3 ){ 0, 0, 0 }, system_time, true );
 
   particle_system_start( &ps );
 
