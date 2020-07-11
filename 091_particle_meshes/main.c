@@ -88,7 +88,7 @@ void particle_system_draw( particle_system_t* particle_system, mat4 P, mat4 V ) 
   // TODO(Anton) bounding radius and distance check for system
 
   // TODO(Anton) number of instances should exclude particles not launched yet etc.
- // gfx_draw_mesh_instanced( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao,
+  // gfx_draw_mesh_instanced( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao,
   //  particle_system->particle_mesh.n_vertices, particle_system->n_particles, NULL, 0 );
 
   gfx_draw_mesh( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao, particle_system->particle_mesh.n_vertices, NULL, 0 );
@@ -119,10 +119,12 @@ int main() {
 
   while ( !gfx_should_window_close() ) {
     gfx_poll_events();
-    gfx_clear_colour_and_depth_buffers( 0.2, 0.2, 0.2, 1.0 );
 
     int w = 0, h = 0;
     gfx_framebuffer_dims( &w, &h );
+    gfx_viewport( 0, 0, w, h );
+    gfx_clear_colour_and_depth_buffers( 0.2, 0.2, 0.2, 1.0 );
+
     mat4 P = perspective( 67.0f, (float)w / (float)h, 0.01f, 1000.0f );
     mat4 V = look_at( ( vec3 ){ 0, 0, 10 }, ( vec3 ){ 0 }, ( vec3 ){ 0, 1, 0 } );
 
