@@ -88,10 +88,10 @@ void particle_system_draw( particle_system_t* particle_system, mat4 P, mat4 V ) 
   // TODO(Anton) bounding radius and distance check for system
 
   // TODO(Anton) number of instances should exclude particles not launched yet etc.
-  // gfx_draw_mesh_instanced( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao,
-  //  particle_system->particle_mesh.n_vertices, particle_system->n_particles, NULL, 0 );
+   gfx_draw_mesh_instanced( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao,
+    particle_system->particle_mesh.n_vertices, particle_system->n_particles, NULL, 0 );
 
-  gfx_draw_mesh( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao, particle_system->particle_mesh.n_vertices, NULL, 0 );
+  //gfx_draw_mesh( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao, particle_system->particle_mesh.n_vertices, NULL, 0 );
 }
 
 int main() {
