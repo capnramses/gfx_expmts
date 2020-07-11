@@ -43,6 +43,10 @@ particle_system_t particle_system_create( gfx_shader_t shader, gfx_mesh_t partic
     ps.particles_vel_loc[i] = ( vec3 ){ 0, 10, 0 };
   }
 
+  gfx_mesh_gen_instanced_buffer( &particle_mesh );
+  /* PARAMS - divisor. Set to 0 to use as regular attribute. Set to 1 to increment 1 element per instanced draw. 2 to increment every 2 instanced draws, etc. */
+  gfx_mesh_update_instanced_buffer( &particle_mesh, &ps.particles_vel_loc[0].x, 3, ps.n_particles, 1 );
+
   return ps;
 }
 
@@ -61,24 +65,18 @@ void particle_system_stop( particle_system_t* particle_system ) {
   particle_system->is_running = false;
 }
 
-/*
 void particle_system_update( particle_system_t* particle_system, double elapsed_s ) {
   assert( particle_system );
 
-  for ( int part_idx = 0; part_idx < particle_system->n_particles; part_idx++ ) {
-    particle_system->particles_vel_loc[i] += particle_system->accel_loc * elapsed_s;
-    particle_system->particles_pos_loc[i] += particle_system->particles_vel_loc[i] * elapsed_s;
-  }
   particle_system->system_elapsed_s += elapsed_s;
-  if ( particle_system->system_elapsed_s >= system_duration_s ) {
-    if (particle_system->loops) {
+  if ( particle_system->system_elapsed_s >= particle_system->system_duration_s ) {
+    if ( particle_system->loops ) {
       particle_system_start( particle_system );
     } else {
       particle_system->is_running = false;
     }
   }
 }
-*/
 
 void particle_system_draw( particle_system_t* particle_system, mat4 P, mat4 V ) {
   assert( particle_system );
@@ -88,10 +86,11 @@ void particle_system_draw( particle_system_t* particle_system, mat4 P, mat4 V ) 
   // TODO(Anton) bounding radius and distance check for system
 
   // TODO(Anton) number of instances should exclude particles not launched yet etc.
-   gfx_draw_mesh_instanced( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao,
+  gfx_draw_mesh_instanced( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao,
     particle_system->particle_mesh.n_vertices, particle_system->n_particles, NULL, 0 );
 
-  //gfx_draw_mesh( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao, particle_system->particle_mesh.n_vertices, NULL, 0 );
+  // gfx_draw_mesh( particle_system->shader, P, V, particle_system->emitter_M, particle_system->particle_mesh.vao, particle_system->particle_mesh.n_vertices,
+  // NULL, 0 );
 }
 
 int main() {
@@ -111,11 +110,14 @@ int main() {
   apg_ply_free( &particle_ply );
 
   particle_system_t ps = particle_system_create( ps_shader, ps_mesh, 1, ( vec3 ){ 0, 0, 0 }, 10.0, true );
-  // TODO(anton) gfx_mesh_gen_instanced_buffer(
 
   particle_system_start( &ps );
 
+  double prev_time_s = gfx_get_time_s();
   while ( !gfx_should_window_close() ) {
+    const double curr_time_s = gfx_get_time_s();
+    const double elapsed_s   = curr_time_s - prev_time_s;
+    prev_time_s              = curr_time_s;
     gfx_poll_events();
 
     int w = 0, h = 0;
@@ -126,6 +128,8 @@ int main() {
     mat4 P = perspective( 67.0f, (float)w / (float)h, 0.01f, 1000.0f );
     mat4 V = look_at( ( vec3 ){ 0, 0, 10 }, ( vec3 ){ 0 }, ( vec3 ){ 0, 1, 0 } );
 
+    particle_system_update( &ps, elapsed_s );
+    gfx_uniform1f( ps.shader, ps.shader.u_time, ps.system_elapsed_s );
     particle_system_draw( &ps, P, V );
 
     gfx_swap_buffer();
