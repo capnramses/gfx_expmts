@@ -109,11 +109,9 @@ int main() {
   gfx_mesh_t ps_mesh     = gfx_create_mesh_from_mem( particle_ply.positions_ptr, particle_ply.n_positions_comps, NULL, 0, NULL, 0, NULL, 0,
     particle_ply.normals_ptr, particle_ply.n_normals_comps, NULL, 0, NULL, 0, particle_ply.n_vertices, false );
   apg_ply_free( &particle_ply );
-  particle_system_t ps = particle_system_create( ps_shader, ps_mesh, 1, ( vec3 ){ 0, 0, 0 }, 10.0, true );
 
-  // TODO gfx_mesh_t particle_mesh = gfx_create_mesh_from_mem();
-  // TODO gfx_mesh_gen_instanced_buffer(
-  // TODO particle_system_t p = ( particle_system_t ){ .particle_mesh = particle_mesh, .n_particles = n_particles };
+  particle_system_t ps = particle_system_create( ps_shader, ps_mesh, 1, ( vec3 ){ 0, 0, 0 }, 10.0, true );
+  // TODO(anton) gfx_mesh_gen_instanced_buffer(
 
   particle_system_start( &ps );
 
