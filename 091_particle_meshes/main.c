@@ -2,6 +2,7 @@
 // Anton Gerdelan <antongdl@protonmail.com> 9 July 2020
 
 #include "apg/apg_gfx.h"
+#include "apg/apg_ply.h"
 #include <stdio.h>
 
 #define PARTICLES_MAX 128
@@ -22,7 +23,28 @@ typedef struct particle_system_t {
   // TODO(Anton) system type
 } particle_system_t;
 
-// particle_system_t particle_system_create( gfx_shader_t shader, gfx_mesh_t particle_mesh, int n_particles ) { return p; }
+particle_system_t particle_system_create( gfx_shader_t shader, gfx_mesh_t particle_mesh, int n_particles, vec3 emitter_pos_wor, double duration_s, bool loops ) {
+  if ( n_particles >= PARTICLES_MAX ) {
+    fprintf( stderr, "WARNING: particle_system_create() %i particles requested but max %i. Using max instead.\n", n_particles, PARTICLES_MAX );
+  }
+
+  particle_system_t ps = ( particle_system_t ){ .particle_mesh = particle_mesh,
+    .shader                                                    = shader,
+    .emitter_M                                                 = translate_mat4( emitter_pos_wor ),
+    .system_elapsed_s                                          = 0.0,
+    .system_duration_s                                         = duration_s,
+    .accel_loc                                                 = -10.0f,
+    .n_particles                                               = APG_M_MIN( n_particles, PARTICLES_MAX ),
+    .is_running                                                = false,
+    .loops                                                     = loops };
+
+  for ( int i = 0; i < ps.n_particles; i++ ) {
+    ps.particles_pos_loc[i] = ( vec3 ){ 0, 0, 0 };
+    ps.particles_vel_loc[i] = ( vec3 ){ 0, 10, 0 };
+  }
+
+  return ps;
+}
 
 void particle_system_start( particle_system_t* particle_system ) {
   assert( particle_system );
@@ -67,12 +89,26 @@ int main() {
   printf( "Anton's particle thing\n" );
   gfx_start( "Anton's particle thing", false );
 
+  apg_ply_t particle_ply = ( apg_ply_t ){ .n_vertices = 0 };
+  if ( !apg_ply_read( "particle.ply", &particle_ply ) ) {
+    printf( "ERROR: reading mesh file `particle.ply`\n" );
+    gfx_stop();
+    return 1;
+  }
+
+  gfx_shader_t ps_shader = gfx_create_shader_program_from_files( "particles.vert", "particles.frag" );
+  gfx_mesh_t ps_mesh     = gfx_create_mesh_from_mem( particle_ply.positions_ptr, particle_ply.n_positions_comps, NULL, 0, NULL, 0, particle_ply.texcoords_ptr,
+    particle_ply.n_texcoords_comps, particle_ply.normals_ptr, particle_ply.n_normals_comps, particle_ply.colours_ptr, particle_ply.n_colours_comps, NULL, 0,
+    particle_ply.n_vertices, false );
+  particle_system_t ps   = particle_system_create( ps_shader, ps_mesh, 32, ( vec3 ){ 0, 0, 0 }, 10.0, true );
+
   // TODO gfx_mesh_t particle_mesh = gfx_create_mesh_from_mem();
   // TODO gfx_mesh_gen_instanced_buffer(
   // TODO particle_system_t p = ( particle_system_t ){ .particle_mesh = particle_mesh, .n_particles = n_particles };
 
   while ( !gfx_should_window_close() ) {
     gfx_poll_events();
+    gfx_clear_colour_and_depth_buffers( 0.2, 0.2, 0.2, 1.0 );
 
     int w = 0, h = 0;
     gfx_framebuffer_dims( &w, &h );
