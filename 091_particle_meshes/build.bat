@@ -13,3 +13,5 @@ main.c apg/apg_gfx.c ^
 ../common/win64_gcc/libglfw3dll.a glad/src/glad.o ^
 -L ../common/win64_gcc/ ^
 -lOpenGL32 
+
+copy ..\common\win64_gcc\glfw3.dll .\
