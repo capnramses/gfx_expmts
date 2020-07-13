@@ -5,7 +5,7 @@
   <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
 </head>
 
-<body>
+<body onload="antons_popup()">
   <a-scene>
     <!-- NOTE(Anton) assets are loaded before displaying the scene. loading inline with eg <a-entity gltf-model="url(/path/to/tree.gltf)"></a-entity> won't wait -->
     <a-assets>
@@ -13,7 +13,7 @@
     </a-assets>
 
     <a-entity gltf-model="#sponza"></a-entity>
-    <!--
+<!--
     <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
     <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
     <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
@@ -24,3 +24,9 @@
 </body>
 
 </html>
+
+<script>
+function antons_popup() {
+  alert("This is a test pop-up from Anton to make sure JavaScript stuff is intergrating okay");
+}
+</script>
