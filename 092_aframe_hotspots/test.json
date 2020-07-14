@@ -1,0 +1,19 @@
+{
+	"hotspots": [
+		{
+			"name": "name",
+			"location": "location",
+			"text": "This is a sample text\n that I've loaded from a file"
+		},
+		{
+			"name": "the thing",
+			"location": "exterior",
+			"text": "some text"
+		},
+		{
+			"name": "curious item",
+			"location": "reading room",
+			"text": "more text"
+		}
+	]
+}

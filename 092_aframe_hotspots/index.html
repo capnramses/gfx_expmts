@@ -1,13 +1,12 @@
-<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
-<meta content="utf-8" http-equiv="encoding">
 <html>
 <!-- NOTE(Anton) A-Frame works on the Oculus Rift which suggests good handling of WebXR/WebVR fallback by A-Frame -->
 
 <head>
+	<meta charset="UTF-8">
 	<script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
 </head>
 
-<body>
+<body onload="load_hotspots()">
 	<a-scene>
 		<!-- NOTE(Anton) assets are loaded before displaying the scene. loading inline with eg <a-entity gltf-model="url(/path/to/tree.gltf)"></a-entity> won't wait -->
 		<a-assets>
@@ -18,9 +17,13 @@
 		<a-entity gltf-model="#sponza"></a-entity>
 		<a-entity gltf-model="#infopoint" scale="0.5 0.5 0.5" position="0 2 0"></a-entity>
 		<!--
-			<a-entity obj-model="obj: url(infopoint.obj); mtl: url(infopoint.mtl)" scale="0.5 0.5 0.5" position="0 2 0">
-			-->
+			<a-entity obj-model="obj: url(infopoint.obj); mtl: url(infopoint.mtl)" scale="0.5 0.5 0.5" position="0 2 0">		
 		</a-entity>
+-->
+
+		<!-- note: onload doesnt work here -->
+		<a-entity geometry="primitive: plane; width: 4; height: auto" material="color: blue"
+			text="value: This text will be 4 units wide." position=" 2 2 -1 " rotation="0 90 0"></a-entity>
 
 
 	</a-scene>
@@ -40,5 +43,24 @@
 
 	//  onload="antons_popup()"
 	function antons_popup() {
-		alert(" This is a test pop-up from Anton to make sure JavaScript stuff is intergrating okay");
-	} </script>
+		alert(" This is a test pop-up from Anton to make sure JavaScript stuff is inteaigrating okay");
+	}
+
+	function load_hotspots() {
+
+		document.getElementById("mytext").value = "Hi there!\nAnton";
+
+
+		var ajaxRequest = new XMLHttpRequest();
+		ajaxRequest.onreadystatechange = function () {
+			if (ajaxRequest.readyState == 4) {
+				console.log("Ready state changed!");
+				var jsonObj = JSON.parse(ajaxRequest.responseText);
+				alert(jsonObj.hotspots[0].text);
+			}
+		}
+		ajaxRequest.open("GET", "test.json", true);
+		ajaxRequest.send();
+	}
+
+</script>
