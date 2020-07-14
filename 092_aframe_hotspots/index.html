@@ -23,7 +23,7 @@
 
 		<!-- note: onload doesnt work here -->
 		<a-entity geometry="primitive: plane; width: 4; height: auto" material="color: blue"
-			text="value: This text will be 4 units wide." position=" 2 2 -1 " rotation="0 90 0"></a-entity>
+			text="value: This text will be 4 units wide." position=" 2 2 -1 " rotation="0 90 0" id="my_text"></a-entity>
 
 
 	</a-scene>
@@ -36,6 +36,7 @@
 	// NOTE(Anton) when my .obj was quads A-Frame incorrectly triangulated it so it was inside-out. had to pre-triangulate
 	// NOTE(Anton) needed newest Blender for reliable GLB export
 	// NOTE(Anton) GLTF looks matte, OBJ looks shiny - this could be a PBR/Phong difference
+	// NOTE(Anton) read this about setting up JS for a-frame: https://aframe.io/docs/1.0.0/introduction/javascript-events-dom-apis.html
 
 
 
@@ -43,13 +44,11 @@
 
 	//  onload="antons_popup()"
 	function antons_popup() {
-		alert(" This is a test pop-up from Anton to make sure JavaScript stuff is inteaigrating okay");
+		alert(" This is a test pop-up from Anton to make sure JavaScript stuff is integrating okay");
 	}
+	var text = "not loaded yet";
 
 	function load_hotspots() {
-
-		document.getElementById("mytext").value = "Hi there!\nAnton";
-
 
 		var ajaxRequest = new XMLHttpRequest();
 		ajaxRequest.onreadystatechange = function () {
@@ -57,10 +56,19 @@
 				console.log("Ready state changed!");
 				var jsonObj = JSON.parse(ajaxRequest.responseText);
 				alert(jsonObj.hotspots[0].text);
+				text = jsonObj.hotspots[0].text;
+
+
+				//document.getElementById('my_text').text = "value:" + text;
+				console.log("asasmy text value is:" + document.getElementById('my_text').text);
+
 			}
 		}
 		ajaxRequest.open("GET", "test.json", true);
 		ajaxRequest.send();
 	}
+
+	//document.getElementById('my_text').text = "value:" + text;
+	console.log("my text value is:" + document.getElementById('my_text').text);
 
 </script>
