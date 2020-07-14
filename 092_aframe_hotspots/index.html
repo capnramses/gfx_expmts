@@ -12,11 +12,14 @@
 		<!-- NOTE(Anton) assets are loaded before displaying the scene. loading inline with eg <a-entity gltf-model="url(/path/to/tree.gltf)"></a-entity> won't wait -->
 		<a-assets>
 			<a-asset-item id="sponza" src="../common/meshes/Sponza/glTF/Sponza.gltf"></a-asset-item>
-			<a-asset-item id="infopoint" src="infopoint.obj"></a-asset-item>
+			<a-asset-item id="infopoint" src="infopoint.glb"></a-asset-item>
 		</a-assets>
 
 		<a-entity gltf-model="#sponza"></a-entity>
-		<a-entity obj-model="obj: url(infopoint.obj); mtl: url(infopoint.mtl)" scale="0.5 0.5 0.5" position="0 2 0">
+		<a-entity gltf-model="#infopoint"></a-entity>
+		<!--
+			<a-entity obj-model="obj: url(infopoint.obj); mtl: url(infopoint.mtl)" scale="0.5 0.5 0.5" position="0 2 0">
+			-->
 		</a-entity>
 
 
@@ -28,6 +31,8 @@
 <script>
 	// NOTE(Anton) needed to specify .mtl before .obj was visible in scene
 	// NOTE(Anton) when my .obj was quads A-Frame incorrectly triangulated it so it was inside-out. had to pre-triangulate
+	// NOTE(Anton) needed newest Blender for reliable GLB export
+	// NOTE(Anton) GLTF looks matte, OBJ looks shiny - this could be a PBR/Phong difference
 
 
 
