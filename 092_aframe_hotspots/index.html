@@ -13,10 +13,10 @@
 			var sceneEl = document.querySelector('a-scene');
 			var entityEl = document.createElement('a-entity');
 			// Do `.setAttribute()`s to initialize the entity.
-			entityEl.setAttribute("geometry", "primitive: plane; width: 4; height: auto");
+			entityEl.setAttribute("geometry", "primitive: plane; width: 3; height: auto");
 			entityEl.setAttribute("material", "color: green; opacity:0.66; transparent: true");
 			entityEl.setAttribute("text", "value: " + text); // NOTE(Anton) use of "value:" here in text attrib
-			entityEl.setAttribute("position", "2 2 -1");
+			entityEl.setAttribute("position", " 0 2 0 "); // TODO(Anton) use same pos for this and infopoint
 			entityEl.setAttribute("rotation", "0 90 0"); // NOTE(Anton) degrees
 			entityEl.setAttribute("id", id_attrib); // NOTE(Anton) degrees
 			console.log(entityEl);
@@ -75,6 +75,48 @@
 				}
 			}
 		);
+
+		var camera_position = new THREE.Vector3(); // NOTE(Anton) lol problem allocation problem solved
+
+		// for reading camera position
+		AFRAME.registerComponent('rotation-reader', {
+			/**
+			 * We use IIFE (immediately-invoked function expression) to only allocate one
+			 * vector or euler and not re-create on every tick to save memory.
+			 */
+			tick: (function () {
+				//	var quaternion = new THREE.Quaternion();
+
+
+				this.el.object3D.getWorldPosition(camera_position);
+				//	console.log(camera_position.x + " " + camera_position.y + " " + camera_position.z);
+
+				/*	return function () {
+						this.el.object3D.getWorldPosition(position);
+						this.el.object3D.getWorldQuaternion(quaternion);
+						// position and rotation now contain vector and quaternion in world space.
+						// NOTE(Anton) What is the point of this example? it does nothing? it returns the whole function so i cant even use those variables as they are local to the function and gone now??! it's missing several connecting logical steps here.
+					};*/
+
+				//console.log(position.x + " " + position.y + " " + position.z);
+
+
+
+				var infopoint0El = document.querySelector('#infopoint0');
+				var infotextbox0El = document.querySelector('#hotspot_text0');
+				//	console.log(infopoint0El);
+				var d = infopoint0El.object3D.position.distanceTo(camera_position);
+				//	console.log("distance = " + d);
+				if (d < 4.0) {
+					infopoint0El.object3D.visible = false;
+					if (infotextbox0El) { infotextbox0El.object3D.visible = true; }
+				} else {
+					infopoint0El.object3D.visible = true;
+					if (infotextbox0El) { infotextbox0El.object3D.visible = false; }
+				}
+
+			})
+		});
 	</script>
 
 	<a-scene log="Hello, Scene!" json_text>
@@ -86,8 +128,24 @@
 			<a-asset-item id="infopoint" src="infopoint.glb"></a-asset-item>
 		</a-assets>
 
+		<!-- "If a camera is specified (e.g., our own <a-camera> or <a-entity camera>), then the default camera will not be added." -->
+		<a-entity id="rig" position="6 1.5 1">
+			<!-- "When moving or rotating the camera relative to the scene, use a camera rig. By doing so, the camera’s height offset can be updated by roomscale devices, while still allowing the tracked area to be moved independently around the scene." -->
+			<a-entity id="camera" camera look-controls wasd-controls rotation-reader>
+
+				<!-- To fix entities onto the camera such that they stay within view no matter where the user looks, you can attach those entities as a child of the camera. Use cases might be a heads-up display (HUD). -->
+				<!--	<a-entity geometry="primitive: plane; height: 0.2; width: 0.2" position="0 0 -1"
+					material="color: gray; opacity: 0.5 transparent: true "></a-entity>
+			-->
+			</a-entity>
+		</a-entity>
+		<!--
+			"When exiting VR, the camera will restore its rotation to its rotation before it entered VR. This is so when we exit VR, the rotation of the camera is back to normal for a desktop screen.
+			Far, near, fov, zoom properties only apply in 2D and magic window modes. In VR mode the camera parameters are supplied by the WebVR / WebXR API to match IPD and headset FOV. Those aren’t configurable."
+		-->
+
 		<a-entity gltf-model="#sponza"></a-entity>
-		<a-entity gltf-model="#infopoint" scale="0.5 0.5 0.5" position="0 2 0"></a-entity>
+		<a-entity gltf-model="#infopoint" scale="0.5 0.5 0.5" position="0 2 0" id="infopoint0"></a-entity>
 		<!--
 			<a-entity obj-model="obj: url(infopoint.obj); mtl: url(infopoint.mtl)" scale="0.5 0.5 0.5" position="0 2 0">		
 		</a-entity>
@@ -106,6 +164,7 @@
 
 
 	</a-scene>
+	<p id="camerastuff"></p>
 </body>
 
 </html>
