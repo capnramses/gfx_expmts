@@ -35,6 +35,25 @@
 			}
 		});
 
+		// just checking i can also modify text as a component of an existing text element in the scene
+		AFRAME.registerComponent('modify_text', {
+			schema: { type: 'string' },
+
+			init: function () {
+				var stringToLog = this.data;
+				console.log(stringToLog);
+				this.el.setAttribute("material", "color: red;");
+				var text = "custom text modified by my component in init()"
+				this.el.setAttribute("text", "value: " + text);
+			}
+		});
+
+		/* TODO(Anton)
+		* -- get /all/ the hotspots
+		* -- also have a location xyz and rotation column
+		* -- loop over and create them all
+		*/
+
 		AFRAME.registerComponent('json_text',
 			{
 				init: function () {
@@ -74,11 +93,11 @@
 		</a-entity>
 -->
 
-		<!-- note: onload doesnt work here 
+		<!-- note: onload doesnt work here  -->
 		<a-entity geometry="primitive: plane; width: 4; height: auto" material="color: green; opacity:0.66;
-			transparent:true" text="value: This text will be 4 units wide." position=" 2 2 -1 " rotation="0 90 0" id="my_text"
-			json_text>
-		</a-entity>-->
+			transparent:true" text="value: This text will be 4 units wide." position=" 2 4 -1 " rotation="0 90 0" id="my_text"
+			modify_text>
+		</a-entity>
 
 
 		<!-- And after the registration, use the component from HTML: -->
