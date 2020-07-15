@@ -6,8 +6,61 @@
 	<script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
 </head>
 
-<body onload="load_hotspots()">
-	<a-scene>
+<body>
+
+	<script>
+		function create_hotspot(id_attrib, text) {
+			var sceneEl = document.querySelector('a-scene');
+			var entityEl = document.createElement('a-entity');
+			// Do `.setAttribute()`s to initialize the entity.
+			entityEl.setAttribute("geometry", "primitive: plane; width: 4; height: auto");
+			entityEl.setAttribute("material", "color: green; opacity:0.66; transparent: true");
+			entityEl.setAttribute("text", "value: " + text); // NOTE(Anton) use of "value:" here in text attrib
+			entityEl.setAttribute("position", "2 2 -1");
+			entityEl.setAttribute("rotation", "0 90 0"); // NOTE(Anton) degrees
+			entityEl.setAttribute("id", id_attrib); // NOTE(Anton) degrees
+			console.log(entityEl);
+			sceneEl.appendChild(entityEl);
+
+		}
+
+		console.log("registering components...");
+		// "As the most basic example, to register a console.log component before <a-scene>:"
+		AFRAME.registerComponent('log', {
+			schema: { type: 'string' },
+
+			init: function () {
+				var stringToLog = this.data;
+				console.log(stringToLog);
+			}
+		});
+
+		AFRAME.registerComponent('json_text',
+			{
+				init: function () {
+
+					var ajaxRequest = new XMLHttpRequest();
+					ajaxRequest.onreadystatechange = function () {
+						if (ajaxRequest.readyState == 4) {
+							console.log("Ready state changed!");
+							var jsonObj = JSON.parse(ajaxRequest.responseText);
+
+							console.log(jsonObj.hotspots[0].text);
+
+							create_hotspot("hotspot_text0", jsonObj.hotspots[0].text);
+						}
+					}
+					ajaxRequest.open("GET", "test.json", true);
+					ajaxRequest.send();
+
+				}
+			}
+		);
+	</script>
+
+	<a-scene log="Hello, Scene!" json_text>
+		<!-- note the hello scene component log executes /after/ the scene has loaded -->
+
 		<!-- NOTE(Anton) assets are loaded before displaying the scene. loading inline with eg <a-entity gltf-model="url(/path/to/tree.gltf)"></a-entity> won't wait -->
 		<a-assets>
 			<a-asset-item id="sponza" src="../common/meshes/Sponza/glTF/Sponza.gltf"></a-asset-item>
@@ -21,10 +74,16 @@
 		</a-entity>
 -->
 
-		<!-- note: onload doesnt work here -->
+		<!-- note: onload doesnt work here 
 		<a-entity geometry="primitive: plane; width: 4; height: auto" material="color: green; opacity:0.66;
-			transparent:true" text="value: This text will be 4 units wide." position=" 2 2 -1 " rotation="0 90 0" id="my_text">
-		</a-entity>
+			transparent:true" text="value: This text will be 4 units wide." position=" 2 2 -1 " rotation="0 90 0" id="my_text"
+			json_text>
+		</a-entity>-->
+
+
+		<!-- And after the registration, use the component from HTML: -->
+		<a-box log="Hello, Box!"></a-box>
+		<!-- NOTE this log displays before the scene is loaded and the scene's log displays -->
 
 
 	</a-scene>
@@ -39,6 +98,7 @@
 	// NOTE(Anton) GLTF looks matte, OBJ looks shiny - this could be a PBR/Phong difference
 	// NOTE(Anton) read this about setting up JS for a-frame: https://aframe.io/docs/1.0.0/introduction/javascript-events-dom-apis.html
 
+	// "Do not try to put A-Frame-related JavaScript in a raw <script> tag after <a-scene> as we would with traditional 2D scripting. If we do, we’d have to take special measures to make sure code runs at the right time"
 
 
 	// TODO(Anton) function to get cam pos and distance from markers and transition to content
@@ -51,25 +111,8 @@
 
 	function load_hotspots() {
 
-		var ajaxRequest = new XMLHttpRequest();
-		ajaxRequest.onreadystatechange = function () {
-			if (ajaxRequest.readyState == 4) {
-				console.log("Ready state changed!");
-				var jsonObj = JSON.parse(ajaxRequest.responseText);
-				alert(jsonObj.hotspots[0].text);
-				text = jsonObj.hotspots[0].text;
 
-
-				//document.getElementById('my_text').text = "value:" + text;
-				console.log("asasmy text value is:" + document.getElementById('my_text').text);
-
-			}
-		}
-		ajaxRequest.open("GET", "test.json", true);
-		ajaxRequest.send();
 	}
 
-	//document.getElementById('my_text').text = "value:" + text;
-	console.log("my text value is:" + document.getElementById('my_text').text);
 
 </script>
