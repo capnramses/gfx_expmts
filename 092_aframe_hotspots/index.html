@@ -131,7 +131,7 @@
 		<!-- "If a camera is specified (e.g., our own <a-camera> or <a-entity camera>), then the default camera will not be added." -->
 		<a-entity id="rig" position="6 1.5 1">
 			<!-- "When moving or rotating the camera relative to the scene, use a camera rig. By doing so, the camera’s height offset can be updated by roomscale devices, while still allowing the tracked area to be moved independently around the scene." -->
-			<a-entity id="camera" camera look-controls wasd-controls rotation-reader>
+			<a-entity id="camera" camera look-controls wasd-controls="fly:true" rotation-reader>
 
 				<!-- To fix entities onto the camera such that they stay within view no matter where the user looks, you can attach those entities as a child of the camera. Use cases might be a heads-up display (HUD). -->
 				<!--	<a-entity geometry="primitive: plane; height: 0.2; width: 0.2" position="0 0 -1"
