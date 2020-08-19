@@ -1,7 +1,7 @@
 /* hardware-accelerated PDF rendering
 
 compile:
-gcc main.c apg_pdf.c glew.c -lm -lglfw -lGL
+gcc main.c apg_pdf.c ../common/src/GL/glew.c -lm -lglfw -lGL -I ../common/include/
 
 run:
 ./a.out sample_PDF.pdf
