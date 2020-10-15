@@ -86,7 +86,7 @@ typedef struct gfx_stats_t {
   uint32_t drawn_verts;
 } gfx_stats_t;
 
-bool gfx_start( const char* window_title, bool fullscreen );
+bool gfx_start( const char* window_title, int w, int h, bool fullscreen );
 void gfx_stop();
 const char* gfx_renderer_str( void );
 
@@ -114,7 +114,7 @@ void gfx_mesh_gen_instanced_buffer( gfx_mesh_t* mesh );
 
 /* PARAMS - divisor. Set to 0 to use as regular attribute. Set to 1 to increment 1 element per instanced draw. 2 to increment every 2 instanced draws, etc. */
 void gfx_mesh_update_instanced_buffer( gfx_mesh_t* mesh, const float* buffer, int n_comps, int n_elements, int divisor );
-  
+
 void gfx_delete_mesh( gfx_mesh_t* mesh );
 
 gfx_texture_t gfx_create_texture_from_mem( const uint8_t* img_buffer, int w, int h, int n_channels, gfx_texture_properties_t properties );

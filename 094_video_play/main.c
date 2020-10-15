@@ -13,13 +13,14 @@ apt install libavcodec-dev (also pulls in libavutils)
 int main() {
   printf( "video playback with libavcodec\n" );
 
-  gfx_start( "anton's video demo", false );
+  int x = 0, y = 0, comp = 0;
+  uint8_t* image_ptr = stbi_load( "anton.jpeg", &x, &y, &comp, 3 );
+
+  gfx_start( "anton's video demo", x, y, false );
 
   vec2 scale = ( vec2 ){ .x = 1, .y = 1 };
   vec2 pos   = ( vec2 ){ .x = 0, .y = 0 };
 
-  int x = 0, y = 0, comp = 0;
-  uint8_t* image_ptr    = stbi_load( "anton.jpeg", &x, &y, &comp, 3 );
   gfx_texture_t texture = gfx_create_texture_from_mem( image_ptr, x, y, 3, ( gfx_texture_properties_t ){ .is_srgb = true } );
   free( image_ptr );
 

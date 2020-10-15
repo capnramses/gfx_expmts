@@ -239,7 +239,7 @@ gfx_cursor_mode_t gfx_get_cursor_mode() {
   return (gfx_cursor_mode_t)mode;
 }
 
-bool gfx_start( const char* window_title, bool fullscreen ) {
+bool gfx_start( const char* window_title, int w, int h, bool fullscreen ) {
   {
     if ( !glfwInit() ) {
       fprintf( stderr, "ERROR: could not start GLFW3\n" );
@@ -264,6 +264,9 @@ bool gfx_start( const char* window_title, bool fullscreen ) {
       glfwWindowHint( GLFW_REFRESH_RATE, mode->refreshRate );
       g_win_width  = mode->width;
       g_win_height = mode->height;
+    } else {
+      g_win_width  = w;
+      g_win_height = h;
     }
 
     gfx_window_ptr = glfwCreateWindow( g_win_width, g_win_height, window_title, gfx_monitor_ptr, NULL );
