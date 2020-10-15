@@ -36,6 +36,8 @@ vox.ply
 *.ttf
 *.zip
 *.gif
+*.mpg
+*.mp4
 afl-in
 afl-out
 id_*
