@@ -23,17 +23,6 @@ TODO
 #include <stdint.h>
 #include <stdlib.h>
 
-// found here https://github.com/FinnT730/BestGameOutThere/blob/57c76b8c525a1f6bf1d6f30315f97d291117206d/libs/raylib/src/models.c
-#define LOAD_ACCESSOR( type, nbcomp, acc, dst )                                                                                                                \
-  {                                                                                                                                                            \
-    int n     = 0;                                                                                                                                             \
-    type* buf = (type*)acc->buffer_view->buffer->data + acc->buffer_view->offset / sizeof( type ) + acc->offset / sizeof( type );                              \
-    for ( int k = 0; k < acc->count; k++ ) {                                                                                                                   \
-      for ( int l = 0; l < nbcomp; l++ ) { dst[nbcomp * k + l] = buf[n + l]; }                                                                                 \
-      n += acc->stride / sizeof( type );                                                                                                                       \
-    }                                                                                                                                                          \
-  }
-
 int main( int argc, const char** argv ) {
   printf( "gltf + draco in opengl\n" );
   if ( argc < 2 ) {
