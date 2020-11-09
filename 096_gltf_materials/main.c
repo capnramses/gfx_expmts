@@ -184,7 +184,7 @@ int main( int argc, const char** argv ) {
         fprintf( stderr, "ERROR loading image: `%s`\n", full_path );
         return 1;
       }
-      textures[i] = gfx_create_texture_from_mem( img_ptr, x, y, comp, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_srgb = false } );
+      textures[i] = gfx_create_texture_from_mem( img_ptr, x, y, comp, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_srgb = false, .repeats = true } );
       free( img_ptr );
 
       printf( "loaded image %i: `%s`\n", i, full_path );
