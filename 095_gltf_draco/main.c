@@ -12,6 +12,9 @@ PLAN:
 TODO
 
 * respect indexed rendering
+
+
+GLTF reference card here: https://www.slideshare.net/Khronos_Group/gltf-20-reference-guide
  */
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -59,6 +62,20 @@ int main( int argc, const char** argv ) {
     for ( int i = 0; i < (int)data->meshes_count; i++ ) {
       if ( data->meshes[i].name ) { printf( "mesh %i) name: `%s`\n", i, data->meshes[i].name ); }
       for ( int j = 0; j < (int)data->meshes[i].primitives_count; j++ ) {
+        // get indices here
+        cgltf_accessor* indices_acc_ptr = data->meshes[i].primitives[j].indices;
+        int n_indices                   = (int)indices_acc_ptr->count;
+        size_t indices_sz = n_indices * sizeof(uint16_t);
+        int indices_type = 1; // uint16_t
+
+        /* https://github.com/KhronosGroup/glTF-Tutorials/blob/master/gltfTutorial/gltfTutorial_005_BuffersBufferViewsAccessors.md
+        The first accessor refers to the bufferView with index 0, which defines the part of the buffer data that contains the indices.
+        Its type is "SCALAR", and its componentType is 5123 (UNSIGNED_SHORT). This means that the indices are stored as scalar unsigned short values.
+        */
+        printf( "n_indices = %i\n", n_indices );
+        uint8_t* indices_bytes_ptr = (uint8_t*)indices_acc_ptr->buffer_view->buffer->data;
+        uint16_t* indices_ptr      = (uint16_t*)&indices_bytes_ptr[indices_acc_ptr->buffer_view->offset];
+
         for ( int k = 0; k < (int)data->meshes[i].primitives[j].attributes_count; k++ ) {
           printf( "mesh %i) primitive %i) `%s`::%i\n", i, j, data->meshes[i].primitives[j].attributes[k].name, data->meshes[i].primitives[j].attributes[k].index );
           if ( data->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_position ) {
@@ -76,7 +93,7 @@ int main( int argc, const char** argv ) {
             }
 
             // TODO(Anton) add indices
-            mesh = gfx_create_mesh_from_mem( points_ptr, 3, NULL, 0, NULL, 0, points_ptr, 3, NULL, 0, 0, n_vertices, false );
+            mesh = gfx_create_mesh_from_mem( points_ptr, 3, NULL, 0, NULL, 0, points_ptr, 3, indices_ptr, indices_sz, indices_type, n_vertices, false );
           }
         }
       }
