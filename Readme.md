@@ -104,7 +104,8 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 093     | `x_converter`               | Converted for old MS .x format mesh files.                                 | proposed            |
 | 094     | `video_play`                | MPEG-1 video playback demo using plmpeg.h                                  | working             |
 | 095     | `gltf_minimal`              | Example of loading a mesh from glTF files and displaying it.               | working             |
-| 096     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
+| 096     | `gltf_materials`            | Example of loading a mesh with materials from glTF files.                  | started             |
+| xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed            |
