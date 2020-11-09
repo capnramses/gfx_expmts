@@ -19,3 +19,24 @@ void main () {
 
   //o_frag_colour.rgb = vec3( v_st, 0.0 );
 }
+
+
+/* PBR BRDF from Khronos glTF example implementation: https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#appendix-b-brdf-implementation
+The metalness values are sampled from the B channel. The roughness values are sampled from the G channel.
+interesting HLSL reference: https://github.com/Nadrin/PBR/blob/master/data/shaders/hlsl/pbr.hlsl
+{
+  const dielectricSpecular = 0.04
+  const black = 0
+
+  c_diff = lerp(baseColor.rgb * (1 - dielectricSpecular), black, metallic)
+  f0 = lerp(0.04, baseColor.rgb, metallic)
+  α = roughness^2
+
+  F = f0 + (1 - f0) * (1 - abs(VdotH))^5
+
+  f_diffuse = (1 - F) * (1 / π) * c_diff
+  f_specular = F * D(α) * G(α) / (4 * abs(VdotN) * abs(LdotN))
+
+  material = f_diffuse + f_specular
+}
+*/
