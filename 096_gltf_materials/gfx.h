@@ -28,6 +28,9 @@ typedef struct gfx_shader_t {
   int u_texture_a; // default to value 0
   // float 
   int u_alpha;
+  // PBR
+  int u_base_colour_rgba;
+  int u_roughness_factor;
 
   char vs_filename[GFX_SHADER_PATH_MAX], fs_filename[GFX_SHADER_PATH_MAX];
   bool loaded;
@@ -73,6 +76,7 @@ gfx_shader_t gfx_create_shader_program_from_files( const char* vert_shader_filen
 gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str, const char* frag_shader_str );
 void gfx_delete_shader_program( gfx_shader_t* shader );
 bool gfx_uniform1f( gfx_shader_t shader, int uniform_location, float f );
+bool gfx_uniform4f( gfx_shader_t shader, int uniform_location, float x, float y, float z, float w );
 
 typedef struct gfx_texture_properties_t {
   bool is_srgb, is_bgr, is_depth, is_array, has_mips, repeats, bilinear;

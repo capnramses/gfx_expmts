@@ -12,7 +12,8 @@ PLAN:
 GLTF reference card here: https://www.slideshare.net/Khronos_Group/gltf-20-reference-guide
 
 
-* NOTE: in glTF the default material model is Metallic-Roughness-Model of PBR. with values for rough/metallic either as constant values for whole model or from textures.
+* NOTE: in glTF the default material model is Metallic-Roughness-Model of PBR. with values for rough/metallic either as constant values for whole model or from
+textures.
   - materials->pbrMetallicRoughness->baseColorTexture->index    (eg 1 to use second texture)
                                                      ->texCoord (eg 0 to use first set of texture coordinates)
                                    ->baseColorFactor: [r,g,b,a]
@@ -34,8 +35,15 @@ GLTF reference card here: https://www.slideshare.net/Khronos_Group/gltf-20-refer
            ->minFilter    - set to OpenGL constant
            ->wrapS        - set to OpenGL constant
            ->wrapT        - set to OpenGL constant
+
+
+
+           this is a nice one:
+            ..\..\glTF-Sample-Models\2.0\BarramundiFish\glTF\BarramundiFish.gltf
  */
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "gfx.h"
 #include "apg_maths.h"
@@ -52,6 +60,22 @@ int main( int argc, const char** argv ) {
     return 0;
   }
 
+  char asset_path[2048];
+  asset_path[0]  = '\0';
+  int last_slash = -1;
+  int len        = strlen( argv[1] );
+  for ( int i = 0; i < len; i++ ) {
+    if ( argv[1][i] == '\\' || argv[1][i] == '/' ) { last_slash = i; }
+  }
+  if ( last_slash > -1 ) {
+    strncpy( asset_path, argv[1], last_slash + 1 );
+    asset_path[last_slash + 1] = '\0';
+    printf( "using asset path: `%s`\n", asset_path );
+    for ( int i = 0; i < last_slash + 1; i++ ) {
+      if ( asset_path[i] == '\\' ) { asset_path[i] = '/'; }
+    }
+  }
+
   char title[1024];
   snprintf( title, 1023, "anton's gltf demo: %s", argv[1] );
   if ( !gfx_start( title, 1920, 1080, false ) ) {
@@ -61,7 +85,12 @@ int main( int argc, const char** argv ) {
 
   gfx_shader_t shader = gfx_create_shader_program_from_files( "shader.vert", "shader.frag" );
 
-  gfx_mesh_t mesh = ( gfx_mesh_t ){ .n_vertices = 0 };
+  gfx_texture_t textures[16];
+  int n_textures = 0;
+
+    float scale_to_fit = 1.0f;
+  float base_colour_rgba[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+  gfx_mesh_t mesh           = ( gfx_mesh_t ){ .n_vertices = 0 };
   {
     printf( "loading `%s`...\n", argv[1] );
     cgltf_data* data      = NULL; // generally matches format in spec https://github.com/KhronosGroup/glTF/tree/master/specification/2.0
@@ -98,6 +127,8 @@ int main( int argc, const char** argv ) {
         uint16_t* indices_ptr      = (uint16_t*)&indices_bytes_ptr[indices_acc_ptr->buffer_view->offset];
         float* points_ptr          = NULL;
         float* texcoords_ptr       = NULL;
+        float* colours_ptr         = NULL;
+        int n_colour_comps         = 3;
         int n_vertices             = 0;
 
         for ( int k = 0; k < (int)data->meshes[i].primitives[j].attributes_count; k++ ) {
@@ -108,16 +139,63 @@ int main( int argc, const char** argv ) {
             printf( "n verts = %i\n", n_vertices );
             uint8_t* bytes_ptr = (uint8_t*)acc->buffer_view->buffer->data;
             points_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
+
+            // TODO first validate hasmin hasmax
+            float min_x = acc->min[0];
+            float min_y = acc->min[1];
+            float min_z = acc->min[2];
+            float max_x = acc->max[0];
+            float max_y = acc->max[1];
+            float max_z = acc->max[2];
+            float biggest = fabs(min_x);
+            if (fabs(min_y) > biggest) { biggest = fabs(min_y); }
+            if (fabs(min_z) > biggest) { biggest = fabs(min_z); }
+            if (fabs(max_x) > biggest) { biggest = fabs(max_x); }
+            if (fabs(max_y) > biggest) { biggest = fabs(max_y); }
+            if (fabs(max_z) > biggest) { biggest = fabs(max_z); }
+            scale_to_fit = 1.0 / biggest;
+
+
           } else if ( data->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_texcoord ) {
             cgltf_accessor* acc = data->meshes[i].primitives[j].attributes[k].data;
-
-           // acc->component_type;
             uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
             texcoords_ptr       = (float*)&bytes_ptr[acc->buffer_view->offset];
+          } else if ( data->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_color ) {
+            cgltf_accessor* acc = data->meshes[i].primitives[j].attributes[k].data;
+            uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
+            colours_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
           } // endif
 
-          mesh = gfx_create_mesh_from_mem( points_ptr, 3, texcoords_ptr, 2, NULL, 0, points_ptr, 3, indices_ptr, indices_sz, indices_type, n_vertices, false );
+          mesh = gfx_create_mesh_from_mem( points_ptr, 3, texcoords_ptr, 2, NULL, 0, colours_ptr, 3, indices_ptr, indices_sz, indices_type, n_vertices, false );
         }
+      }
+    }
+
+    // load images
+    n_textures = (int)data->images_count;
+    printf( "%i textures\n", n_textures );
+    for ( int i = 0; i < (int)data->images_count; i++ ) {
+      char full_path[2048];
+      strcpy( full_path, asset_path );
+      strcat( full_path, data->images[i].uri );
+      int x = 0, y = 0, comp = 0;
+      unsigned char* img_ptr = stbi_load( full_path, &x, &y, &comp, 0 );
+      if ( !img_ptr ) {
+        fprintf( stderr, "ERROR loading image: `%s`\n", full_path );
+        return 1;
+      }
+      textures[i] = gfx_create_texture_from_mem( img_ptr, x, y, comp, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_srgb = false } );
+      free( img_ptr );
+
+      printf( "loaded image %i: `%s`\n", i, full_path );
+    }
+
+    // load materials
+    for ( int i = 0; i < (int)data->materials_count; i++ ) {
+      printf( "material %i: `%s`. has_pbr_metallic_roughness: %i. has_pbr_specular_glossiness: %i\n", i, data->materials[i].name,
+        data->materials[i].has_pbr_metallic_roughness, data->materials[i].has_pbr_specular_glossiness );
+      if ( data->materials[i].has_pbr_metallic_roughness ) {
+        memcpy( base_colour_rgba, data->materials[i].pbr_metallic_roughness.base_color_factor, sizeof( float ) * 4 );
       }
     }
 
@@ -131,15 +209,20 @@ int main( int argc, const char** argv ) {
     gfx_clear_colour_and_depth_buffers( 0.2, 0.2, 0.2, 1.0 );
 
     mat4 P = perspective( 67, (float)fb_w / (float)fb_h, 0.1, 1000 );
-    mat4 V = look_at( ( vec3 ){ 0, 0, 1 }, ( vec3 ){ 0, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
+    mat4 V = look_at( ( vec3 ){ 0, 0, 2 }, ( vec3 ){ 0, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
     // TODO scale mesh to fit viewport
-    mat4 M = scale_mat4( ( vec3 ){ 4, 4, 4 } );
+    mat4 Rx = rot_x_deg_mat4( 90 + gfx_get_time_s() * 10.0 );
+    mat4 Ry = rot_y_deg_mat4( gfx_get_time_s() * 10.0 );
+    mat4 R  = mult_mat4_mat4( Ry, Rx );
+    mat4 S  = scale_mat4( ( vec3 ){ scale_to_fit, scale_to_fit, scale_to_fit } );
+    mat4 M  = mult_mat4_mat4( R, S );
 
     gfx_backface_culling( false );
 
     // gfx_mesh_t mesh, gfx_primitive_type_t pt, gfx_shader_t shader, float* P, float* V, float* M, gfx_texture_t* textures, int n_textures
     gfx_uniform1f( shader, shader.u_alpha, 1.0 );
-    gfx_draw_mesh( mesh, GFX_PT_TRIANGLES, shader, P.m, V.m, M.m, NULL, 0 );
+    gfx_uniform4f( shader, shader.u_base_colour_rgba, base_colour_rgba[0], base_colour_rgba[1], base_colour_rgba[2], base_colour_rgba[3] );
+    gfx_draw_mesh( mesh, GFX_PT_TRIANGLES, shader, P.m, V.m, M.m, textures, n_textures );
 
     gfx_swap_buffer();
     gfx_poll_events();

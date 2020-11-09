@@ -201,13 +201,6 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                              //
     glVertexAttribPointer( GFX_SHADER_BINDING_VP, n_points_comps, GL_FLOAT, GL_FALSE, 0, NULL );
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
   }
-  if ( colours_buffer && n_colours_comps > 0 && mesh->colours_vbo ) {
-    glBindBuffer( GL_ARRAY_BUFFER, mesh->colours_vbo );
-    glBufferData( GL_ARRAY_BUFFER, sizeof( float ) * n_colours_comps * n_vertices, colours_buffer, usage );
-    glEnableVertexAttribArray( GFX_SHADER_BINDING_VC );
-    glVertexAttribPointer( GFX_SHADER_BINDING_VC, n_colours_comps, GL_FLOAT, GL_FALSE, 0, NULL );
-    glBindBuffer( GL_ARRAY_BUFFER, 0 );
-  }
   if ( texcoords_buffer && n_texcoord_comps > 0 && mesh->texcoords_vbo ) {
     glBindBuffer( GL_ARRAY_BUFFER, mesh->texcoords_vbo );
     glBufferData( GL_ARRAY_BUFFER, sizeof( float ) * n_texcoord_comps * n_vertices, texcoords_buffer, usage );
@@ -220,6 +213,13 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                              //
     glBufferData( GL_ARRAY_BUFFER, sizeof( float ) * n_normal_comps * n_vertices, normals_buffer, usage );
     glEnableVertexAttribArray( GFX_SHADER_BINDING_VN );
     glVertexAttribPointer( GFX_SHADER_BINDING_VN, n_normal_comps, GL_FLOAT, GL_FALSE, 0, NULL );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+  }
+  if ( colours_buffer && n_colours_comps > 0 && mesh->colours_vbo ) {
+    glBindBuffer( GL_ARRAY_BUFFER, mesh->colours_vbo );
+    glBufferData( GL_ARRAY_BUFFER, sizeof( float ) * n_colours_comps * n_vertices, colours_buffer, usage );
+    glEnableVertexAttribArray( GFX_SHADER_BINDING_VC );
+    glVertexAttribPointer( GFX_SHADER_BINDING_VC, n_colours_comps, GL_FLOAT, GL_FALSE, 0, NULL );
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
   }
   if ( indices_buffer && mesh->indices_vbo ) {
@@ -323,11 +323,13 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   glDeleteShader( vs );
   glDeleteShader( fs );
 
-  shader.u_M         = glGetUniformLocation( shader.program_gl, "u_M" );
-  shader.u_V         = glGetUniformLocation( shader.program_gl, "u_V" );
-  shader.u_P         = glGetUniformLocation( shader.program_gl, "u_P" );
-  shader.u_texture_a = glGetUniformLocation( shader.program_gl, "u_texture_a" );
-  shader.u_alpha     = glGetUniformLocation( shader.program_gl, "u_alpha" );
+  shader.u_M                = glGetUniformLocation( shader.program_gl, "u_M" );
+  shader.u_V                = glGetUniformLocation( shader.program_gl, "u_V" );
+  shader.u_P                = glGetUniformLocation( shader.program_gl, "u_P" );
+  shader.u_texture_a        = glGetUniformLocation( shader.program_gl, "u_texture_a" );
+  shader.u_alpha            = glGetUniformLocation( shader.program_gl, "u_alpha" );
+  shader.u_base_colour_rgba = glGetUniformLocation( shader.program_gl, "u_base_colour_rgba" );
+  shader.u_roughness_factor = glGetUniformLocation( shader.program_gl, "u_roughness_factor" );
 
   bool linked = true;
   int params  = -1;
@@ -357,7 +359,14 @@ void gfx_delete_shader_program( gfx_shader_t* shader ) {
 bool gfx_uniform1f( gfx_shader_t shader, int uniform_location, float f ) {
   if ( !shader.program_gl ) { return false; }
   if ( uniform_location < 0 ) { return false; }
-  glUniform1f( uniform_location, f );
+  glProgramUniform1f( shader.program_gl, uniform_location, f );
+  return true;
+}
+
+bool gfx_uniform4f( gfx_shader_t shader, int uniform_location, float x, float y, float z, float w ) {
+  if ( !shader.program_gl ) { return false; }
+  if ( uniform_location < 0 ) { return false; }
+  glProgramUniform4f( shader.program_gl, uniform_location, x, y, z, w );
   return true;
 }
 
