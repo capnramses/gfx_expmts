@@ -7,7 +7,7 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 ## Contents
 
 | numerus | titulus                     | descriptio                                                                 | status              |
-| ------- | --------------------------- | -------------------------------------------------------------------------- | ------------------- |
+|---------|-----------------------------|----------------------------------------------------------------------------|---------------------|
 | 000     | `video_modus`               | find and list all video modes on troublesome hardware                      | working             |
 | 001     | `cube_map_depth`            | depth writing to cube maps for omni-direc. shadows                         | abandoned           |
 | 002     | `bezier_curve`              | demo from splines and curves lecture last year                             | working             |
@@ -103,6 +103,8 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 092     | `aframe_hotspots`           | A-Frame WebXR/WebVR demo with information points. Using Sponza.            | started             |
 | 093     | `x_converter`               | Converted for old MS .x format mesh files.                                 | proposed            |
 | 094     | `video_play`                | MPEG-1 video playback demo using plmpeg.h                                  | working             |
+| 095     | `gltf_minimal`              | Example of loading a mesh from glTF files and displaying it.               | working             |
+| 096     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed            |

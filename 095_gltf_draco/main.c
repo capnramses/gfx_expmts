@@ -65,8 +65,8 @@ int main( int argc, const char** argv ) {
         // get indices here
         cgltf_accessor* indices_acc_ptr = data->meshes[i].primitives[j].indices;
         int n_indices                   = (int)indices_acc_ptr->count;
-        size_t indices_sz = n_indices * sizeof(uint16_t);
-        int indices_type = 1; // uint16_t
+        size_t indices_sz               = n_indices * sizeof( uint16_t );
+        int indices_type                = 1; // uint16_t
 
         /* https://github.com/KhronosGroup/glTF-Tutorials/blob/master/gltfTutorial/gltfTutorial_005_BuffersBufferViewsAccessors.md
         The first accessor refers to the bufferView with index 0, which defines the part of the buffer data that contains the indices.
@@ -88,9 +88,9 @@ int main( int argc, const char** argv ) {
             uint8_t* bytes_ptr = (uint8_t*)acc->buffer_view->buffer->data;
             float* points_ptr  = (float*)&bytes_ptr[acc->buffer_view->offset];
 
-            for ( int v = 0; v < n_vertices; v++ ) {
-              printf( " point %i ) { %f,%f,%f }\n", v, points_ptr[3 * v], points_ptr[3 * v + 1], points_ptr[3 * v + 2] );
-            }
+            /*   for ( int v = 0; v < n_vertices; v++ ) {
+                 printf( " point %i ) { %f,%f,%f }\n", v, points_ptr[3 * v], points_ptr[3 * v + 1], points_ptr[3 * v + 2] );
+               }*/
 
             // TODO(Anton) add indices
             mesh = gfx_create_mesh_from_mem( points_ptr, 3, NULL, 0, NULL, 0, points_ptr, 3, indices_ptr, indices_sz, indices_type, n_vertices, false );
@@ -110,7 +110,8 @@ int main( int argc, const char** argv ) {
 
     mat4 P = perspective( 67, (float)fb_w / (float)fb_h, 0.1, 1000 );
     mat4 V = look_at( ( vec3 ){ 0, 0, 1 }, ( vec3 ){ 0, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
-    mat4 M = identity_mat4();
+    // TODO scale mesh to fit viewport
+    mat4 M = scale_mat4( ( vec3 ){ 4, 4, 4 } );
 
     gfx_backface_culling( false );
 
