@@ -157,9 +157,12 @@ gfx_mesh_t gfx_create_mesh_from_mem(                                          //
   const float* colours_buffer, int n_colours_comps,                           //
   const void* indices_buffer, size_t indices_buffer_sz, uint8_t indices_type, //
   int n_vertices, bool dynamic ) {
-  assert( points_buffer && n_points_comps > 0 );
-
   gfx_mesh_t mesh = ( gfx_mesh_t ){ .indices_type = indices_type, .n_vertices = n_vertices, .dynamic = dynamic };
+
+  if ( !points_buffer || n_points_comps <= 0 ) {
+    fprintf( stderr, "ERROR:loading mesh from memory. No vertex points given.\n" );
+    return mesh;
+  }
 
   glGenVertexArrays( 1, &mesh.vao );
   glGenBuffers( 1, &mesh.points_vbo );
