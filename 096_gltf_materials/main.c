@@ -9,12 +9,31 @@ PLAN:
 3. add PBR lighting shaders and use the materials from the gltf file
 
 
-TODO
-
-* respect indexed rendering
-
-
 GLTF reference card here: https://www.slideshare.net/Khronos_Group/gltf-20-reference-guide
+
+
+* NOTE: in glTF the default material model is Metallic-Roughness-Model of PBR. with values for rough/metallic either as constant values for whole model or from textures.
+  - materials->pbrMetallicRoughness->baseColorTexture->index    (eg 1 to use second texture)
+                                                     ->texCoord (eg 0 to use first set of texture coordinates)
+                                   ->baseColorFactor: [r,g,b,a]
+                                   ->metallicRoughnessTexture....
+                                   ->metallicFactor...
+                                   ->roughnessFactor...
+                                   ->normalTexture...
+                                   ->occlusionTexture... (bits in the model that are internally shadowed and factored darker)
+                                   ->emissiveTexture...
+                                   ->emissiveFactor...
+ - textures->....set of textures of type:
+                ->source: #   - number of image asset
+                ->sampler: #  - number of sampler
+ - images->uri eg. filename or mime type
+        OR
+         ->bufferView: #
+         ->mimeType: image/jpeg
+ - samplers->magFilter    - set to OpenGL constant
+           ->minFilter    - set to OpenGL constant
+           ->wrapS        - set to OpenGL constant
+           ->wrapT        - set to OpenGL constant
  */
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -91,7 +110,7 @@ int main( int argc, const char** argv ) {
             points_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
           } else if ( data->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_texcoord ) {
             cgltf_accessor* acc = data->meshes[i].primitives[j].attributes[k].data;
-            
+
            // acc->component_type;
             uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
             texcoords_ptr       = (float*)&bytes_ptr[acc->buffer_view->offset];
