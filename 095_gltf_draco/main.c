@@ -15,7 +15,7 @@ TODO
  */
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "apg_gfx.h"
+#include "gfx.h"
 #include "apg_maths.h"
 #define CGLTF_IMPLEMENTATION
 #include "cgltf/cgltf.h"
@@ -75,7 +75,8 @@ int main( int argc, const char** argv ) {
               printf( " point %i ) { %f,%f,%f }\n", v, points_ptr[3 * v], points_ptr[3 * v + 1], points_ptr[3 * v + 2] );
             }
 
-            mesh = gfx_create_mesh_from_mem( points_ptr, 3, NULL, 0, NULL, 0, NULL, 0, NULL, 0, points_ptr, 3, NULL, 0, n_vertices, false );
+            // TODO(Anton) add indices
+            mesh = gfx_create_mesh_from_mem( points_ptr, 3, NULL, 0, NULL, 0, points_ptr, 3, NULL, 0, 0, n_vertices, false );
           }
         }
       }
@@ -96,8 +97,9 @@ int main( int argc, const char** argv ) {
 
     gfx_backface_culling( false );
 
+    // gfx_mesh_t mesh, gfx_primitive_type_t pt, gfx_shader_t shader, float* P, float* V, float* M, gfx_texture_t* textures, int n_textures
     gfx_uniform1f( gfx_default_shader, gfx_default_shader.u_alpha, 1.0 );
-    gfx_draw_mesh( gfx_default_shader, P, V, M, mesh.vao, mesh.n_vertices, NULL, 0 );
+    gfx_draw_mesh( mesh, GFX_PT_TRIANGLES, gfx_default_shader, P.m, V.m, M.m, NULL, 0 );
 
     gfx_swap_buffer();
     gfx_poll_events();
