@@ -2,22 +2,26 @@
 
 in vec2 v_st;
 in vec3 v_rgb;
+in vec3 v_cube_st;
 
 uniform float u_alpha;
 
-uniform sampler2D u_albedo_texture;
+uniform sampler2D u_texture_a; // albedo
+uniform samplerCube u_texture_b; // cube
 uniform vec4 u_base_colour_rgba;
 uniform float u_roughness_factor;
 
 out vec4 o_frag_colour;
 
 void main () {
-  vec4 albedo_texel = texture( u_albedo_texture, v_st );
-  o_frag_colour.rgba = albedo_texel * u_base_colour_rgba;
-  o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );
+  vec4 albedo_texel = texture( u_texture_a, v_st );
+  vec4 cube_texel = texture( u_texture_b, normalize( v_cube_st ) );
 
+  vec4 rgba = albedo_texel * u_base_colour_rgba;
+	rgba.rgb = cube_texel.rgb * 0.1 + albedo_texel.rgb * 0.9;
 
-  //o_frag_colour.rgb = vec3( v_st, 0.0 );
+	o_frag_colour = rgba;
+  //o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );
 }
 
 

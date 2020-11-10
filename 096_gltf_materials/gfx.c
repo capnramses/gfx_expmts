@@ -16,6 +16,7 @@ static GLFWmonitor* gfx_monitor_ptr;
 static int g_win_width = 1920, g_win_height = 1080;
 
 gfx_shader_t gfx_default_shader;
+gfx_mesh_t gfx_cube_mesh;
 
 bool gfx_start( const char* window_title, int w, int h, bool fullscreen ) {
   g_win_width  = w;
@@ -90,7 +91,23 @@ bool gfx_start( const char* window_title, int w, int h, bool fullscreen ) {
     gfx_default_shader = gfx_create_shader_program_from_strings( vertex_shader, fragment_shader );
     if ( !gfx_default_shader.loaded ) { return false; }
   }
-
+  { //
+    gfx_cube_mesh  = ( gfx_mesh_t ){ .n_vertices = 36 };
+    float points[] = { -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f,
+      1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f,
+      1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+      -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f,
+      -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f };
+    glGenBuffers( 1, &gfx_cube_mesh.points_vbo );
+    glBindBuffer( GL_ARRAY_BUFFER, gfx_cube_mesh.points_vbo );
+    glBufferData( GL_ARRAY_BUFFER, 3 * 36 * sizeof( GLfloat ), &points, GL_STATIC_DRAW );
+    glGenVertexArrays( 1, &gfx_cube_mesh.vao );
+    glBindVertexArray( gfx_cube_mesh.vao );
+    glEnableVertexAttribArray( 0 );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, NULL );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glBindVertexArray( 0 );
+  }
   {
     glClearColor( 0.5, 0.5, 0.5, 1.0 );
     glDepthFunc( GL_LESS );
@@ -105,7 +122,11 @@ bool gfx_start( const char* window_title, int w, int h, bool fullscreen ) {
   return true;
 }
 
-void gfx_stop() { glfwTerminate(); }
+void gfx_stop() {
+  gfx_delete_shader_program( &gfx_default_shader );
+  gfx_delete_mesh( &gfx_cube_mesh );
+  glfwTerminate();
+}
 
 bool gfx_should_window_close() {
   assert( gfx_window_ptr );
@@ -147,6 +168,14 @@ void gfx_backface_culling( bool enable ) {
     glEnable( GL_CULL_FACE );
   } else {
     glDisable( GL_CULL_FACE );
+  }
+}
+
+void gfx_depth_mask( bool enable ) {
+  if ( enable ) {
+    glDepthMask( GL_TRUE );
+  } else {
+    glDepthMask( GL_FALSE );
   }
 }
 
@@ -327,9 +356,12 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   shader.u_V                = glGetUniformLocation( shader.program_gl, "u_V" );
   shader.u_P                = glGetUniformLocation( shader.program_gl, "u_P" );
   shader.u_texture_a        = glGetUniformLocation( shader.program_gl, "u_texture_a" );
+  shader.u_texture_b        = glGetUniformLocation( shader.program_gl, "u_texture_b" );
   shader.u_alpha            = glGetUniformLocation( shader.program_gl, "u_alpha" );
   shader.u_base_colour_rgba = glGetUniformLocation( shader.program_gl, "u_base_colour_rgba" );
   shader.u_roughness_factor = glGetUniformLocation( shader.program_gl, "u_roughness_factor" );
+  glProgramUniform1i( shader.program_gl, shader.u_texture_a, 0 );
+  glProgramUniform1i( shader.program_gl, shader.u_texture_b, 1 );
 
   bool linked = true;
   int params  = -1;
@@ -482,6 +514,34 @@ gfx_texture_t gfx_create_texture_from_mem( const uint8_t* img_buffer, int w, int
   return texture;
 }
 
+gfx_texture_t gfx_create_cube_texture_from_mem( uint8_t* imgs_buffer[6], int w, int h, int n_channels, gfx_texture_properties_t properties ) {
+  assert( 4 == n_channels || 3 == n_channels || 1 == n_channels ); // 2 not used yet so not impl
+  gfx_texture_t texture      = ( gfx_texture_t ){ .properties = properties };
+  texture.properties.is_cube = true;
+  glGenTextures( 1, &texture.handle_gl );
+  glBindTexture( GL_TEXTURE_CUBE_MAP, texture.handle_gl );
+  {
+    for ( int i = 0; i < 6; i++ ) {
+      if ( 4 == n_channels ) {
+        glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgs_buffer[i] );
+      } else if ( 3 == n_channels ) {
+        glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, imgs_buffer[i] );
+      } else if ( 1 == n_channels ) {
+        glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, imgs_buffer[i] );
+      }
+    }
+
+    // format cube map texture
+    glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+    glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+    glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
+    glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+    glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+  }
+  glBindTexture( GL_TEXTURE_CUBE_MAP, 0 );
+  return texture;
+}
+
 void gfx_delete_texture( gfx_texture_t* texture ) {
   assert( texture && texture->handle_gl );
   glDeleteTextures( 1, &texture->handle_gl );
@@ -497,6 +557,12 @@ void gfx_draw_mesh( gfx_mesh_t mesh, gfx_primitive_type_t pt, gfx_shader_t shade
 
   for ( int i = 0; i < n_textures; i++ ) {
     GLenum tex_type = !textures[i].properties.is_array ? GL_TEXTURE_2D : GL_TEXTURE_2D_ARRAY;
+    if ( textures[i].properties.is_cube ) {
+      tex_type = GL_TEXTURE_CUBE_MAP;
+      printf( "binding cube map to texture unit %i\n", i );
+    } else {
+      printf( "binding 2D map to texture unit %i\n", i );
+    }
     glActiveTexture( GL_TEXTURE0 + i );
     glBindTexture( tex_type, textures[i].handle_gl );
   }
@@ -522,6 +588,7 @@ void gfx_draw_mesh( gfx_mesh_t mesh, gfx_primitive_type_t pt, gfx_shader_t shade
   glUseProgram( 0 );
   for ( int i = 0; i < n_textures; i++ ) {
     GLenum tex_type = !textures[i].properties.is_array ? GL_TEXTURE_2D : GL_TEXTURE_2D_ARRAY;
+    if ( textures[i].properties.is_cube ) { tex_type = GL_TEXTURE_CUBE_MAP; }
     glActiveTexture( GL_TEXTURE0 + i );
     glBindTexture( tex_type, 0 );
   }

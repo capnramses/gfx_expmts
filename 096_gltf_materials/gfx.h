@@ -26,7 +26,8 @@ typedef struct gfx_shader_t {
   int u_P, u_V, u_M;
   // int
   int u_texture_a; // default to value 0
-  // float 
+  int u_texture_b; // default to value 0
+  // float
   int u_alpha;
   // PBR
   int u_base_colour_rgba;
@@ -47,6 +48,7 @@ void gfx_clear_colour_and_depth_buffers( float r, float g, float b, float a );
 void gfx_swap_buffer();
 void gfx_poll_events();
 void gfx_backface_culling( bool enable );
+void gfx_depth_mask( bool enable );
 
 /*
 PARAMS
@@ -79,7 +81,7 @@ bool gfx_uniform1f( gfx_shader_t shader, int uniform_location, float f );
 bool gfx_uniform4f( gfx_shader_t shader, int uniform_location, float x, float y, float z, float w );
 
 typedef struct gfx_texture_properties_t {
-  bool is_srgb, is_bgr, is_depth, is_array, has_mips, repeats, bilinear;
+  bool is_srgb, is_bgr, is_depth, is_array, has_mips, repeats, bilinear, is_cube;
 } gfx_texture_properties_t;
 
 typedef struct gfx_texture_t {
@@ -89,9 +91,19 @@ typedef struct gfx_texture_t {
 } gfx_texture_t;
 
 gfx_texture_t gfx_create_texture_from_mem( const uint8_t* img_buffer, int w, int h, int n_channels, gfx_texture_properties_t properties );
+
+/*
+PARAMS
+  imgs_buffer - To match OpenGL constants order is: posx,negx,posy,negy,posz,negz.
+  n_channels  - Only 4,3, and 1 supported currently.
+ */
+gfx_texture_t gfx_create_cube_texture_from_mem( uint8_t* imgs_buffer[6], int w, int h, int n_channels, gfx_texture_properties_t properties );
+
 void gfx_delete_texture( gfx_texture_t* texture );
+
 // PARAMS - if properties haven't changed you can use texture->is_depth etc.
 void gfx_update_texture( gfx_texture_t* texture, const uint8_t* img_buffer, int w, int h, int n_channels );
+
 void gfx_update_texture_sub_image( gfx_texture_t* texture, const uint8_t* img_buffer, int x_offs, int y_offs, int w, int h );
 
 typedef enum gfx_primitive_type_t { GFX_PT_TRIANGLES = 0, GFX_PT_TRIANGLE_STRIP, GFX_PT_POINTS } gfx_primitive_type_t;
@@ -106,6 +118,7 @@ double gfx_get_time_s();
 bool input_is_key_held( int keycode );
 
 extern gfx_shader_t gfx_default_shader;
+extern gfx_mesh_t gfx_cube_mesh;
 
 #ifdef __cplusplus
 }
