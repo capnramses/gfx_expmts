@@ -557,12 +557,7 @@ void gfx_draw_mesh( gfx_mesh_t mesh, gfx_primitive_type_t pt, gfx_shader_t shade
 
   for ( int i = 0; i < n_textures; i++ ) {
     GLenum tex_type = !textures[i].properties.is_array ? GL_TEXTURE_2D : GL_TEXTURE_2D_ARRAY;
-    if ( textures[i].properties.is_cube ) {
-      tex_type = GL_TEXTURE_CUBE_MAP;
-      printf( "binding cube map to texture unit %i\n", i );
-    } else {
-      printf( "binding 2D map to texture unit %i\n", i );
-    }
+    if ( textures[i].properties.is_cube ) { tex_type = GL_TEXTURE_CUBE_MAP; }
     glActiveTexture( GL_TEXTURE0 + i );
     glBindTexture( tex_type, textures[i].handle_gl );
   }
