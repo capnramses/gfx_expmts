@@ -40,6 +40,14 @@ textures.
 
            this is a nice one:
             ..\..\glTF-Sample-Models\2.0\BarramundiFish\glTF\BarramundiFish.gltf
+
+
+
+
+
+            TODO
+            * blur reflection map and ~lower res
+            *
  */
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -258,7 +266,7 @@ int main( int argc, const char** argv ) {
 
     gfx_backface_culling( true );
 
-    mat4 V_envmap = rot_y_deg_mat4( -cam_heading );
+    mat4 V_envmap = identity_mat4(); // rot_y_deg_mat4( -cam_heading );
     mat4 M_envmap = scale_mat4( ( vec3 ){ 10, 10, 10 } );
     gfx_depth_mask( false );
     gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &cube_texture, 1 );

@@ -17,14 +17,14 @@ out vec4 o_frag_colour;
 void main () {
 	vec3 n_wor = normalize( v_n );
   vec4 albedo_texel = texture( u_texture_a, v_st );
-  vec4 cube_texel = texture( u_texture_b, normalize( v_cube_st ) );
+  vec4 cube_texel = texture( u_texture_b, n_wor );
 
   vec4 rgba = albedo_texel * u_base_colour_rgba;
-	rgba.rgb = cube_texel.rgb * 0.1 + albedo_texel.rgb * 0.9;
+	rgba.rgb = cube_texel.rgb * 0.05 + albedo_texel.rgb * 0.95;
 
 	o_frag_colour = rgba;
   //o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );
-	o_frag_colour.rgb = n_wor;
+	//o_frag_colour.rgb = n_wor;
 }
 
 
