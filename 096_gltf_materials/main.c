@@ -151,6 +151,7 @@ int main( int argc, const char** argv ) {
         float* points_ptr          = NULL;
         float* texcoords_ptr       = NULL;
         float* colours_ptr         = NULL;
+        float* normals_ptr         = NULL;
         int n_colour_comps         = 3;
         int n_vertices             = 0;
 
@@ -186,9 +187,13 @@ int main( int argc, const char** argv ) {
             cgltf_accessor* acc = data->meshes[i].primitives[j].attributes[k].data;
             uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
             colours_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
+          } else if ( data->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_normal ) {
+            cgltf_accessor* acc = data->meshes[i].primitives[j].attributes[k].data;
+            uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
+            normals_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
           } // endif
 
-          mesh = gfx_create_mesh_from_mem( points_ptr, 3, texcoords_ptr, 2, NULL, 0, colours_ptr, 3, indices_ptr, indices_sz, indices_type, n_vertices, false );
+          mesh = gfx_create_mesh_from_mem( points_ptr, 3, texcoords_ptr, 2, normals_ptr, 3, colours_ptr, 3, indices_ptr, indices_sz, indices_type, n_vertices, false );
         }
       }
     }

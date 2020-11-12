@@ -3,6 +3,7 @@
 in vec2 v_st;
 in vec3 v_rgb;
 in vec3 v_cube_st;
+in vec3 v_n;
 
 uniform float u_alpha;
 
@@ -14,6 +15,7 @@ uniform float u_roughness_factor;
 out vec4 o_frag_colour;
 
 void main () {
+	vec3 n_wor = normalize( v_n );
   vec4 albedo_texel = texture( u_texture_a, v_st );
   vec4 cube_texel = texture( u_texture_b, normalize( v_cube_st ) );
 
@@ -22,6 +24,7 @@ void main () {
 
 	o_frag_colour = rgba;
   //o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );
+	o_frag_colour.rgb = n_wor;
 }
 
 
