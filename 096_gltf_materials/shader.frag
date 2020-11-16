@@ -30,12 +30,14 @@ void main () {
 
   vec4 rgba = albedo_texel * u_base_colour_rgba;
 	rgba.rgb = cube_texel.rgb * metal_roughness_texel.b * 0.15 + albedo_texel.rgb * metal_roughness_texel.g;
+	rgba.rgb *= ambient_occlusion_texel.rgb;
+	rgba.rgb = mix( rgba.rgb, emissive_texel.rgb, emissive_texel.rgb );
 
 	o_frag_colour = rgba;
   //o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );
 	//o_frag_colour.rgb = n_wor;
 
-	//o_frag_colour.rgb = vec3( metal_roughness_texel.b );
+	//o_frag_colour.rgb = vec3( normal_texel );
 }
 
 
