@@ -99,7 +99,7 @@ void main () {
 
 		vec3 pbr_light_contrib = vec3( 0.0 );
 		////////////////
-			vec3 lightColor = cube_texel.rgb;
+			vec3 lightColor = vec3( 1.0 );
 			// NOTE(Anton) i think this is direction /to/ the light ??
 			vec3 light_dir_wor = n_wor;// normalize( vec3( 0.0, 1.0, 1.0 ) );
 
@@ -121,14 +121,14 @@ void main () {
 		//////////////
 
 
-		vec3 color = pbr_light_contrib;
-		color *= ( ambient_occlusion_texel.r < 0.01 ? 1.0 : ambient_occlusion_texel.r );
-		color += emissive_texel.rgb ;
+		vec3 color;
 
 		{
 			vec3 I =  n_dot_l * vec3( 0.75 ) * ( diffuse_contrib + spec_contrib );
 			// NOTE(Anton) had to modify cube texel's spec/diff comp manually because don't have HDR texture BRDF info in mine
-			color = I + (n_dot_l * cube_texel.rgb * 0.4 * spec_contrib + 0.1 * diffuse_contrib *cube_texel.rgb ) * ambient_occlusion_texel.r + emissive_texel.rgb;
+			color = I + (n_dot_l * cube_texel.rgb * 0.4 * spec_contrib + 0.1 * diffuse_contrib *cube_texel.rgb );
+			color *= ambient_occlusion_texel.r;
+			color += emissive_texel.rgb;
 		}
 	
 
