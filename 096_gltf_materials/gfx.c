@@ -366,6 +366,7 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   shader.u_alpha                     = glGetUniformLocation( shader.program_gl, "u_alpha" );
   shader.u_base_colour_rgba          = glGetUniformLocation( shader.program_gl, "u_base_colour_rgba" );
   shader.u_roughness_factor          = glGetUniformLocation( shader.program_gl, "u_roughness_factor" );
+  shader.u_cam_pos_wor               = glGetUniformLocation( shader.program_gl, "u_cam_pos_wor" );
   glProgramUniform1i( shader.program_gl, shader.u_texture_a, 0 );
   glProgramUniform1i( shader.program_gl, shader.u_texture_b, 1 );
   glProgramUniform1i( shader.program_gl, shader.u_texture_albedo, GFX_TEXTURE_UNIT_ALBEDO );
@@ -411,6 +412,13 @@ bool gfx_uniform1f( gfx_shader_t shader, int uniform_location, float f ) {
   if ( !shader.program_gl ) { return false; }
   if ( uniform_location < 0 ) { return false; }
   glProgramUniform1f( shader.program_gl, uniform_location, f );
+  return true;
+}
+
+bool gfx_uniform3f( gfx_shader_t shader, int uniform_location, float x, float y, float z ) {
+  if ( !shader.program_gl ) { return false; }
+  if ( uniform_location < 0 ) { return false; }
+  glProgramUniform3f( shader.program_gl, uniform_location, x, y, z );
   return true;
 }
 

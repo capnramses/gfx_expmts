@@ -33,6 +33,8 @@ typedef struct gfx_shader_t {
   int u_texture_ambient_occlusion; // default to value 3
   int u_texture_normal;            // default to value 4
   int u_texture_environment;       // default to value 5
+  // vec3
+  int u_cam_pos_wor;
   // float
   int u_alpha;
   // PBR
@@ -84,6 +86,7 @@ gfx_shader_t gfx_create_shader_program_from_files( const char* vert_shader_filen
 gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str, const char* frag_shader_str );
 void gfx_delete_shader_program( gfx_shader_t* shader );
 bool gfx_uniform1f( gfx_shader_t shader, int uniform_location, float f );
+bool gfx_uniform3f( gfx_shader_t shader, int uniform_location, float x, float y, float z );
 bool gfx_uniform4f( gfx_shader_t shader, int uniform_location, float x, float y, float z, float w );
 
 typedef struct gfx_texture_properties_t {

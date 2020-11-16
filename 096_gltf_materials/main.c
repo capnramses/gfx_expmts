@@ -262,7 +262,8 @@ int main( int argc, const char** argv ) {
     // mat4 V_t = translate_mat4( ( vec3 ){ 0, 0, -2 } );
     // mat4 V_r = rot_y_deg_mat4( -cam_heading );
     // mat4 V   = mult_mat4_mat4( V_t, V_r );
-    mat4 V = look_at( ( vec3 ){ 0, 0, 2 }, ( vec3 ){ 0, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
+    vec3 cam_pos = ( vec3 ){ 0, 0, 2 };
+    mat4 V       = look_at( cam_pos, ( vec3 ){ 0, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
 
     // TODO scale mesh to fit viewport
     mat4 Rx = rot_x_deg_mat4( 90 + gfx_get_time_s() * 10.0 );
@@ -282,6 +283,7 @@ int main( int argc, const char** argv ) {
     // gfx_mesh_t mesh, gfx_primitive_type_t pt, gfx_shader_t shader, float* P, float* V, float* M, gfx_texture_t* textures, int n_textures
     gfx_uniform1f( shader, shader.u_alpha, 1.0 );
     gfx_uniform4f( shader, shader.u_base_colour_rgba, base_colour_rgba[0], base_colour_rgba[1], base_colour_rgba[2], base_colour_rgba[3] );
+    gfx_uniform3f( shader, shader.u_cam_pos_wor, cam_pos.x, cam_pos.y, cam_pos.z );
     gfx_draw_mesh( mesh, GFX_PT_TRIANGLES, shader, P.m, V.m, M.m, textures, GFX_TEXTURE_UNIT_MAX );
 
     gfx_swap_buffer();
