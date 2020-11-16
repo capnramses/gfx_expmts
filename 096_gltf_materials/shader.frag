@@ -1,4 +1,9 @@
 /*
+TODO(Anton) redo based off of:
+https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/pbr.frag
+
+
+
 - can precompute and load a look-up table for PBR as a ktx texture
 - load a prefiltered (blurry) environment map
 - can use normal map if tangents loaded in
