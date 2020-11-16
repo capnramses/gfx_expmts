@@ -1,2 +1,2 @@
 #!/bin/bash
-./a.out minimal.gltf
+./a.out ../../glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf
