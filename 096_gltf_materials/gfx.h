@@ -25,8 +25,14 @@ typedef struct gfx_shader_t {
   // mat4
   int u_P, u_V, u_M;
   // int
-  int u_texture_a; // default to value 0
-  int u_texture_b; // default to value 0
+  int u_texture_a;                 // default to value 0
+  int u_texture_b;                 // default to value 1
+  int u_texture_albedo;            // default to value 0
+  int u_texture_metal_roughness;   // default to value 1
+  int u_texture_emissive;          // default to value 2
+  int u_texture_ambient_occlusion; // default to value 3
+  int u_texture_normal;            // default to value 4
+  int u_texture_environment;       // default to value 5
   // float
   int u_alpha;
   // PBR
@@ -107,6 +113,15 @@ void gfx_update_texture( gfx_texture_t* texture, const uint8_t* img_buffer, int 
 void gfx_update_texture_sub_image( gfx_texture_t* texture, const uint8_t* img_buffer, int x_offs, int y_offs, int w, int h );
 
 typedef enum gfx_primitive_type_t { GFX_PT_TRIANGLES = 0, GFX_PT_TRIANGLE_STRIP, GFX_PT_POINTS } gfx_primitive_type_t;
+typedef enum gfx_texture_unit_t {
+  GFX_TEXTURE_UNIT_ALBEDO            = 0,
+  GFX_TEXTURE_UNIT_METAL_ROUGHNESS   = 1,
+  GFX_TEXTURE_UNIT_EMISSIVE          = 2,
+  GFX_TEXTURE_UNIT_AMBIENT_OCCLUSION = 3,
+  GFX_TEXTURE_UNIT_NORMAL            = 4,
+  GFX_TEXTURE_UNIT_ENVIRONMENT       = 5,
+  GFX_TEXTURE_UNIT_MAX
+} gfx_texture_unit_t;
 
 /* Draw a mesh, in a given primitive mode, with a shader, using virtual camera and local->world matrices, and optional array of textures */
 void gfx_draw_mesh( gfx_mesh_t mesh, gfx_primitive_type_t pt, gfx_shader_t shader, float* P, float* V, float* M, gfx_texture_t* textures, int n_textures );

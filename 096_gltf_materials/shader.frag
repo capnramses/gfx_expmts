@@ -7,8 +7,12 @@ in vec3 v_n;
 
 uniform float u_alpha;
 
-uniform sampler2D u_texture_a; // albedo
-uniform samplerCube u_texture_b; // cube
+uniform sampler2D u_texture_albedo;
+uniform sampler2D u_texture_metal_roughness;
+uniform sampler2D u_texture_emissive;
+uniform sampler2D u_texture_ambient_occlusion;
+uniform sampler2D u_texture_normal;
+uniform samplerCube u_texture_environment;
 uniform vec4 u_base_colour_rgba;
 uniform float u_roughness_factor;
 
@@ -16,15 +20,22 @@ out vec4 o_frag_colour;
 
 void main () {
 	vec3 n_wor = normalize( v_n );
-  vec4 albedo_texel = texture( u_texture_a, v_st );
-  vec4 cube_texel = texture( u_texture_b, n_wor );
+  vec4 albedo_texel = texture( u_texture_albedo, v_st );
+  vec4 metal_roughness_texel = texture( u_texture_metal_roughness, v_st );
+  vec4 emissive_texel = texture( u_texture_emissive, v_st );
+  vec4 ambient_occlusion_texel = texture( u_texture_ambient_occlusion, v_st );
+  vec4 normal_texel = texture( u_texture_normal, v_st );
+
+  vec4 cube_texel = texture( u_texture_environment, n_wor );
 
   vec4 rgba = albedo_texel * u_base_colour_rgba;
-	rgba.rgb = cube_texel.rgb * 0.05 + albedo_texel.rgb * 0.95;
+	rgba.rgb = cube_texel.rgb * metal_roughness_texel.b * 0.15 + albedo_texel.rgb * metal_roughness_texel.g;
 
 	o_frag_colour = rgba;
   //o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );
 	//o_frag_colour.rgb = n_wor;
+
+	//o_frag_colour.rgb = vec3( metal_roughness_texel.b );
 }
 
 

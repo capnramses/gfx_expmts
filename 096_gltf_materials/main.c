@@ -114,6 +114,13 @@ int main( int argc, const char** argv ) {
   gfx_shader_t shader      = gfx_create_shader_program_from_files( "shader.vert", "shader.frag" );
   gfx_shader_t cube_shader = gfx_create_shader_program_from_files( "cube.vert", "cube.frag" );
 
+  /*
+  loaded image 0: `../../glTF-Sample-Models/2.0/DamagedHelmet/glTF/Default_albedo.jpg`
+  loaded image 1: `../../glTF-Sample-Models/2.0/DamagedHelmet/glTF/Default_metalRoughness.jpg`
+  loaded image 2: `../../glTF-Sample-Models/2.0/DamagedHelmet/glTF/Default_emissive.jpg`
+  loaded image 3: `../../glTF-Sample-Models/2.0/DamagedHelmet/glTF/Default_AO.jpg`
+  loaded image 4: `../../glTF-Sample-Models/2.0/DamagedHelmet/glTF/Default_normal.jpg`
+  */
   gfx_texture_t textures[16];
   int n_textures = 0;
 
@@ -238,7 +245,7 @@ int main( int argc, const char** argv ) {
     cgltf_free( data );
   }
 
-  textures[1] = cube_texture;
+  textures[GFX_TEXTURE_UNIT_ENVIRONMENT] = cube_texture; // #5
 
   float cam_heading = 0.0f; // y-rotation in degrees
 
@@ -275,7 +282,7 @@ int main( int argc, const char** argv ) {
     // gfx_mesh_t mesh, gfx_primitive_type_t pt, gfx_shader_t shader, float* P, float* V, float* M, gfx_texture_t* textures, int n_textures
     gfx_uniform1f( shader, shader.u_alpha, 1.0 );
     gfx_uniform4f( shader, shader.u_base_colour_rgba, base_colour_rgba[0], base_colour_rgba[1], base_colour_rgba[2], base_colour_rgba[3] );
-    gfx_draw_mesh( mesh, GFX_PT_TRIANGLES, shader, P.m, V.m, M.m, textures, 2 );
+    gfx_draw_mesh( mesh, GFX_PT_TRIANGLES, shader, P.m, V.m, M.m, textures, GFX_TEXTURE_UNIT_MAX );
 
     gfx_swap_buffer();
     gfx_poll_events();

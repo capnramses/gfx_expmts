@@ -352,16 +352,35 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   glDeleteShader( vs );
   glDeleteShader( fs );
 
-  shader.u_M                = glGetUniformLocation( shader.program_gl, "u_M" );
-  shader.u_V                = glGetUniformLocation( shader.program_gl, "u_V" );
-  shader.u_P                = glGetUniformLocation( shader.program_gl, "u_P" );
-  shader.u_texture_a        = glGetUniformLocation( shader.program_gl, "u_texture_a" );
-  shader.u_texture_b        = glGetUniformLocation( shader.program_gl, "u_texture_b" );
-  shader.u_alpha            = glGetUniformLocation( shader.program_gl, "u_alpha" );
-  shader.u_base_colour_rgba = glGetUniformLocation( shader.program_gl, "u_base_colour_rgba" );
-  shader.u_roughness_factor = glGetUniformLocation( shader.program_gl, "u_roughness_factor" );
+  shader.u_M                         = glGetUniformLocation( shader.program_gl, "u_M" );
+  shader.u_V                         = glGetUniformLocation( shader.program_gl, "u_V" );
+  shader.u_P                         = glGetUniformLocation( shader.program_gl, "u_P" );
+  shader.u_texture_a                 = glGetUniformLocation( shader.program_gl, "u_texture_a" );
+  shader.u_texture_b                 = glGetUniformLocation( shader.program_gl, "u_texture_b" );
+  shader.u_texture_albedo            = glGetUniformLocation( shader.program_gl, "u_texture_albedo" );
+  shader.u_texture_metal_roughness   = glGetUniformLocation( shader.program_gl, "u_texture_metal_roughness" );
+  shader.u_texture_emissive          = glGetUniformLocation( shader.program_gl, "u_texture_emissive" );
+  shader.u_texture_ambient_occlusion = glGetUniformLocation( shader.program_gl, "u_texture_ambient_occlusion" );
+  shader.u_texture_normal            = glGetUniformLocation( shader.program_gl, "u_texture_normal" );
+  shader.u_texture_environment       = glGetUniformLocation( shader.program_gl, "u_texture_environment" );
+  shader.u_alpha                     = glGetUniformLocation( shader.program_gl, "u_alpha" );
+  shader.u_base_colour_rgba          = glGetUniformLocation( shader.program_gl, "u_base_colour_rgba" );
+  shader.u_roughness_factor          = glGetUniformLocation( shader.program_gl, "u_roughness_factor" );
   glProgramUniform1i( shader.program_gl, shader.u_texture_a, 0 );
   glProgramUniform1i( shader.program_gl, shader.u_texture_b, 1 );
+  glProgramUniform1i( shader.program_gl, shader.u_texture_albedo, GFX_TEXTURE_UNIT_ALBEDO );
+  glProgramUniform1i( shader.program_gl, shader.u_texture_metal_roughness, GFX_TEXTURE_UNIT_METAL_ROUGHNESS );
+  glProgramUniform1i( shader.program_gl, shader.u_texture_emissive, GFX_TEXTURE_UNIT_EMISSIVE );
+  glProgramUniform1i( shader.program_gl, shader.u_texture_ambient_occlusion, GFX_TEXTURE_UNIT_AMBIENT_OCCLUSION );
+  glProgramUniform1i( shader.program_gl, shader.u_texture_normal, GFX_TEXTURE_UNIT_NORMAL );
+  glProgramUniform1i( shader.program_gl, shader.u_texture_environment, GFX_TEXTURE_UNIT_ENVIRONMENT );
+
+  int u_texture_albedo;            // default to value 0
+  int u_texture_metal_roughness;   // default to value 1
+  int u_texture_emissive;          // default to value 2
+  int u_texture_ambient_occlusion; // default to value 3
+  int u_texture_normal;            // default to value 4
+  int u_texture_environment;       // default to value 5
 
   bool linked = true;
   int params  = -1;
