@@ -10,12 +10,14 @@ extern "C" {
 #include <stddef.h> // size_t
 #include <stdint.h>
 
+typedef enum gfx_indices_type_t { GFX_INDICES_TYPE_UBYTE = 0, GFX_INDICES_TYPE_UINT16 = 1, GFX_INDICES_TYPE_UINT32 = 2 } gfx_indices_type_t;
+
 typedef struct gfx_mesh_t {
   uint32_t vao;
   uint32_t points_vbo, texcoords_vbo, normals_vbo, colours_vbo, indices_vbo;
   size_t n_vertices;
   size_t n_indices;
-  uint8_t indices_type; // 0=ubyte, 1=ushort, 2=uint
+  gfx_indices_type_t indices_type; // 0=ubyte, 1=ushort, 2=uint
   bool dynamic;
 } gfx_mesh_t;
 
@@ -64,20 +66,20 @@ PARAMS
  indices_buffer_sz - Size of the indices_buffer in bytes. The number of indices in the buffer will be inferred from this size / indices_type size (1,2, or 4).
  indices_type      - Data type of indices - 0=unsigned byte, 1=unsigned short, 2=unsigned int.
 */
-gfx_mesh_t gfx_create_mesh_from_mem(                                          //
-  const float* points_buffer, int n_points_comps,                             //
-  const float* texcoords_buffer, int n_texcoord_comps,                        //
-  const float* normals_buffer, int n_normal_comps,                            //
-  const float* colours_buffer, int n_colours_comps,                           //
-  const void* indices_buffer, size_t indices_buffer_sz, uint8_t indices_type, //
+gfx_mesh_t gfx_create_mesh_from_mem(                                                     //
+  const float* points_buffer, int n_points_comps,                                        //
+  const float* texcoords_buffer, int n_texcoord_comps,                                   //
+  const float* normals_buffer, int n_normal_comps,                                       //
+  const float* colours_buffer, int n_colours_comps,                                      //
+  const void* indices_buffer, size_t indices_buffer_sz, gfx_indices_type_t indices_type, //
   int n_vertices, bool dynamic );
 
-void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                              //
-  const float* points_buffer, int n_points_comps,                             //
-  const float* texcoords_buffer, int n_texcoord_comps,                        //
-  const float* normals_buffer, int n_normal_comps,                            //
-  const float* colours_buffer, int n_colours_comps,                           //
-  const void* indices_buffer, size_t indices_buffer_sz, uint8_t indices_type, //
+void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                         //
+  const float* points_buffer, int n_points_comps,                                        //
+  const float* texcoords_buffer, int n_texcoord_comps,                                   //
+  const float* normals_buffer, int n_normal_comps,                                       //
+  const float* colours_buffer, int n_colours_comps,                                      //
+  const void* indices_buffer, size_t indices_buffer_sz, gfx_indices_type_t indices_type, //
   int n_vertices, bool dynamic );
 
 void gfx_delete_mesh( gfx_mesh_t* mesh );

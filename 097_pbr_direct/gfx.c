@@ -179,12 +179,12 @@ void gfx_depth_mask( bool enable ) {
   }
 }
 
-gfx_mesh_t gfx_create_mesh_from_mem(                                          //
-  const float* points_buffer, int n_points_comps,                             //
-  const float* texcoords_buffer, int n_texcoord_comps,                        //
-  const float* normals_buffer, int n_normal_comps,                            //
-  const float* colours_buffer, int n_colours_comps,                           //
-  const void* indices_buffer, size_t indices_buffer_sz, uint8_t indices_type, //
+gfx_mesh_t gfx_create_mesh_from_mem(                                                     //
+  const float* points_buffer, int n_points_comps,                                        //
+  const float* texcoords_buffer, int n_texcoord_comps,                                   //
+  const float* normals_buffer, int n_normal_comps,                                       //
+  const float* colours_buffer, int n_colours_comps,                                      //
+  const void* indices_buffer, size_t indices_buffer_sz, gfx_indices_type_t indices_type, //
   int n_vertices, bool dynamic ) {
   gfx_mesh_t mesh = ( gfx_mesh_t ){ .indices_type = indices_type, .n_vertices = n_vertices, .dynamic = dynamic };
 
@@ -206,12 +206,12 @@ gfx_mesh_t gfx_create_mesh_from_mem(                                          //
   return mesh;
 }
 
-void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                              //
-  const float* points_buffer, int n_points_comps,                             //
-  const float* texcoords_buffer, int n_texcoord_comps,                        //
-  const float* normals_buffer, int n_normal_comps,                            //
-  const float* colours_buffer, int n_colours_comps,                           //
-  const void* indices_buffer, size_t indices_buffer_sz, uint8_t indices_type, //
+void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                         //
+  const float* points_buffer, int n_points_comps,                                        //
+  const float* texcoords_buffer, int n_texcoord_comps,                                   //
+  const float* normals_buffer, int n_normal_comps,                                       //
+  const float* colours_buffer, int n_colours_comps,                                      //
+  const void* indices_buffer, size_t indices_buffer_sz, gfx_indices_type_t indices_type, //
   int n_vertices, bool dynamic ) {
   assert( points_buffer && n_points_comps > 0 );
   if ( !points_buffer || n_points_comps <= 0 ) { return; }
@@ -597,9 +597,9 @@ void gfx_draw_mesh( gfx_mesh_t mesh, gfx_primitive_type_t pt, gfx_shader_t shade
   if ( mesh.indices_vbo ) {
     GLenum type = GL_UNSIGNED_BYTE;
     switch ( mesh.indices_type ) {
-    case 0: type = GL_UNSIGNED_BYTE; break;
-    case 1: type = GL_UNSIGNED_SHORT; break;
-    case 2: type = GL_UNSIGNED_INT; break;
+    case GFX_INDICES_TYPE_UBYTE: type = GL_UNSIGNED_BYTE; break;
+    case GFX_INDICES_TYPE_UINT16: type = GL_UNSIGNED_SHORT; break;
+    case GFX_INDICES_TYPE_UINT32: type = GL_UNSIGNED_INT; break;
     default: break;
     }
     glDrawElements( mode, mesh.n_indices, type, NULL );
