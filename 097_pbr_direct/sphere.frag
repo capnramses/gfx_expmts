@@ -1,4 +1,6 @@
 #version 410 core
+// https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_shading_language_include.txt
+#extension GL_ARB_shading_language_include : require
 
 in vec3 v_n_wor;
 out vec4 o_frag_colour;
