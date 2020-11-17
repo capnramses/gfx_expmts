@@ -83,14 +83,25 @@ int main() {
     int fb_w = 0, fb_h = 0;
     gfx_framebuffer_dims( &fb_w, &fb_h );
     float aspect = (float)fb_w / (float)fb_h;
-    mat4 M       = rot_y_deg_mat4( gfx_get_time_s() * 10.0 );
-    mat4 V       = look_at( ( vec3 ){ 0, 0, 2.0f }, ( vec3 ){ 0, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
+    mat4 V       = look_at( ( vec3 ){ 0, 0, 15.0f }, ( vec3 ){ 0, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
     mat4 P       = perspective( 67, aspect, 0.1, 1000.0 );
 
     gfx_viewport( 0, 0, fb_w, fb_h );
     gfx_clear_colour_and_depth_buffers( 0.2, 0.2, 0.2, 1.0 );
 
-    gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, NULL, 0 );
+    int n_across = 5;
+    int n_down   = 5;
+    for ( int yi = 0; yi < n_down; yi++ ) {
+      float y = (float)yi * 3.0f - ( ( n_down - 1 ) * 3 * 0.5f );
+      for ( int xi = 0; xi < n_across; xi++ ) {
+        // u_roughness_factor
+        float x = (float)xi * 3.0f - ( ( n_across - 1 ) * 3 * 0.5f );
+        mat4 T  = translate_mat4( ( vec3 ){ x, y, 0 } );
+        mat4 R  = rot_y_deg_mat4( gfx_get_time_s() * 10.0 );
+        mat4 M  = mult_mat4_mat4( T, R );
+        gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, NULL, 0 );
+      }
+    }
 
     gfx_swap_buffer();
     gfx_poll_events();
