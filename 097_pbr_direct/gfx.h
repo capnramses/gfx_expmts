@@ -42,6 +42,7 @@ typedef struct gfx_shader_t {
   // PBR
   int u_base_colour_rgba;
   int u_roughness_factor;
+  int u_metallic_factor;
 
   char vs_filename[GFX_SHADER_PATH_MAX], fs_filename[GFX_SHADER_PATH_MAX];
   bool loaded;

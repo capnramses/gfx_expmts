@@ -366,6 +366,7 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   shader.u_alpha                     = glGetUniformLocation( shader.program_gl, "u_alpha" );
   shader.u_base_colour_rgba          = glGetUniformLocation( shader.program_gl, "u_base_colour_rgba" );
   shader.u_roughness_factor          = glGetUniformLocation( shader.program_gl, "u_roughness_factor" );
+  shader.u_metallic_factor           = glGetUniformLocation( shader.program_gl, "u_metallic_factor" );
   shader.u_cam_pos_wor               = glGetUniformLocation( shader.program_gl, "u_cam_pos_wor" );
   glProgramUniform1i( shader.program_gl, shader.u_texture_a, 0 );
   glProgramUniform1i( shader.program_gl, shader.u_texture_b, 1 );

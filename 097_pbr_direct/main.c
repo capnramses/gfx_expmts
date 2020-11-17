@@ -99,6 +99,13 @@ int main() {
         mat4 T  = translate_mat4( ( vec3 ){ x, y, 0 } );
         mat4 R  = rot_y_deg_mat4( gfx_get_time_s() * 10.0 );
         mat4 M  = mult_mat4_mat4( T, R );
+
+        float roughness = (float)xi / (float)( n_across - 1 );
+        float metallic  = (float)yi / (float)( n_down - 1 );
+        printf( "roughness = %f, metallic = %f\n", roughness, metallic );
+        gfx_uniform1f( sphere_shader, sphere_shader.u_roughness_factor, roughness );
+        gfx_uniform1f( sphere_shader, sphere_shader.u_metallic_factor, metallic );
+
         gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, NULL, 0 );
       }
     }
