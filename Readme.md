@@ -105,6 +105,7 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 094     | `video_play`                | MPEG-1 video playback demo using plmpeg.h                                  | working             |
 | 095     | `gltf_minimal`              | Example of loading a mesh from glTF files and displaying it.               | working             |
 | 096     | `gltf_materials`            | Example of loading a mesh with materials from glTF files.                  | started             |
+| 097     | `pbr_direct`                | PBR example using only a direct light source.                  | started             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
