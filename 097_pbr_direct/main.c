@@ -76,8 +76,8 @@ int main() {
     gfx_create_mesh_from_mem( &verts[0].x, 3, NULL, 0, NULL, 0, NULL, 0, indices, sizeof( uint32_t ) * n_indices, GFX_INDICES_TYPE_UINT32, n_verts, false );
   gfx_shader_t sphere_shader = gfx_create_shader_program_from_files( "sphere.vert", "sphere.frag" );
 
-  gfx_wireframe_mode();
-  gfx_backface_culling( false );
+  // gfx_wireframe_mode();
+  // gfx_backface_culling( false );
 
   while ( !gfx_should_window_close() ) {
     int fb_w = 0, fb_h = 0;
