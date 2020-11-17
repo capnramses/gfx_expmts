@@ -84,9 +84,10 @@ int main() {
   while ( !gfx_should_window_close() ) {
     int fb_w = 0, fb_h = 0;
     gfx_framebuffer_dims( &fb_w, &fb_h );
-    float aspect = (float)fb_w / (float)fb_h;
-    mat4 V       = look_at( ( vec3 ){ 0, 0, 15.0f }, ( vec3 ){ 0, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
-    mat4 P       = perspective( 67, aspect, 0.1, 1000.0 );
+    float aspect     = (float)fb_w / (float)fb_h;
+    vec3 cam_pos_wor = ( vec3 ){ 0, 0, 15.0f };
+    mat4 V           = look_at( cam_pos_wor, ( vec3 ){ 0, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
+    mat4 P           = perspective( 67, aspect, 0.1, 1000.0 );
 
     gfx_viewport( 0, 0, fb_w, fb_h );
     gfx_clear_colour_and_depth_buffers( 0.2, 0.2, 0.2, 1.0 );
@@ -113,6 +114,7 @@ int main() {
         gfx_uniform1f( sphere_shader, sphere_shader.u_roughness_factor, roughness );
         gfx_uniform1f( sphere_shader, sphere_shader.u_metallic_factor, metallic );
         gfx_uniform3f( sphere_shader, sphere_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
+        gfx_uniform3f( sphere_shader, sphere_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
 
         gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, NULL, 0 );
       }
