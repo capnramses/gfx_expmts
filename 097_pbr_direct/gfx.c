@@ -368,6 +368,8 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   shader.u_roughness_factor          = glGetUniformLocation( shader.program_gl, "u_roughness_factor" );
   shader.u_metallic_factor           = glGetUniformLocation( shader.program_gl, "u_metallic_factor" );
   shader.u_cam_pos_wor               = glGetUniformLocation( shader.program_gl, "u_cam_pos_wor" );
+  shader.u_light_pos_wor             = glGetUniformLocation( shader.program_gl, "u_light_pos_wor" );
+
   glProgramUniform1i( shader.program_gl, shader.u_texture_a, 0 );
   glProgramUniform1i( shader.program_gl, shader.u_texture_b, 1 );
   glProgramUniform1i( shader.program_gl, shader.u_texture_albedo, GFX_TEXTURE_UNIT_ALBEDO );

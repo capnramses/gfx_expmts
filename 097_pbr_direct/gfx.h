@@ -37,6 +37,7 @@ typedef struct gfx_shader_t {
   int u_texture_environment;       // default to value 5
   // vec3
   int u_cam_pos_wor;
+  int u_light_pos_wor;
   // float
   int u_alpha;
   // PBR

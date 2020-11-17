@@ -76,6 +76,8 @@ int main() {
     gfx_create_mesh_from_mem( &verts[0].x, 3, NULL, 0, NULL, 0, NULL, 0, indices, sizeof( uint32_t ) * n_indices, GFX_INDICES_TYPE_UINT32, n_verts, false );
   gfx_shader_t sphere_shader = gfx_create_shader_program_from_files( "sphere.vert", "sphere.frag" );
 
+  vec3 light_pos_wor_initial = ( vec3 ){ 0, 5, 15 };
+
   // gfx_wireframe_mode();
   // gfx_backface_culling( false );
 
@@ -88,6 +90,11 @@ int main() {
 
     gfx_viewport( 0, 0, fb_w, fb_h );
     gfx_clear_colour_and_depth_buffers( 0.2, 0.2, 0.2, 1.0 );
+
+    // rotate light around z axis
+    mat4 R_light = rot_z_deg_mat4( gfx_get_time_s() * 100.0 );
+
+    vec4 light_pos_curr_wor_xyzw = mult_mat4_vec4( R_light, v4_v3f( light_pos_wor_initial, 1.0 ) );
 
     int n_across = 5;
     int n_down   = 5;
@@ -102,9 +109,10 @@ int main() {
 
         float roughness = (float)xi / (float)( n_across - 1 );
         float metallic  = (float)yi / (float)( n_down - 1 );
-        printf( "roughness = %f, metallic = %f\n", roughness, metallic );
+        // printf( "roughness = %f, metallic = %f\n", roughness, metallic );
         gfx_uniform1f( sphere_shader, sphere_shader.u_roughness_factor, roughness );
         gfx_uniform1f( sphere_shader, sphere_shader.u_metallic_factor, metallic );
+        gfx_uniform3f( sphere_shader, sphere_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
 
         gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, NULL, 0 );
       }
