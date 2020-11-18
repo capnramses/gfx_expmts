@@ -68,10 +68,12 @@ void main() {
 	vec3 viewer_to_surface_wor = normalize( u_cam_pos_wor - v_p_wor ); // V
 	vec3 albedo = vec3( 1.0, 0.0, 0.0 );
 	float k_a = 1.0; // AO
-	float alpha_roughness = u_roughness_factor * u_roughness_factor;
+	float metal = clamp( u_metallic_factor, 0.02, 0.95 );
+	float roughness = clamp( u_roughness_factor, 0.1, 0.95 ); // @lh0xfb: There is a singularity where roughness = 0
+	float alpha_roughness = roughness * roughness;
 	float k = alpha_roughness + 1.0;
 	k = ( k * k ) / 8.0;
-	vec3 f0 = mix( vec3( 0.04 ), albedo, u_metallic_factor );
+	vec3 f0 = mix( vec3( 0.04 ), albedo, metal );
 	vec3 l_o = vec3( 0.0 );
 
 	{ // for each light in n lights...
@@ -95,7 +97,7 @@ void main() {
 
 		vec3 k_s = f;
 		vec3 k_d = vec3( 1.0 ) - k_s; // NOTE(Anton) conservation of energy here
-		k_d *= 1.0 - u_metallic_factor;
+		k_d *= 1.0 - metal;
 
 		float n_dot_l = clamp( dot( n_wor, dir_to_light_wor ), 0.0, 1.0 );
 		l_o += ( k_d * albedo / GPI + specular ) * radiance * n_dot_l;
