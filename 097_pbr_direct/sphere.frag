@@ -69,9 +69,9 @@ void main() {
 #ifdef PBR
 	vec3 viewer_to_surface_wor = normalize( u_cam_pos_wor - v_p_wor ); // V
 	vec3 albedo = vec3( 1.0, 0.0, 0.0 );
-	float k_a = 1.0; // AO
-	float metal = clamp( u_metallic_factor, 0.02, 0.95 );
-	float roughness = clamp( u_roughness_factor, 0.1, 0.95 ); // @lh0xfb: There is a singularity where roughness = 0
+	float k_a = 0.9; // AO
+	float metal = clamp( u_metallic_factor, 0.01, 1.0 );
+	float roughness = clamp( u_roughness_factor, 0.01, 1.0 ); // @lh0xfb: There is a singularity where roughness = 0
 	float alpha_roughness = roughness * roughness;
 	float k = alpha_roughness + 1.0;
 	k = ( k * k ) / 8.0;
