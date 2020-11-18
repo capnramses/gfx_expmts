@@ -25,6 +25,8 @@ vec3 blinn_phong( vec3 n, vec3 light_pos, vec3 light_rgb ) {
 	float dot_d = clamp( dot( n, dir_to_light ), 0.0, 1.0 );
 	vec3 i_d = l_d * k_d * dot_d;
 
+	// TODO(Anton) add specular
+
 	return i_a + i_d;
 }
 
@@ -48,7 +50,7 @@ float distribution_ggx( vec3 n, vec3 h, float alpha ) {
 	float alpha2 = alpha * alpha;
 	float n_dot_h = clamp( dot( n, h ), 0.0, 1.0 );
 	float k = n_dot_h * n_dot_h * ( alpha2 - 1.0 ) + 1.0;
-	return alpha2 / ( GPI * k * k );
+	return alpha2 / ( GPI * k * k ); // NOTE(Anton) if k * GPI is 0 here or alpha2  is zero we have an issue
 }
 
 float geometry_schlick_ggx( float x, float k ) {
