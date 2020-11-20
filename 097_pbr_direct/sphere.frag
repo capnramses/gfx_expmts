@@ -50,8 +50,8 @@ void linear_to_srgb( inout vec3 rgb ) {
 // PBR code based on https://github.com/michal-z/SimpleDirectPBR/blob/master/Source/Shaders/SimpleForward.hlsl
 // alternative functions are also listed there
 #define GPI 3.14159265359
-vec3 fresnel_schlick( float h_dot_v, vec3 f0 ) { // NOTE(Anton) i think this is supposed to be n_dot_h or n_dot_v
-	return f0 + ( vec3( 1.0 ) - f0 ) * pow( 1.0 - h_dot_v, 5.0 );
+vec3 fresnel_schlick( float h_dot_n, vec3 f0 ) { // NOTE(Anton) i think this is supposed to be n_dot_h or n_dot_v
+	return f0 + ( vec3( 1.0 ) - f0 ) * pow( 1.0 - h_dot_n, 5.0 );
 }
 
 // Trowbridge-Reitz GGX normal distribution function.
@@ -98,7 +98,7 @@ void main() {
 		vec3 light_colour = vec3( 0.8 );
 		vec3 radiance = light_colour * attenuation;
 
-		vec3 f = fresnel_schlick( clamp( dot( h, viewer_to_surface_wor ), 0.0, 1.0 ), f0 );
+		vec3 f = fresnel_schlick( clamp( dot( h, n_wor ), 0.0, 1.0 ), f0 );
 		float ndf = distribution_ggx( n_wor, h, alpha_roughness );
 		float g = geometry_smith( n_wor, viewer_to_surface_wor, dir_to_light_wor, k );
 
