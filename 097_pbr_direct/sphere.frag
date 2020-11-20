@@ -15,19 +15,28 @@ out vec4 o_frag_colour;
 
 vec3 blinn_phong( vec3 n, vec3 light_pos, vec3 light_rgb ) {
 	vec3 dir_to_light = normalize( u_light_pos_wor - v_p_wor );
+	vec3 dir_to_viewer = normalize( u_cam_pos_wor - v_p_wor );
+
+	vec3 base_colour = vec3( 1.0, 0.0, 0.0 );
 
 	vec3 l_a = light_rgb;
-	vec3 k_a = vec3( 0.03 );
+	vec3 k_a = base_colour * 0.05;
 	vec3 i_a = l_a * k_a;
 
+	vec3 l_s = light_rgb;
+	vec3 k_s = base_colour * ( 1.0 - u_roughness_factor );
+	float specular_exponent = 50.0; // specular 'power'
+	vec3 half_way = normalize( dir_to_viewer + dir_to_light );
+	float dot_s = clamp( dot( half_way, n ), 0.0, 1.0 );
+	float specular_factor = pow( dot_s, specular_exponent );
+	vec3 i_s = l_s * k_s * specular_factor * u_metallic_factor;
+
 	vec3 l_d = light_rgb;
-	vec3 k_d = vec3( 0.7 );
+	vec3 k_d = ( vec3( 1.0 ) - k_s ) * base_colour; // NOTE(Anton) aping energy conservation here
 	float dot_d = clamp( dot( n, dir_to_light ), 0.0, 1.0 );
 	vec3 i_d = l_d * k_d * dot_d;
 
-	// TODO(Anton) add specular
-
-	return i_a + i_d;
+	return i_a + ( i_d + i_s ) * 0.95;
 }
 
 void srgb_to_linear( inout vec3 rgb ) {
@@ -41,7 +50,7 @@ void linear_to_srgb( inout vec3 rgb ) {
 // PBR code based on https://github.com/michal-z/SimpleDirectPBR/blob/master/Source/Shaders/SimpleForward.hlsl
 // alternative functions are also listed there
 #define GPI 3.14159265359
-vec3 fresnel_schlick( float h_dot_v, vec3 f0 ) {
+vec3 fresnel_schlick( float h_dot_v, vec3 f0 ) { // NOTE(Anton) i think this is supposed to be n_dot_h or n_dot_v
 	return f0 + ( vec3( 1.0 ) - f0 ) * pow( 1.0 - h_dot_v, 5.0 );
 }
 
