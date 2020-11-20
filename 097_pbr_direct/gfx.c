@@ -8,7 +8,7 @@
 #define GFX_SHADER_BINDING_VT 1
 #define GFX_SHADER_BINDING_VN 2
 #define GFX_SHADER_BINDING_VC 3
-#define GFX_MAX_SHADER_STR 10000
+#define GFX_MAX_SHADER_STR 20000
 
 GLFWwindow* gfx_window_ptr; // extern in apg_glcontext.h
 
