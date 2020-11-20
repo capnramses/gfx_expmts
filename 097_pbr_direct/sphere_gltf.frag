@@ -71,18 +71,6 @@ which allows the artist to change the constant F0 value for dielectrics. In Subs
 and is supplied by a texture sampler in the metal/roughness PBR shader. It represents the range of 0.0-0.08, as shown in Figure 20.
 This range is remapped in the shader to 0.0-1.0 where 0.5 represents 4% reflective.
 
-The base color map is an RGB map that can contain 2 types of data: diffuse reflected color for dielectrics and reflectance values for metals, as shown in Figure 22.
-The color that represents dielectrics represents reflected wavelengths, as discussed in Part 1.
-* The reflectance values are present if an area is denoted as metal in the metallic map (white values).
-* Values that indicate the reflectance values for metals should be obtained from real-world measured values.
-* Metal areas that fall in this range will need to have a reflectance range of 70-100% reflective.
-  - gold   sRGB(255,226,155)
-  - silver sRGB(252,250,245)
-	- Al     sRGB(245,246,246)
-	- Iron   sRGB(196,199,199)
-	- Copper sRGB(250,208,192)
-* If the metallic map has gray values lower than 235 sRGB you need to lower the “raw” metal reflectance value in the base color.
-
 
 UNREAL
 https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_slides.pdf
@@ -142,57 +130,6 @@ NOTE: I have no idea what F90 is from glTF ref so gonna use a model without it.
 
 #define M_PI 3.14159265359
 
-/*
-Normal Distribution (D)
-Trowbridge-Reitz GGX
-Unreal calls this the Specular distribution term D(h) https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_slides.pdf
-learnopengl.com example image of output range (for roughness values i guess): https://learnopengl.com/img/pbr/ndf.png
-*/
-float D_GGX( float NdotH, float alphaRoughness ) {
-    float alphaRoughnessSq = alphaRoughness * alphaRoughness;
-    float f = ( NdotH * NdotH ) * ( alphaRoughnessSq - 1.0 ) + 1.0;
-    return alphaRoughnessSq / ( M_PI * f * f );
-}
-
-/*
-Geometric Occlusion / Visibility (V)
-Smith Joint GGX (Smith calls Schlick as a subfunction as explained here https://learnopengl.com/PBR/Theory)
-*/
-float V_GGX( float NdotL, float NdotV, float alphaRoughness ) {
-	float alphaRoughnessSq = alphaRoughness * alphaRoughness;
-
-	float GGXV = NdotL * sqrt( NdotV * NdotV * ( 1.0 - alphaRoughnessSq ) + alphaRoughnessSq ); // this is schlick (1 - k) + k
-	float GGXL = NdotV * sqrt( NdotL * NdotL * ( 1.0 - alphaRoughnessSq ) + alphaRoughnessSq ); // this is schlick (1 - k) + k
-
-	float GGX = GGXV + GGXL;
-	if ( GGX > 0.0 ) {
-		return 0.5 / GGX;
-	}
-	return 0.0;
-}
-
-/* Microfacet metallic-roughness BRDF */
-vec3 metallicBRDF( vec3 f0, vec3 f90, float alphaRoughness, float VdotH, float NdotL, float NdotV, float NdotH ) {
-	vec3 F = fresnel_schlick( f0, f90, VdotH );
-	float Vis = V_GGX( NdotL, NdotV, alphaRoughness ); // Vis = G / (4 * NdotL * NdotV)
-	float D = D_GGX( NdotH, alphaRoughness );
-
-	return F * Vis * D; // vec3 F_specular = D * Vis * F;
-}
-
-/*-----------------------------------------------------------------------------
-Diffuse Term (F_diffuse)
------------------------------------------------------------------------------*/
-
-/*
-Lambertian
-Alternative here is Burley.
-*/
-vec3 lambertian( vec3 f0, vec3 f90, vec3 diffuseColor, float VdotH ) {
-	return ( 1.0 - fresnel_schlick( f0, f90, VdotH ) ) *  (diffuseColor / M_PI ); // vec3 F_diffuse = (1.0 - F) * diffuse;
-}
-
-#endif
 /******************************************************************************
 Notes from https://learnopengl.com/PBR/Theory
 
@@ -227,9 +164,9 @@ The reflectance equation
 					k_s - ratio of incoming light energy reflected.
           f_cook_torrance = (D*F*G) / ( 4 * ( w_o dot n ) * ( w_i dot n ) )
 					D - normal distribution function - appoximation of surface microfacet alignment with halfway vector (based on roughness). (Epic uses Trowbridge-Reitz GGX)
-					G - geometry function - self-shadowing by microfacets. very rough surfaces overshadow other microfacets. ( Epic uses Fresnel-Schlick)
-					F - fresnel equation - ratio of reflection at different surface angles. (Epic uses Smith's Schlick-GGX aka Schlick-Beckmann)
-
+					F - fresnel equation - ratio of reflection at different surface angles. (Fresnel-Schlick)
+					G - geometry function - self-shadowing by microfacets. very rough surfaces overshadow other microfacets. (Epic uses Smith's Schlick-GGX aka Schlick-Beckmann)
+					
 					D = NDF_GGXTR(n,h,alpha) = alpha^2 / ( pi * ( ( n dot h )^2 * ( alpha^2 - 1 ) + 1 )^2 )
 					G = G(n, v, l, k) = G_sub(n, v, k) * G_sub(n, l, k)
 					    we we will use G_schlickGGX for G_sub:
@@ -251,61 +188,118 @@ The reflectance equation
 
 
 ******************************************************************************/
-// NOTE(Anton) glTF and others use an f90 variable here to balance f0. note sure.
-vec3 fresnel_schlick( float cos_theta, vec3 f0 ) {
+/* F - fresnel equation.
+Ratio of reflection at different surface angles.
+Epic uses Fresnel-Schlick. Not to be confused woth Schlick-Beckman, below.
+NOTE(Anton) glTF and others use an f90 variable here to balance f0. note sure.
+*/
+vec3 f_fresnel_schlick( float cos_theta, vec3 f0 ) {
 	return f0 + ( 1.0 - f0 ) * pow( 1.0 - cos_theta, 5.0 );
-}  
+}
+
+/* D - normal distribution function.
+Appoximation of surface microfacet alignment with halfway vector (based on roughness).
+Epic uses Trowbridge-Reitz GGX.
+*/
+float d_trowbridge_reitz_ggx( float n_dot_h, float roughness_factor_k ) {
+	float alpha_sq = roughness_factor_k * roughness_factor_k;
+	float part = n_dot_h * n_dot_h * ( alpha_sq - 1.0 ) + 1.0;
+	return ( roughness_factor_k * roughness_factor_k ) / ( M_PI * part * part );
+}
+
+float g_schlick_ggx( float n_dot_something, float roughness ) {
+	float r = roughness + 1.0;
+	float k = ( roughness * roughness ) / 8.0;
+	return n_dot_something / ( n_dot_something * ( 1.0 - k ) + k );
+}
+
+/* G - geometry function.
+Self-shadowing by microfacets. Very rough surfaces overshadow other microfacets.
+Epic uses Smith's Schlick-GGX aka Schlick-Beckmann.
+*/
+float g_smith( vec3 n, vec3 v, vec3 l, float roughness ) {
+	float n_dot_v = clamp( dot( n, v ), 0.0, 1.0 );
+	float n_dot_l = clamp( dot( n, l ), 0.0, 1.0 );
+	float part_a  = g_schlick_ggx( n_dot_v, roughness );
+	float part_b  = g_schlick_ggx( n_dot_l, roughness );
+	return part_a * part_b;
+}
+#endif
 
 void main() {
 	vec3 n_wor = normalize( v_n_wor );
 	
-
 #ifdef PBR
-	{
-		vec3 albedo = vec3( 1.0, 0.0, 0.0 );
+	vec3 rgb = vec3( 0.0 );
+	////
+		// NB plug in RGB version here (linear) as it gets corrected to sRGB later. a texture would store the sRGB (usually)
+		// Copper	RGB (0.95, 0.64, 0.54) sRGB (0.98, 0.82, 0.76)
+		// NOTE colour for gold RGB value vec3( 1.0, 0.71, 0.29)
+
+		/*
+		The base color map is an RGB map that can contain 2 types of data: diffuse reflected color for dielectrics and reflectance values for metals, as shown in Figure 22.
+		The color that represents dielectrics represents reflected wavelengths, as discussed in Part 1.
+		* The reflectance values are present if an area is denoted as metal in the metallic map (white values).
+		* Values that indicate the reflectance values for metals should be obtained from real-world measured values.
+		* Metal areas that fall in this range will need to have a reflectance range of 70-100% reflective.
+
+		* If the metallic map has gray values lower than 235 sRGB you need to lower the “raw” metal reflectance value in the base color.
+		*/
+		vec3 gold   = pow( vec3(255.0,226.0,155.0) / 255.0,vec3(2.2));
+		vec3 silver = pow( vec3(252.0,250.0,245.0) / 255.0,vec3(2.2));
+		vec3 Al     = pow( vec3(245.0,246.0,246.0) / 255.0,vec3(2.2));
+		vec3 Iron   = pow( vec3(196.0,199.0,199.0) / 255.0,vec3(2.2));
+		vec3 Copper = pow( vec3(250.0,208.0,192.0) / 255.0,vec3(2.2));
+		vec3 red   = vec3(1.0,0.0,0.0);
+		vec3 purple   = vec3(1.0,0.0,1.0);
+
+
+		vec3 albedo = red;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
 		float metal = clamp( u_metallic_factor, 0.01, 1.0 );
+		float roughness = clamp( u_roughness_factor, 0.01, 1.0 );
 
 		vec3 v_to_p_dir_wor   = normalize( u_cam_pos_wor - v_p_wor );     // V
-		vec3 L_o = vec3( 0.0 ); // total reflected light
-		{ // for each light l in scene (this is equivalent to solving integral over omega for direct light sources
-			vec3 light_colour   = vec3( 23.0, 21.0, 20.0 );               // NOTE(Anton) higher than 1.0 values! radiant flux translated to rgb triplet.
+		vec3 L_o              = vec3( 0.0 ); // total reflected light
+		 ///// for each light l in scene (this is equivalent to solving integral over omega for direct light sources
+		 // NOTE(Anton) higher than 1.0 values! radiant flux translated to rgb triplet.
+			vec3 light_colour   = vec3( 500.0 );               
 			vec3 p_to_l_dir_wor = normalize( u_light_pos_wor - v_p_wor ); // L. == equiv to w_i incoming vector
 			vec3 h_wor          = normalize( v_to_p_dir_wor + p_to_l_dir_wor );
+
 			float distance      = length( u_light_pos_wor - v_p_wor );
 			float attenuation   = 1.0 / ( distance * distance );
+
 			vec3 radiance       = light_colour * attenuation; // NB more correct atten with inverse-square available when gamma correcting
 			// Cook-Torrance specular term
-			vec3 f0 = mix( vec3( 0.04 ), albedo, metal );
-			vec3 f  = fresnel_schlick( clamp( dot( h_wor, v_to_p_dir_wor ), 0.0, 1.0 ), f0 );
-		}
-		
-		
-		float cos_theta     = clamp( dot( n_wor, p_to_l_dir_wor ), 0.0, 1.0 );
-		// NOTE: a directional light source has a constant w_i, with no attenuation factor. area lights etc have different properties.
-		float attenuation   = calc_atten( v_p_wor, u_light_pos_wor );
-}
-	float k_a = 0.9; // AO
-	float roughness = clamp( u_roughness_factor, 0.01, 1.0 ); // @lh0xfb: There is a singularity where roughness = 0
-	float alpha_roughness = roughness * roughness;
-	float k = alpha_roughness + 1.0;
-	k = ( k * k ) / 8.0;
-	vec3 f0 = mix( vec3( 0.04 ), albedo, metal );
-	vec3 l_o = vec3( 0.0 );
+			// IOR term but we use metal term to differentiate from a dead-on angle.
+			vec3 f0       = mix( vec3( 0.04 ), albedo, metal ); // F0 is the base reflectivity of the surface - calculated using index of refraction IOR
+			float h_dot_v = clamp( dot( h_wor, v_to_p_dir_wor ), 0.0, 1.0 );
+			vec3 F        = f_fresnel_schlick( h_dot_v, f0 );
+			float n_dot_h = clamp( dot( n_wor, h_wor ), 0.0, 1.0 );
+			float D       = d_trowbridge_reitz_ggx( n_dot_h, roughness );  // normal distribution function      
+			float G       = g_smith( n_wor, v_to_p_dir_wor, p_to_l_dir_wor, roughness );      
+			// calculate cook-torrance BRDF
+			// TODO precalc ndotv etc
+			float denominator   = 4.0 * clamp( dot( n_wor, v_to_p_dir_wor ), 0.0, 1.0 ) * clamp( dot( n_wor, p_to_l_dir_wor), 0.0, 1.0 );
+			vec3 specular       = ( D * G * F ) / max( denominator, 0.001 );
 
-	{ // for each light in n lights...
-		vec3 dist3d_to_light_wor = u_light_pos_wor - v_p_wor; // LightVector 
-		vec3 dir_to_light_wor = normalize( dist3d_to_light_wor ); // L
-		vec3 h_wor = normalize( dir_to_light_wor + viewer_to_surface_wor );
+			vec3 k_s = F;
+			vec3 k_d = ( vec3( 1.0 ) - k_s ) * ( 1.0 - metal );
 
-		float kS = calculateSpecularComponent(...); // reflection/specular fraction
-		float kD = 1.0 - kS;                        // refraction/diffuse  fraction
-	}
-	vec3 ambient = vec3( 0.03 ) * albedo * k_a;
-	vec3 rgb = ambient + l_o;
+			float n_dot_l = clamp( dot( n_wor, p_to_l_dir_wor ), 0.0, 1.0 );     
+    	L_o += ( k_d * albedo / M_PI + specular ) * radiance * n_dot_l;
+		//////
+		float ao = 1.0; // TODO later - load from image!
+		vec3 ambient = vec3( 0.03 ) * albedo * ao;
+		rgb  = ambient + L_o;  	
+		rgb = rgb / ( rgb + vec3( 1.0 ) );
+	////
 #else
 	vec3 rgb = blinn_phong( n_wor, u_light_pos_wor, vec3( 0.8 ) );
 #endif
 
-	o_frag_colour = vec4( rgb, 1.0 );
-	linear_to_srgb( o_frag_colour.rgb );
+	o_frag_colour.rgb = rgb;
+	o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );
+	o_frag_colour.a = 1.0;
+
 }
