@@ -39,15 +39,6 @@ vec3 blinn_phong( vec3 n, vec3 light_pos, vec3 light_rgb ) {
 	return i_a + ( i_d + i_s ) * 0.95;
 }
 
-void srgb_to_linear( inout vec3 rgb ) {
-	rgb = pow( rgb, vec3( 2.2 ) );
-}
-
-void linear_to_srgb( inout vec3 rgb ) {
-	rgb = pow( rgb, vec3( 1.0 / 2.2 ) );
-}
-
-
 /******************************************************************************
 GLTF's code.
 From Appendix A: https://github.com/KhronosGroup/glTF-Sample-Viewer
