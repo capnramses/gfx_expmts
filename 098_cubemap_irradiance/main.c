@@ -228,7 +228,8 @@ int main() {
       mat4 V_envmap = cam_R;
       mat4 M_envmap = scale_mat4( ( vec3 ){ 10, 10, 10 } );
       gfx_depth_mask( false );
-      gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &irradiance_texture, 1 );
+      // SWITCH TO irradiance_texture to test
+      gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &cube_texture, 1 );
       gfx_depth_mask( true );
     }
 

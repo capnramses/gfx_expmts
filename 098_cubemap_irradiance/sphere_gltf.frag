@@ -286,7 +286,7 @@ void main() {
 			vec3 k_d = ( vec3( 1.0 ) - k_s ) * ( 1.0 - metal );
 
 			float n_dot_l = clamp( dot( n_wor, p_to_l_dir_wor ), 0.0, 1.0 );     
-    //	L_o += ( k_d * albedo / M_PI + specular ) * radiance * n_dot_l;
+    	L_o += ( k_d * albedo / M_PI + specular ) * radiance * n_dot_l;
 		//////
 
 		float ao = 1.0; // TODO later - load from image!
@@ -300,7 +300,7 @@ void main() {
 			vec3 diffuse = irradiance_rgb * albedo;
 			ambient = k_d * diffuse * ao;
 		}
-		rgb  = ambient + L_o;
+		rgb  = clamp( ambient, vec3( 0.0 ), vec3( 1.0 ) ) + clamp( L_o, vec3( 0.0 ), vec3( 1.0 ) );
 
 #ifdef TONE_MAPPING
 	if ( gl_FragCoord.x < 1024.0 * 0.5 ) {
