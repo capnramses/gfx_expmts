@@ -1,9 +1,12 @@
 #version 410 core
 
 #define PBR
+#define TONE_MAPPING // kills edge highlights and some metallic tint but smooths banded light exposure
 
 in vec3 v_p_wor;
 in vec3 v_n_wor;
+
+uniform samplerCube u_texture_irradiance_map;
 
 uniform float u_roughness_factor;
 uniform float u_metallic_factor;
@@ -188,6 +191,11 @@ vec3 f_fresnel_schlick( float cos_theta, vec3 f0 ) {
 	return f0 + ( 1.0 - f0 ) * pow( 1.0 - cos_theta, 5.0 );
 }
 
+/* used in ambient IBL */
+vec3 fresnel_schlick_roughness( float cos_theta, vec3 f0, float roughness ) {
+	return f0 + ( max( vec3( 1.0 - roughness ), f0 ) - f0 ) * pow( 1.0 - cos_theta, 5.0 );
+}
+
 /* D - normal distribution function.
 Appoximation of surface microfacet alignment with halfway vector (based on roughness).
 Epic uses Trowbridge-Reitz GGX.
@@ -245,7 +253,7 @@ void main() {
 		vec3 purple   = vec3(1.0,0.0,1.0);
 
 
-		vec3 albedo = red;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
+		vec3 albedo = Copper;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
 		float metal = clamp( u_metallic_factor, 0.01, 1.0 );
 		float roughness = clamp( u_roughness_factor, 0.01, 1.0 );
 
@@ -280,10 +288,28 @@ void main() {
 			float n_dot_l = clamp( dot( n_wor, p_to_l_dir_wor ), 0.0, 1.0 );     
     	L_o += ( k_d * albedo / M_PI + specular ) * radiance * n_dot_l;
 		//////
+
 		float ao = 1.0; // TODO later - load from image!
 		vec3 ambient = vec3( 0.03 ) * albedo * ao;
-		rgb  = ambient + L_o;  	
-		rgb = rgb / ( rgb + vec3( 1.0 ) );
+		{ // IBL
+			float n_dot_v = clamp( dot( n_wor, v_to_p_dir_wor ), 0.0, 1.0 );
+			vec3 k_s = fresnel_schlick_roughness( clamp( n_dot_v, 0.0, 1.0 ), f0, roughness );
+			vec3 k_d = 1.0 - k_s;
+			k_d *= ( 1.0 - metal );
+			vec3 irradiance_rgb = texture( u_texture_irradiance_map, n_wor ).rgb;
+			vec3 diffuse = irradiance_rgb * albedo;
+			ambient = k_d * diffuse * ao;
+		}
+		rgb  = ambient + L_o;
+
+#ifdef TONE_MAPPING
+	if ( gl_FragCoord.x < 1024.0 * 0.5 ) {
+		//	rgb.b = 1.0;
+			rgb = rgb / ( rgb + vec3( 1.0 ) ); // tone mapping
+	}
+#endif
+
+	//	rgb = irradiance_rgb;
 	////
 #else
 	vec3 rgb = blinn_phong( n_wor, u_light_pos_wor, vec3( 0.8 ) );

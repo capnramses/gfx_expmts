@@ -5,6 +5,8 @@
 in vec3 v_p_wor;
 in vec3 v_n_wor;
 
+uniform samplerCube u_texture_irradiance_map; // irradiance map goes here
+
 uniform float u_roughness_factor;
 uniform float u_metallic_factor;
 
@@ -113,8 +115,9 @@ void main() {
 		float n_dot_l = clamp( dot( n_wor, dir_to_light_wor ), 0.0, 1.0 );
 		l_o += ( k_d * albedo / GPI + specular ) * radiance * n_dot_l;
 	}
+
 	vec3 ambient = vec3( 0.03 ) * albedo * k_a;
-	vec3 rgb = ambient + l_o;
+	vec3 rgb = n_worambient + l_o;
 #else
 	vec3 rgb = blinn_phong( n_wor, u_light_pos_wor, vec3( 0.8 ) );
 #endif
