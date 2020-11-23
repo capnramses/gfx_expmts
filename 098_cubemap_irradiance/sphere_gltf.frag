@@ -253,7 +253,7 @@ void main() {
 		vec3 purple   = vec3(1.0,0.0,1.0);
 
 
-		vec3 albedo = Copper;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
+		vec3 albedo = gold;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
 		float metal = clamp( u_metallic_factor, 0.01, 1.0 );
 		float roughness = clamp( u_roughness_factor, 0.01, 1.0 );
 
