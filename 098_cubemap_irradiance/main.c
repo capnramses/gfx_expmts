@@ -124,7 +124,7 @@ static void _dump_obj( const vec3* verts_ptr, const uint32_t* indices_ptr, uint3
   fclose( f_ptr );
 }
 
-gfx_texture_t cubemap_set_up() {
+gfx_texture_t cubemap_from_images() {
   gfx_texture_t tex = ( gfx_texture_t ){ .handle_gl = 0 };
   // to match OpenGL constants order is: posx,negx,posy,negy,posz,negz
   const char* img_paths[6] = { "textures/kegs_right.png", "textures/kegs_left.png", "textures/kegs_up.png", "textures/kegs_down.png",
@@ -177,17 +177,32 @@ int main() {
     gfx_create_mesh_from_mem( &verts[0].x, 3, NULL, 0, NULL, 0, NULL, 0, indices, sizeof( uint32_t ) * n_indices, GFX_INDICES_TYPE_UINT32, n_verts, false );
   gfx_shader_t sphere_shader = gfx_create_shader_program_from_files( "sphere.vert", "sphere_gltf.frag" );
   gfx_shader_t cube_shader   = gfx_create_shader_program_from_files( "cube.vert", "cube.frag" );
-  gfx_texture_t cube_texture = cubemap_set_up();
+  gfx_texture_t cube_texture = cubemap_from_images();
+  gfx_texture_t irradiance_texture =
+    gfx_create_cube_texture_from_mem( NULL, 32, 32, 3, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_srgb = true } );
+  gfx_framebuffer_t convoluting_framebuffer = gfx_create_framebuffer( 32, 32, true );
 
   vec3 light_pos_wor_initial = ( vec3 ){ 0, 5, 10 };
 
   gfx_texture_t irradiance_map = generate_ibl( cube_texture );
 
+  { // pass to create irradiance map from cube map
+    gfx_viewport( 0, 0, 32, 32 );
+    gfx_bind_framebuffer( &convoluting_framebuffer );
+    mat4 I = identity_mat4();
+    for ( int i = 0; i < 6; i++ ) {
+      gfx_framebuffer_bind_cube_face( convoluting_framebuffer, irradiance_texture, i );
+      gfx_clear_colour_and_depth_buffers( 0.0f, 0.0f, 0.0f, 0.0f );
+      gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, I.m, I.m, I.m, &cube_texture, 1 );
+    }
+    gfx_bind_framebuffer( NULL );
+  }
+
   // gfx_wireframe_mode();
   // gfx_backface_culling( false );
 
   float cam_x_deg = 0.0f, cam_y_deg = 0.0f;
-  double prev_s   = gfx_get_time_s();
+  double prev_s = gfx_get_time_s();
 
   while ( !gfx_should_window_close() ) {
     double curr_s    = gfx_get_time_s();
@@ -199,22 +214,22 @@ int main() {
     if ( input_is_key_held( input_turn_left_key ) ) { cam_y_deg += 90.0f * elapsed_s; }
     if ( input_is_key_held( input_turn_right_key ) ) { cam_y_deg -= 90.0f * elapsed_s; }
 
-    mat4 cam_R_x = rot_x_deg_mat4( -cam_x_deg );
-    mat4 cam_R_y = rot_y_deg_mat4( -cam_y_deg );
-    mat4 cam_R = mult_mat4_mat4( cam_R_x, cam_R_y );
+    mat4 cam_R_x     = rot_x_deg_mat4( -cam_x_deg );
+    mat4 cam_R_y     = rot_y_deg_mat4( -cam_y_deg );
+    mat4 cam_R       = mult_mat4_mat4( cam_R_x, cam_R_y );
     vec3 cam_pos_wor = ( vec3 ){ 0, 0, 15.0f };
-    mat4 cam_T   = translate_mat4( ( vec3 ){ .x = 0, .y = 0, .z = -cam_pos_wor.z } );
-    mat4 V = mult_mat4_mat4( cam_R, cam_T );
+    mat4 cam_T       = translate_mat4( ( vec3 ){ .x = 0, .y = 0, .z = -cam_pos_wor.z } );
+    mat4 V           = mult_mat4_mat4( cam_R, cam_T );
 
     int fb_w = 0, fb_h = 0;
     gfx_framebuffer_dims( &fb_w, &fb_h );
-    float aspect     = (float)fb_w / (float)fb_h;
-    mat4 P = perspective( 67, aspect, 0.1, 1000.0 );
+    float aspect = (float)fb_w / (float)fb_h;
+    mat4 P       = perspective( 67, aspect, 0.1, 1000.0 );
 
     gfx_viewport( 0, 0, fb_w, fb_h );
     gfx_clear_colour_and_depth_buffers( 0.2, 0.2, 0.2, 1.0 );
 
-    {                                  // skybox
+    { // skybox
       mat4 V_envmap = cam_R;
       mat4 M_envmap = scale_mat4( ( vec3 ){ 10, 10, 10 } );
       gfx_depth_mask( false );

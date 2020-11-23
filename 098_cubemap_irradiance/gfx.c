@@ -587,12 +587,13 @@ gfx_texture_t gfx_create_cube_texture_from_mem( uint8_t* imgs_buffer[6], int w, 
   glBindTexture( GL_TEXTURE_CUBE_MAP, texture.handle_gl );
   {
     for ( int i = 0; i < 6; i++ ) {
+      uint8_t* img_ptr = imgs_buffer != NULL ? imgs_buffer[i] : NULL;
       if ( 4 == n_channels ) {
-        glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgs_buffer[i] );
+        glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_ptr );
       } else if ( 3 == n_channels ) {
-        glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, imgs_buffer[i] );
+        glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, img_ptr );
       } else if ( 1 == n_channels ) {
-        glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, imgs_buffer[i] );
+        glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, img_ptr );
       }
     }
 
@@ -659,3 +660,99 @@ void gfx_wireframe_mode() { glPolygonMode( GL_FRONT_AND_BACK, GL_LINE ); }
 void gfx_polygon_mode() { glPolygonMode( GL_FRONT_AND_BACK, GL_FILL ); }
 
 double gfx_get_time_s() { return glfwGetTime(); }
+
+void gfx_rebuild_framebuffer( gfx_framebuffer_t* fb, int w, int h ) {
+  assert( fb );
+  if ( w <= 0 || h <= 0 ) { return; } // can happen during alt+tab
+  assert( fb->handle_gl > 0 );
+  assert( fb->has_cubemap || fb->output_texture.handle_gl > 0 );
+  assert( fb->depth_texture.handle_gl > 0 );
+
+  fb->built = false; // invalidate
+  fb->w     = w;
+  fb->h     = h;
+
+  glBindFramebuffer( GL_FRAMEBUFFER, fb->handle_gl );
+  {
+    if ( !fb->has_cubemap ) {
+      gfx_update_texture( &fb->output_texture, NULL, fb->w, fb->h, fb->output_texture.n_channels );
+      glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb->output_texture.handle_gl, 0 );
+    }
+    gfx_update_texture( &fb->depth_texture, NULL, fb->w, fb->h, fb->depth_texture.n_channels );
+    glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, fb->depth_texture.handle_gl, 0 );
+
+    GLenum draw_buf = GL_COLOR_ATTACHMENT0;
+    glDrawBuffers( 1, &draw_buf );
+
+    {
+      GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
+      if ( GL_FRAMEBUFFER_COMPLETE != status ) {
+        fprintf( stderr, "ERROR: incomplete framebuffer\n" );
+        if ( GL_FRAMEBUFFER_UNDEFINED == status ) {
+          fprintf( stderr, "GL_FRAMEBUFFER_UNDEFINED\n" );
+        } else if ( GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT == status ) {
+          fprintf( stderr, "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT\n" );
+        } else if ( GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT == status ) {
+          fprintf( stderr, "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT\n" );
+        } else if ( GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER == status ) {
+          fprintf( stderr, "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER\n" );
+        } else if ( GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER == status ) {
+          fprintf( stderr, "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER\n" );
+        } else if ( GL_FRAMEBUFFER_UNSUPPORTED == status ) {
+          fprintf( stderr, "GL_FRAMEBUFFER_UNSUPPORTED\n" );
+        } else if ( GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE == status ) {
+          fprintf( stderr, "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE\n" );
+        } else if ( GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS == status ) {
+          fprintf( stderr, "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS\n" );
+        } else {
+          fprintf( stderr, "glCheckFramebufferStatus unspecified error\n" );
+        }
+        return;
+      }
+    } // endblock checks
+  }
+  glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+  fb->built = true; // validate
+}
+
+// NOTE(Anton) maybe later need some srgb settings in this function
+gfx_framebuffer_t gfx_create_framebuffer( int w, int h, bool has_cubemap ) {
+  gfx_framebuffer_t fb = ( gfx_framebuffer_t ){ .w = w, .h = h, .has_cubemap = true };
+
+  glGenFramebuffers( 1, &fb.handle_gl );
+  if ( !has_cubemap ) {
+    fb.output_texture = ( gfx_texture_t ){ .w = w, .h = h, .n_channels = 4 };
+    glGenTextures( 1, &fb.output_texture.handle_gl );
+  }
+  fb.depth_texture = ( gfx_texture_t ){ .w = w, .h = h, .n_channels = 4, .properties.is_depth = true };
+  glGenTextures( 1, &fb.depth_texture.handle_gl );
+
+  gfx_rebuild_framebuffer( &fb, w, h );
+  return fb;
+}
+
+void gfx_bind_framebuffer( const gfx_framebuffer_t* fb ) {
+  if ( !fb ) {
+    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+    return;
+  }
+  glBindFramebuffer( GL_FRAMEBUFFER, fb->handle_gl );
+}
+
+void gfx_framebuffer_bind_cube_face( gfx_framebuffer_t fb, gfx_texture_t tex, int face_idx ) {
+  assert( fb.handle_gl && fb.built );
+
+  gfx_bind_framebuffer( &fb );
+  glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face_idx, tex.handle_gl, 0 );
+}
+
+void gfx_read_pixels( int x, int y, int w, int h, int n_channels, uint8_t* data ) {
+  GLenum format = GL_RGB;
+  if ( 4 == n_channels ) { format = GL_RGBA; }
+
+  glPixelStorei( GL_PACK_ALIGNMENT, 1 );   // for irregular display sizes in RGB
+  glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // affects glReadPixels and subsequent texture calls alignment format
+
+  glReadBuffer( GL_COLOR_ATTACHMENT0 );
+  glReadPixels( x, y, w, h, format, GL_UNSIGNED_BYTE, data ); // note can be eg float
+}

@@ -143,6 +143,38 @@ double gfx_get_time_s();
 extern gfx_shader_t gfx_default_shader;
 extern gfx_mesh_t gfx_cube_mesh;
 
+// main properties and bounds outputs of a framebuffer rendering pass. use to daisy-chain passes
+typedef struct gfx_framebuffer_t {
+  int w, h;                     // some multiple of gfx_viewport dims
+  gfx_texture_t output_texture; //
+  gfx_texture_t depth_texture;  //
+  unsigned int handle_gl;       //
+  bool has_cubemap;
+  bool built;
+} gfx_framebuffer_t;
+
+gfx_framebuffer_t gfx_create_framebuffer( int w, int h, bool has_cubemap );
+
+// TODO(Anton) delete fb
+
+void gfx_bind_framebuffer( const gfx_framebuffer_t* fb );
+/*
+On success fb->built is set to true. On failure it is set to false.
+PARAMS
+  fb                    - A valid framebuffer created with a call to gfx_crate_framebuffer.
+  w, h                  - Framebuffer's textures are set to these dimensions.
+                          Remember to set viewport to these dimensions too.
+*/
+void gfx_rebuild_framebuffer( gfx_framebuffer_t* fb, int w, int h );
+
+/*
+Remember to also set viewport to approriate dims and clear the framebuffer before drawing.
+IMPORTANT NOTE: Also binds the framebuffer.
+*/
+void gfx_framebuffer_bind_cube_face( gfx_framebuffer_t fb, gfx_texture_t tex, int face_idx );
+
+void gfx_read_pixels( int x, int y, int w, int h, int n_channels, uint8_t* data );
+
 #ifdef __cplusplus
 }
 #endif /* CPP */
