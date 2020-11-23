@@ -61,6 +61,7 @@ void gfx_swap_buffer();
 void gfx_poll_events();
 void gfx_backface_culling( bool enable );
 void gfx_depth_mask( bool enable );
+void gfx_cubemap_seamless( bool enable );
 
 /*
 PARAMS

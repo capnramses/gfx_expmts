@@ -181,6 +181,14 @@ void gfx_depth_mask( bool enable ) {
   }
 }
 
+void gfx_cubemap_seamless( bool enable ) {
+  if ( enable ) {
+    glEnable( GL_TEXTURE_CUBE_MAP_SEAMLESS );
+  } else {
+    glDisable( GL_TEXTURE_CUBE_MAP_SEAMLESS );
+  }
+}
+
 gfx_mesh_t gfx_create_mesh_from_mem(                                                     //
   const float* points_buffer, int n_points_comps,                                        //
   const float* texcoords_buffer, int n_texcoord_comps,                                   //

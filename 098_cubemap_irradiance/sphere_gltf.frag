@@ -1,7 +1,7 @@
 #version 410 core
 
 #define PBR
-#define TONE_MAPPING // kills edge highlights and some metallic tint but smooths banded light exposure
+//#define TONE_MAPPING // kills edge highlights and some metallic tint but smooths banded light exposure
 
 in vec3 v_p_wor;
 in vec3 v_n_wor;
@@ -286,7 +286,7 @@ void main() {
 			vec3 k_d = ( vec3( 1.0 ) - k_s ) * ( 1.0 - metal );
 
 			float n_dot_l = clamp( dot( n_wor, p_to_l_dir_wor ), 0.0, 1.0 );     
-    	L_o += ( k_d * albedo / M_PI + specular ) * radiance * n_dot_l;
+    //	L_o += ( k_d * albedo / M_PI + specular ) * radiance * n_dot_l;
 		//////
 
 		float ao = 1.0; // TODO later - load from image!

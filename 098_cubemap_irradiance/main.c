@@ -72,6 +72,9 @@ Plan
 #include <stdio.h>
 #include <string.h>
 
+// resolution of IBL map -- make it higher to test.
+#define IBL_DIMS 32 //1024 // 32
+
 // see http://www.songho.ca/opengl/gl_sphere.html -- also has code for verts, normals
 static void _gen_uv_sphere( int stackCount, int sectorCount, float radius, vec3* vertices_ptr, uint32_t* n_verts_ptr, uint32_t* indices_ptr, uint32_t* n_indices_ptr ) {
   uint32_t n_verts = 0;
@@ -140,23 +143,6 @@ gfx_texture_t cubemap_from_images() {
   return tex;
 }
 
-/* convolve a cube map into a RGB 32x32 6-face irradiance cubemap
-// TODO(Anton) put into gfx lib
-// could also do a save-to-cube and save-to-equirectangular version
-// could use in conjuction with a capture-cube function
-*/
-gfx_texture_t generate_ibl( gfx_texture_t cube_texture ) {
-  uint8_t* img_ptr[6] = { NULL };
-  int dims            = 32;
-  int n_chans         = 3;
-  gfx_texture_t ibl   = gfx_create_cube_texture_from_mem(
-    img_ptr, dims, dims, n_chans, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_srgb = true } );
-
-  // TODO(Anton) thingy thing thing
-
-  return ibl;
-}
-
 int main() {
   // load a sphere mesh
   vec3 verts[4096];
@@ -175,25 +161,34 @@ int main() {
 
   gfx_mesh_t sphere_mesh =
     gfx_create_mesh_from_mem( &verts[0].x, 3, NULL, 0, NULL, 0, NULL, 0, indices, sizeof( uint32_t ) * n_indices, GFX_INDICES_TYPE_UINT32, n_verts, false );
-  gfx_shader_t sphere_shader = gfx_create_shader_program_from_files( "sphere.vert", "sphere_gltf.frag" );
-  gfx_shader_t cube_shader   = gfx_create_shader_program_from_files( "cube.vert", "cube.frag" );
-  gfx_texture_t cube_texture = cubemap_from_images();
-  gfx_texture_t irradiance_texture =
-    gfx_create_cube_texture_from_mem( NULL, 32, 32, 3, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_srgb = true } );
-  gfx_framebuffer_t convoluting_framebuffer = gfx_create_framebuffer( 32, 32, true );
+  gfx_shader_t sphere_shader       = gfx_create_shader_program_from_files( "sphere.vert", "sphere_gltf.frag" );
+  gfx_shader_t cube_shader         = gfx_create_shader_program_from_files( "cube.vert", "cube.frag" );
+  gfx_texture_t cube_texture       = cubemap_from_images();
+  gfx_texture_t irradiance_texture = gfx_create_cube_texture_from_mem(
+    NULL, IBL_DIMS, IBL_DIMS, 3, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_srgb = true } );
+  gfx_framebuffer_t convoluting_framebuffer = gfx_create_framebuffer( IBL_DIMS, IBL_DIMS, true );
+  gfx_shader_t convoluting_shader           = gfx_create_shader_program_from_files( "cube.vert", "cube_convolution.frag" );
 
   vec3 light_pos_wor_initial = ( vec3 ){ 0, 5, 10 };
 
-  gfx_texture_t irradiance_map = generate_ibl( cube_texture );
-
+  gfx_cubemap_seamless( true );
   { // pass to create irradiance map from cube map
-    gfx_viewport( 0, 0, 32, 32 );
+    gfx_viewport( 0, 0, IBL_DIMS, IBL_DIMS );
     gfx_bind_framebuffer( &convoluting_framebuffer );
-    mat4 I = identity_mat4();
+    mat4 I     = identity_mat4();
+    mat4 P     = perspective( 90.0f, 1.0f, 0.1f, 100.0f );
+    mat4 Vs[6] = {
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ 1, 0, 0 }, ( vec3 ){ 0, -1, 0 } ),  //
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ -1, 0, 0 }, ( vec3 ){ 0, -1, 0 } ), //
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ 0, 1, 0 }, ( vec3 ){ 0, 0, 1 } ),   //
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ 0, -1, 0 }, ( vec3 ){ 0, 0, -1 } ), //
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ 0, 0, 1 }, ( vec3 ){ 0, -1, 0 } ),  //
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ 0, 0, -1 }, ( vec3 ){ 0, -1, 0 } )  //
+    };
     for ( int i = 0; i < 6; i++ ) {
       gfx_framebuffer_bind_cube_face( convoluting_framebuffer, irradiance_texture, i );
       gfx_clear_colour_and_depth_buffers( 0.0f, 0.0f, 0.0f, 0.0f );
-      gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, I.m, I.m, I.m, &cube_texture, 1 );
+      gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, convoluting_shader, P.m, Vs[i].m, I.m, &cube_texture, 1 );
     }
     gfx_bind_framebuffer( NULL );
   }
@@ -233,7 +228,7 @@ int main() {
       mat4 V_envmap = cam_R;
       mat4 M_envmap = scale_mat4( ( vec3 ){ 10, 10, 10 } );
       gfx_depth_mask( false );
-      gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &cube_texture, 1 );
+      gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &irradiance_texture, 1 );
       gfx_depth_mask( true );
     }
 
@@ -261,7 +256,7 @@ int main() {
         gfx_uniform3f( sphere_shader, sphere_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
         gfx_uniform3f( sphere_shader, sphere_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
 
-        gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, &cube_texture, 1 );
+        gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, &irradiance_texture, 1 );
       }
     }
 
