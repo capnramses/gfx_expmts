@@ -244,13 +244,13 @@ void main() {
 
 		* If the metallic map has gray values lower than 235 sRGB you need to lower the “raw” metal reflectance value in the base color.
 		*/
-		vec3 gold   = pow( vec3(255.0,226.0,155.0) / 255.0,vec3(2.2));
-		vec3 silver = pow( vec3(252.0,250.0,245.0) / 255.0,vec3(2.2));
-		vec3 Al     = pow( vec3(245.0,246.0,246.0) / 255.0,vec3(2.2));
-		vec3 Iron   = pow( vec3(196.0,199.0,199.0) / 255.0,vec3(2.2));
-		vec3 Copper = pow( vec3(250.0,208.0,192.0) / 255.0,vec3(2.2));
-		vec3 red   = vec3(1.0,0.0,0.0);
-		vec3 purple   = vec3(1.0,0.0,1.0);
+		vec3 gold   = pow( vec3( 255.0, 226.0, 155.0 ) / 255.0, vec3( 2.2 ) );
+		vec3 silver = pow( vec3( 252.0, 250.0, 245.0 ) / 255.0, vec3( 2.2 ) );
+		vec3 Al     = pow( vec3( 245.0, 246.0, 246.0 ) / 255.0, vec3( 2.2 ) );
+		vec3 Iron   = pow( vec3( 196.0, 199.0, 199.0 ) / 255.0, vec3( 2.2 ) );
+		vec3 Copper = pow( vec3( 250.0, 208.0, 192.0 ) / 255.0, vec3( 2.2 ) );
+		vec3 red    = vec3( 1.0, 0.0, 0.0 );
+		vec3 purple = vec3( 1.0, 0.0, 1.0 );
 
 
 		vec3 albedo = gold;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
@@ -261,7 +261,7 @@ void main() {
 		vec3 L_o              = vec3( 0.0 ); // total reflected light
 		 ///// for each light l in scene (this is equivalent to solving integral over omega for direct light sources
 		 // NOTE(Anton) higher than 1.0 values! radiant flux translated to rgb triplet.
-			vec3 light_colour   = vec3( 500.0 );               
+			vec3 light_colour   = vec3( 200.0 );               
 			vec3 p_to_l_dir_wor = normalize( u_light_pos_wor - v_p_wor ); // L. == equiv to w_i incoming vector
 			vec3 h_wor          = normalize( v_to_p_dir_wor + p_to_l_dir_wor );
 
