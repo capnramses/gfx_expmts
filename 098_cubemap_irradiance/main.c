@@ -73,7 +73,7 @@ Plan
 #include <string.h>
 
 // resolution of IBL map -- make it higher to test.
-#define IBL_DIMS 32 //1024 // 32
+#define IBL_DIMS 32 // 1024 // 32
 
 // see http://www.songho.ca/opengl/gl_sphere.html -- also has code for verts, normals
 static void _gen_uv_sphere( int stackCount, int sectorCount, float radius, vec3* vertices_ptr, uint32_t* n_verts_ptr, uint32_t* indices_ptr, uint32_t* n_indices_ptr ) {
@@ -199,6 +199,8 @@ int main() {
   float cam_x_deg = 0.0f, cam_y_deg = 0.0f;
   double prev_s = gfx_get_time_s();
 
+  bool background_show_irradiance = false;
+
   while ( !gfx_should_window_close() ) {
     double curr_s    = gfx_get_time_s();
     double elapsed_s = curr_s - prev_s;
@@ -208,6 +210,7 @@ int main() {
     if ( input_is_key_held( input_turn_down_key ) ) { cam_x_deg -= 90.0f * elapsed_s; }
     if ( input_is_key_held( input_turn_left_key ) ) { cam_y_deg += 90.0f * elapsed_s; }
     if ( input_is_key_held( input_turn_right_key ) ) { cam_y_deg -= 90.0f * elapsed_s; }
+    if ( input_was_key_pressed( 'I' ) ) { background_show_irradiance = !background_show_irradiance; }
 
     mat4 cam_R_x     = rot_x_deg_mat4( -cam_x_deg );
     mat4 cam_R_y     = rot_y_deg_mat4( -cam_y_deg );
@@ -229,7 +232,11 @@ int main() {
       mat4 M_envmap = scale_mat4( ( vec3 ){ 10, 10, 10 } );
       gfx_depth_mask( false );
       // SWITCH TO irradiance_texture to test
-      gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &cube_texture, 1 );
+      if ( background_show_irradiance ) {
+        gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &irradiance_texture, 1 );
+      } else {
+        gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &cube_texture, 1 );
+      }
       gfx_depth_mask( true );
     }
 
