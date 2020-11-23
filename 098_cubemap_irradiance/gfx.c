@@ -659,8 +659,3 @@ void gfx_wireframe_mode() { glPolygonMode( GL_FRONT_AND_BACK, GL_LINE ); }
 void gfx_polygon_mode() { glPolygonMode( GL_FRONT_AND_BACK, GL_FILL ); }
 
 double gfx_get_time_s() { return glfwGetTime(); }
-
-bool input_is_key_held( int keycode ) {
-  assert( gfx_window_ptr && keycode >= 32 && keycode <= GLFW_KEY_LAST );
-  return glfwGetKey( gfx_window_ptr, keycode );
-}

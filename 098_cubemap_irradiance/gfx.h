@@ -140,8 +140,6 @@ void gfx_wireframe_mode();
 void gfx_polygon_mode();
 
 double gfx_get_time_s();
-bool input_is_key_held( int keycode );
-
 extern gfx_shader_t gfx_default_shader;
 extern gfx_mesh_t gfx_cube_mesh;
 

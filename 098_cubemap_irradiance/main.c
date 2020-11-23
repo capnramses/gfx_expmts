@@ -63,6 +63,7 @@ Plan
 
 #include "gfx.h"
 #include "apg_maths.h"
+#include "input.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 #include <assert.h>
@@ -139,6 +140,23 @@ gfx_texture_t cubemap_set_up() {
   return tex;
 }
 
+/* convolve a cube map into a RGB 32x32 6-face irradiance cubemap
+// TODO(Anton) put into gfx lib
+// could also do a save-to-cube and save-to-equirectangular version
+// could use in conjuction with a capture-cube function
+*/
+gfx_texture_t generate_ibl( gfx_texture_t cube_texture ) {
+  uint8_t* img_ptr[6] = { NULL };
+  int dims            = 32;
+  int n_chans         = 3;
+  gfx_texture_t ibl   = gfx_create_cube_texture_from_mem(
+    img_ptr, dims, dims, n_chans, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_srgb = true } );
+
+  // TODO(Anton) thingy thing thing
+
+  return ibl;
+}
+
 int main() {
   // load a sphere mesh
   vec3 verts[4096];
@@ -153,6 +171,7 @@ int main() {
   // loop over nxm spheres with varying inputs
 
   gfx_start( "PBR spheres direct lighting demo", 1024, 1024, false );
+  input_init();
 
   gfx_mesh_t sphere_mesh =
     gfx_create_mesh_from_mem( &verts[0].x, 3, NULL, 0, NULL, 0, NULL, 0, indices, sizeof( uint32_t ) * n_indices, GFX_INDICES_TYPE_UINT32, n_verts, false );
@@ -162,22 +181,41 @@ int main() {
 
   vec3 light_pos_wor_initial = ( vec3 ){ 0, 5, 10 };
 
+  gfx_texture_t irradiance_map = generate_ibl( cube_texture );
+
   // gfx_wireframe_mode();
   // gfx_backface_culling( false );
 
+  float cam_x_deg = 0.0f, cam_y_deg = 0.0f;
+  double prev_s   = gfx_get_time_s();
+
   while ( !gfx_should_window_close() ) {
+    double curr_s    = gfx_get_time_s();
+    double elapsed_s = curr_s - prev_s;
+    prev_s           = curr_s;
+
+    if ( input_is_key_held( input_turn_up_key ) ) { cam_x_deg += 90.0f * elapsed_s; }
+    if ( input_is_key_held( input_turn_down_key ) ) { cam_x_deg -= 90.0f * elapsed_s; }
+    if ( input_is_key_held( input_turn_left_key ) ) { cam_y_deg += 90.0f * elapsed_s; }
+    if ( input_is_key_held( input_turn_right_key ) ) { cam_y_deg -= 90.0f * elapsed_s; }
+
+    mat4 cam_R_x = rot_x_deg_mat4( -cam_x_deg );
+    mat4 cam_R_y = rot_y_deg_mat4( -cam_y_deg );
+    mat4 cam_R = mult_mat4_mat4( cam_R_x, cam_R_y );
+    vec3 cam_pos_wor = ( vec3 ){ 0, 0, 15.0f };
+    mat4 cam_T   = translate_mat4( ( vec3 ){ .x = 0, .y = 0, .z = -cam_pos_wor.z } );
+    mat4 V = mult_mat4_mat4( cam_R, cam_T );
+
     int fb_w = 0, fb_h = 0;
     gfx_framebuffer_dims( &fb_w, &fb_h );
     float aspect     = (float)fb_w / (float)fb_h;
-    vec3 cam_pos_wor = ( vec3 ){ 0, 0, 15.0f };
-    mat4 V           = look_at( cam_pos_wor, ( vec3 ){ 0, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
-    mat4 P           = perspective( 67, aspect, 0.1, 1000.0 );
+    mat4 P = perspective( 67, aspect, 0.1, 1000.0 );
 
     gfx_viewport( 0, 0, fb_w, fb_h );
     gfx_clear_colour_and_depth_buffers( 0.2, 0.2, 0.2, 1.0 );
 
     {                                  // skybox
-      mat4 V_envmap = identity_mat4(); // rot_y_deg_mat4( -cam_heading );
+      mat4 V_envmap = cam_R;
       mat4 M_envmap = scale_mat4( ( vec3 ){ 10, 10, 10 } );
       gfx_depth_mask( false );
       gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &cube_texture, 1 );
@@ -213,6 +251,7 @@ int main() {
     }
 
     gfx_swap_buffer();
+    input_reset_last_polled_input_states();
     gfx_poll_events();
   }
 
