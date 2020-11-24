@@ -77,6 +77,8 @@ Plan
 #include <stdio.h>
 #include <string.h>
 
+// uncomment if source cubemap is hdr
+#define ENVMAP_HDR
 // resolution of IBL map -- make it higher to test.
 #define IBL_DIMS 32 // 1024 // 32
 
@@ -143,7 +145,8 @@ gfx_texture_t cubemap_from_images() {
     img_ptr[i] = stbi_load( img_paths[i], &x, &y, &comp, 0 );
     if ( !img_ptr[i] ) { fprintf( stderr, "ERROR loading `%s`\n", img_paths[i] ); }
   }
-  tex = gfx_create_cube_texture_from_mem( img_ptr, x, y, comp, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = false, .is_cube = true, .is_srgb = true } );
+  tex = gfx_create_cube_texture_from_mem(
+    img_ptr, x, y, comp, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = false, .is_cube = true, .is_srgb = true, .is_hdr = false } );
   for ( int i = 0; i < 6; i++ ) { free( img_ptr[i] ); }
   return tex;
 }
@@ -161,7 +164,7 @@ int main() {
 
   // loop over nxm spheres with varying inputs
 
-  gfx_start( "PBR spheres direct lighting demo", 1024, 1024, false );
+  gfx_start( "PBR - Image-Based-Lighting demo", 1024, 1024, false );
   input_init();
   gfx_cubemap_seamless( true );
 
@@ -202,11 +205,15 @@ int main() {
 
   // new stuff
   // NOTE: viewing the prefilter map at LODs shows distinct colour differences between cube sides but its otherwise okay. limitation of source LDR image?
-  int prefilter_map_dims                  = 128; // can be higher for more detailed surfaces
-  int prefilter_max_mip_levels            = 5;
-  gfx_texture_t prefilter_map_texture     = gfx_create_cube_texture_from_mem( NULL, prefilter_map_dims, prefilter_map_dims, 3,
+  int prefilter_map_dims              = 128; // can be higher for more detailed surfaces
+  int prefilter_max_mip_levels        = 5;
+  gfx_texture_t prefilter_map_texture = gfx_create_cube_texture_from_mem( NULL, prefilter_map_dims, prefilter_map_dims, 3,
     ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_hdr = true, .is_srgb = true, .cube_max_mip_level = prefilter_max_mip_levels } );
-  gfx_shader_t prefilter_shader           = gfx_create_shader_program_from_files( "cube.vert", "cube_prefilter.frag" );
+#ifdef ENVMAP_HDR
+  gfx_shader_t prefilter_shader = gfx_create_shader_program_from_files( "cube.vert", "cube_prefilter_hdr.frag" );
+#else
+  gfx_shader_t prefilter_shader = gfx_create_shader_program_from_files( "cube.vert", "cube_prefilter_ldr.frag" );
+#endif
   gfx_framebuffer_t prefilter_framebuffer = gfx_create_framebuffer( prefilter_map_dims, prefilter_map_dims, true );
 
   { // create prefilter map
@@ -228,7 +235,7 @@ int main() {
       int mip_w = prefilter_map_dims * pow( 0.5, (double)mip_level );
       int mip_h = prefilter_map_dims * pow( 0.5, (double)mip_level );
       gfx_framebuffer_update_depth_texture_dims( prefilter_framebuffer, mip_w, mip_h );
-      gfx_viewport( 0, 0, prefilter_map_dims, prefilter_map_dims );
+      gfx_viewport( 0, 0, mip_w, mip_h );
 
       for ( int i = 0; i < 6; i++ ) {
         gfx_framebuffer_bind_cube_face( prefilter_framebuffer, prefilter_map_texture, i, mip_level );

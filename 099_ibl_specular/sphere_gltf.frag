@@ -255,7 +255,7 @@ void main() {
 		vec3 purple = vec3( 1.0, 0.0, 1.0 );
 
 
-		vec3 albedo = gold;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
+		vec3 albedo = Al;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
 		float metal = clamp( u_metallic_factor, 0.01, 1.0 );
 		float roughness = clamp( u_roughness_factor, 0.01, 1.0 );
 			// IOR term but we use metal term to differentiate from a dead-on angle.
@@ -311,7 +311,6 @@ void main() {
 			// prefilter
 			vec3 reflection_wor = reflect( -v_to_p_dir_wor, n_wor );   
 			const float MAX_REFLECTION_LOD = 4.0;
-		//	prefilteredColor = textureLod( u_texture_prefilter_map, reflection_wor, roughness * MAX_REFLECTION_LOD ).rgb;
 			prefilteredColor = textureLod( u_texture_prefilter_map, reflection_wor, roughness * MAX_REFLECTION_LOD ).rgb;  
 			vec2 envBRDF  = texture( u_texture_brdf_lut, vec2( max( dot( n_wor, v_to_p_dir_wor ), 0.0), roughness ) ).rg;
 			vec3 specular = prefilteredColor * (f * envBRDF.x + envBRDF.y);  

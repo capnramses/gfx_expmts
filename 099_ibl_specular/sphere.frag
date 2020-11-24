@@ -1,6 +1,6 @@
 #version 410 core
 
-#define PBR
+//#define PBR
 
 in vec3 v_p_wor;
 in vec3 v_n_wor;
@@ -125,3 +125,4 @@ void main() {
 	o_frag_colour = vec4( rgb, 1.0 );
 	linear_to_srgb( o_frag_colour.rgb );
 }
+ssdgsd

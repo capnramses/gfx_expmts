@@ -9,6 +9,7 @@ out vec4 o_frag_colour;
 
 const float PI = 3.14159265359;
 
+// NOTE: 16 bit shift here
 // Van Der Corpus
 float radical_inverse_vdc( uint bits ) {
 	bits = ( bits << 16 ) | ( bits >> 16u );

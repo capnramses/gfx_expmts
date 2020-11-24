@@ -106,7 +106,8 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 095     | `gltf_minimal`              | Example of loading a mesh from glTF files and displaying it.               | working             |
 | 096     | `gltf_materials`            | Example of loading a mesh with materials from glTF files.                  | ~working            |
 | 097     | `pbr_direct`                | PBR example using only a direct light source.                              | working             |
-| 098     | `pbr_ibl`                   | PBR example using image-based lighting.                                    | proposed            |
+| 098     | `cubemap_irradiance`        | PBR image-based lighting example part 1: generating irradiance map.        | working             |
+| 099     | `pbr_ibl_specular`          | PBR Image-Based Lighting complete - specular term and BRDF LUT used.       | working             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
