@@ -141,7 +141,7 @@ gfx_texture_t cubemap_from_images() {
     img_ptr[i] = stbi_load( img_paths[i], &x, &y, &comp, 0 );
     if ( !img_ptr[i] ) { fprintf( stderr, "ERROR loading `%s`\n", img_paths[i] ); }
   }
-  tex = gfx_create_cube_texture_from_mem( img_ptr, x, y, comp, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_srgb = true } );
+  tex = gfx_create_cube_texture_from_mem( img_ptr, x, y, comp, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = false, .is_cube = true, .is_srgb = true } );
   for ( int i = 0; i < 6; i++ ) { free( img_ptr[i] ); }
   return tex;
 }
@@ -161,6 +161,7 @@ int main() {
 
   gfx_start( "PBR spheres direct lighting demo", 1024, 1024, false );
   input_init();
+  gfx_cubemap_seamless( true );
 
   gfx_mesh_t sphere_mesh =
     gfx_create_mesh_from_mem( &verts[0].x, 3, NULL, 0, NULL, 0, NULL, 0, indices, sizeof( uint32_t ) * n_indices, GFX_INDICES_TYPE_UINT32, n_verts, false );
@@ -173,7 +174,6 @@ int main() {
   gfx_framebuffer_t convoluting_framebuffer = gfx_create_framebuffer( IBL_DIMS, IBL_DIMS, true );
   gfx_shader_t convoluting_shader           = gfx_create_shader_program_from_files( "cube.vert", "cube_convolution.frag" );
 
-  gfx_cubemap_seamless( true );
   { // pass to create irradiance map from cube map
     gfx_viewport( 0, 0, IBL_DIMS, IBL_DIMS );
     mat4 I     = identity_mat4();

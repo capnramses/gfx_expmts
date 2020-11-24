@@ -48,7 +48,7 @@ void main () {
 		vec2 xi       = hammersley( i, SAMPLE_COUNT );
 		vec3 h        = importance_sample_ggx( xi, n_wor, u_roughness_factor );
 		vec3 l        = normalize( 2.0 * dot( n_wor, h ) * h - n_wor );
-		float n_dot_l = clamp( dot( n_wor, l ), 0.0, 1.0 );
+		float n_dot_l = max( dot( n_wor, l ), 0.0 );
 		if ( n_dot_l > 0.0 ) {
 			prefiltered_rgb += texture( u_texture_a, l ).rgb * n_dot_l;
 			total_weight    += n_dot_l;
