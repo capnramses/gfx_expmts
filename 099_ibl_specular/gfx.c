@@ -837,6 +837,10 @@ void gfx_framebuffer_update_depth_texture_dims( gfx_framebuffer_t fb, int w, int
 void gfx_read_pixels( int x, int y, int w, int h, int n_channels, uint8_t* data ) {
   GLenum format = GL_RGB;
   if ( 4 == n_channels ) { format = GL_RGBA; }
+  if ( 2 == n_channels ) {
+    glPixelStorei( GL_PACK_ALIGNMENT, 1 );
+    format = GL_RG;
+  }
 
   glPixelStorei( GL_PACK_ALIGNMENT, 1 );   // for irregular display sizes in RGB
   glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // affects glReadPixels and subsequent texture calls alignment format

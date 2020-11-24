@@ -69,6 +69,8 @@ Plan
 #include "input.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb/stb_image_write.h"
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
@@ -175,6 +177,7 @@ int main() {
   gfx_shader_t convoluting_shader           = gfx_create_shader_program_from_files( "cube.vert", "cube_convolution.frag" );
 
   { // pass to create irradiance map from cube map
+
     gfx_viewport( 0, 0, IBL_DIMS, IBL_DIMS );
     mat4 I     = identity_mat4();
     mat4 P     = perspective( 90.0f, 1.0f, 0.1f, 100.0f );
@@ -243,9 +246,9 @@ int main() {
 
   // newer stuff
   // TODO(Anton) add a way to set the framebuffer texture to HDR RG16F
+  gfx_texture_t brdf_lut_texture = gfx_create_texture_from_mem( NULL, 512, 512, 2, ( gfx_texture_properties_t ){ .bilinear = true, .is_hdr = true } );
   {
-    gfx_shader_t gfx_brdf_lut_shader = gfx_create_shader_program_from_files( "brdf_lut.vert", "brdf_lut.frag" );
-    gfx_texture_t brdf_lut_texture   = gfx_create_texture_from_mem( NULL, 512, 512, 2, ( gfx_texture_properties_t ){ .bilinear = true, .is_hdr = true } );
+    gfx_shader_t gfx_brdf_lut_shader = gfx_create_shader_program_from_files( "quad.vert", "brdf_lut.frag" );
     gfx_framebuffer_t brdf_lut_fb    = gfx_create_framebuffer( 512, 512, false );
     gfx_framebuffer_bind_texture( brdf_lut_fb, brdf_lut_texture );
     gfx_bind_framebuffer( &brdf_lut_fb );
@@ -258,6 +261,20 @@ int main() {
     gfx_draw_mesh( gfx_ss_quad_mesh, GFX_PT_TRIANGLE_STRIP, gfx_brdf_lut_shader, I.m, I.m, I.m, NULL, 0 );
     gfx_bind_framebuffer( NULL );
   }
+  gfx_shader_t quad_shader = gfx_create_shader_program_from_files( "quad.vert", "quad.frag" );
+  {
+    gfx_viewport( 0, 0, 512, 512 );
+    gfx_clear_colour_and_depth_buffers( 0.0f, 0.0f, 0.0f, 0.0f );
+    mat4 I = identity_mat4();
+    gfx_draw_mesh( gfx_ss_quad_mesh, GFX_PT_TRIANGLE_STRIP, quad_shader, I.m, I.m, I.m, &brdf_lut_texture, 1 );
+    gfx_swap_buffer();
+
+    uint8_t* img_ptr = malloc( 512 * 512 * 2 );
+    gfx_read_pixels( 0, 0, 512, 512, 2, img_ptr );
+    stbi_write_png( "lut.png", 512, 512, 2, img_ptr, 512 * 2 );
+    free( img_ptr );
+  }
+
   vec3 light_pos_wor_initial = ( vec3 ){ 0, 5, 10 };
 
   // gfx_wireframe_mode();
@@ -267,6 +284,7 @@ int main() {
   double prev_s = gfx_get_time_s();
 
   int background_image_mode = 0;
+  bool debug_lut            = false;
 
   while ( !gfx_should_window_close() ) {
     double curr_s    = gfx_get_time_s();
@@ -278,6 +296,7 @@ int main() {
     if ( input_is_key_held( input_turn_left_key ) ) { cam_y_deg += 90.0f * elapsed_s; }
     if ( input_is_key_held( input_turn_right_key ) ) { cam_y_deg -= 90.0f * elapsed_s; }
     if ( input_was_key_pressed( 'I' ) ) { background_image_mode = ( background_image_mode + 1 ) % 3; }
+    if ( input_was_key_pressed( 'L' ) ) { debug_lut = !debug_lut; }
 
     mat4 cam_R_x     = rot_x_deg_mat4( -cam_x_deg );
     mat4 cam_R_y     = rot_y_deg_mat4( -cam_y_deg );
@@ -339,6 +358,11 @@ int main() {
 
         gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, &irradiance_texture, 1 );
       }
+    }
+
+    if ( debug_lut ) {
+      mat4 I = identity_mat4();
+      gfx_draw_mesh( gfx_ss_quad_mesh, GFX_PT_TRIANGLE_STRIP, quad_shader, I.m, I.m, I.m, &brdf_lut_texture, 1 );
     }
 
     gfx_swap_buffer();
