@@ -177,6 +177,7 @@ params
   mip_level - Specify a MIP level or leave at 0 for default behaviour.
 */
 void gfx_framebuffer_bind_cube_face( gfx_framebuffer_t fb, gfx_texture_t tex, int face_idx, int mip_level );
+void gfx_framebuffer_bind_texture( gfx_framebuffer_t fb, gfx_texture_t tex );
 
 void gfx_framebuffer_update_depth_texture_dims( gfx_framebuffer_t fb, int w, int h );
 
@@ -184,6 +185,8 @@ void gfx_framebuffer_update_depth_texture_dims( gfx_framebuffer_t fb, int w, int
 bool gfx_framebuffer_status( gfx_framebuffer_t fb );
 
 void gfx_read_pixels( int x, int y, int w, int h, int n_channels, uint8_t* data );
+
+extern gfx_mesh_t gfx_ss_quad_mesh;
 
 #ifdef __cplusplus
 }

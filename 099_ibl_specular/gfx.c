@@ -19,6 +19,7 @@ static int g_win_width = 1920, g_win_height = 1080;
 
 gfx_shader_t gfx_default_shader;
 gfx_mesh_t gfx_cube_mesh;
+gfx_mesh_t gfx_ss_quad_mesh;
 
 bool gfx_start( const char* window_title, int w, int h, bool fullscreen ) {
   g_win_width  = w;
@@ -92,6 +93,10 @@ bool gfx_start( const char* window_title, int w, int h, bool fullscreen ) {
       "}\n";
     gfx_default_shader = gfx_create_shader_program_from_strings( vertex_shader, fragment_shader );
     if ( !gfx_default_shader.loaded ) { return false; }
+  }
+  {
+    float ss_quad_pos[] = { -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0 };
+    gfx_ss_quad_mesh    = gfx_create_mesh_from_mem( ss_quad_pos, 2, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 0, 4, false );
   }
   { //
     gfx_cube_mesh  = ( gfx_mesh_t ){ .n_vertices = 36 };
@@ -481,6 +486,10 @@ void gfx_update_texture_sub_image( gfx_texture_t* texture, const uint8_t* img_bu
     format = texture->properties.is_bgr ? GL_BGR : GL_RGB;
     glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // for small 1-channel npot images and framebuffer reading
   } break;
+  case 2: {
+    format = GL_RG;
+    glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // for small 1-channel npot images and framebuffer reading
+  } break;
   case 1: {
     format = GL_RED;
     glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // for small 1-channel npot images and framebuffer reading
@@ -503,8 +512,8 @@ void gfx_update_texture_sub_image( gfx_texture_t* texture, const uint8_t* img_bu
 }
 
 void gfx_update_texture( gfx_texture_t* texture, const uint8_t* img_buffer, int w, int h, int n_channels ) {
-  assert( texture && texture->handle_gl );                         // NOTE: it is valid for pixels to be NULL
-  assert( 4 == n_channels || 3 == n_channels || 1 == n_channels ); // 2 not used yet so not impl
+  assert( texture && texture->handle_gl ); // NOTE: it is valid for pixels to be NULL
+  assert( 4 == n_channels || 3 == n_channels || 2 == n_channels || 1 == n_channels );
   texture->w          = w;
   texture->h          = h;
   texture->n_channels = n_channels;
@@ -531,9 +540,22 @@ void gfx_update_texture( gfx_texture_t* texture, const uint8_t* img_buffer, int 
     }
     glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // for small 1-channel npot images and framebuffer reading
   } break;
+  case 2: {
+    internal_format = GL_RG;
+    format          = GL_RG;
+    if ( texture->properties.is_hdr ) {
+      internal_format = GL_RG16F;
+      type            = GL_FLOAT;
+    }
+    glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // for small 1-channel npot images and framebuffer reading
+  } break;
   case 1: {
     internal_format = GL_RED;
     format          = GL_RED;
+    if ( texture->properties.is_hdr ) {
+      internal_format = GL_RG16F;
+      type            = GL_FLOAT;
+    }
     glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // for small 1-channel npot images and framebuffer reading
   } break;
   default: {
@@ -583,7 +605,7 @@ void gfx_update_texture( gfx_texture_t* texture, const uint8_t* img_buffer, int 
 }
 
 gfx_texture_t gfx_create_texture_from_mem( const uint8_t* img_buffer, int w, int h, int n_channels, gfx_texture_properties_t properties ) {
-  assert( 4 == n_channels || 3 == n_channels || 1 == n_channels ); // 2 not used yet so not impl
+  assert( 4 == n_channels || 3 == n_channels || 2 == n_channels || 1 == n_channels );
   gfx_texture_t texture = ( gfx_texture_t ){ .properties = properties };
   glGenTextures( 1, &texture.handle_gl );
   gfx_update_texture( &texture, img_buffer, w, h, n_channels );
@@ -608,6 +630,13 @@ gfx_texture_t gfx_create_cube_texture_from_mem( uint8_t* imgs_buffer[6], int w, 
     format          = GL_RGB;
     if ( properties.is_hdr ) {
       internal_format = GL_RGB16F;
+      type            = GL_FLOAT;
+    }
+  } else if ( 2 == n_channels ) {
+    internal_format = GL_RG;
+    format          = GL_RG;
+    if ( properties.is_hdr ) {
+      internal_format = GL_RG16F;
       type            = GL_FLOAT;
     }
   } else if ( 1 == n_channels ) {
@@ -791,6 +820,13 @@ void gfx_framebuffer_bind_cube_face( gfx_framebuffer_t fb, gfx_texture_t tex, in
 
   gfx_bind_framebuffer( &fb );
   glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face_idx, tex.handle_gl, mip_level );
+}
+
+void gfx_framebuffer_bind_texture( gfx_framebuffer_t fb, gfx_texture_t tex ) {
+  assert( fb.handle_gl && fb.built );
+
+  gfx_bind_framebuffer( &fb );
+  glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex.handle_gl, 0 );
 }
 
 void gfx_framebuffer_update_depth_texture_dims( gfx_framebuffer_t fb, int w, int h ) {

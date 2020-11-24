@@ -241,6 +241,23 @@ int main() {
     gfx_bind_framebuffer( NULL );
   }
 
+  // newer stuff
+  // TODO(Anton) add a way to set the framebuffer texture to HDR RG16F
+  {
+    gfx_shader_t gfx_brdf_lut_shader = gfx_create_shader_program_from_files( "brdf_lut.vert", "brdf_lut.frag" );
+    gfx_texture_t brdf_lut_texture   = gfx_create_texture_from_mem( NULL, 512, 512, 2, ( gfx_texture_properties_t ){ .bilinear = true, .is_hdr = true } );
+    gfx_framebuffer_t brdf_lut_fb    = gfx_create_framebuffer( 512, 512, false );
+    gfx_framebuffer_bind_texture( brdf_lut_fb, brdf_lut_texture );
+    gfx_bind_framebuffer( &brdf_lut_fb );
+    gfx_viewport( 0, 0, 512, 512 );
+    gfx_clear_colour_and_depth_buffers( 0.0f, 0.0f, 0.0f, 0.0f );
+
+    //	gfx_draw_mesh( quad
+
+    mat4 I = identity_mat4();
+    gfx_draw_mesh( gfx_ss_quad_mesh, GFX_PT_TRIANGLE_STRIP, gfx_brdf_lut_shader, I.m, I.m, I.m, NULL, 0 );
+    gfx_bind_framebuffer( NULL );
+  }
   vec3 light_pos_wor_initial = ( vec3 ){ 0, 5, 10 };
 
   // gfx_wireframe_mode();
