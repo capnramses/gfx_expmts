@@ -108,6 +108,7 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 097     | `pbr_direct`                | PBR example using only a direct light source.                              | working             |
 | 098     | `cubemap_irradiance`        | PBR image-based lighting example part 1: generating irradiance map.        | working             |
 | 099     | `pbr_ibl_specular`          | PBR Image-Based Lighting complete - specular term and BRDF LUT used.       | working             |
+| 100     | `pbr_materials`             | PBR rendering with prepared metalness-roughness materials.                 | proposed            |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
