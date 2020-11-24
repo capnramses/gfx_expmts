@@ -180,6 +180,7 @@ void gfx_framebuffer_bind_cube_face( gfx_framebuffer_t fb, gfx_texture_t tex, in
 
 void gfx_framebuffer_update_depth_texture_dims( gfx_framebuffer_t fb, int w, int h );
 
+// note: unbinds framebuffer!!
 bool gfx_framebuffer_status( gfx_framebuffer_t fb );
 
 void gfx_read_pixels( int x, int y, int w, int h, int n_channels, uint8_t* data );

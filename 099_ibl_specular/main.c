@@ -168,15 +168,14 @@ int main() {
   gfx_shader_t cube_shader   = gfx_create_shader_program_from_files( "cube.vert", "cube.frag" );
   gfx_texture_t cube_texture = cubemap_from_images();
   // TODO(Anton) does not need mips.
-  gfx_texture_t irradiance_texture = gfx_create_cube_texture_from_mem(
-    NULL, IBL_DIMS, IBL_DIMS, 3, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_srgb = true } );
+  gfx_texture_t irradiance_texture =
+    gfx_create_cube_texture_from_mem( NULL, IBL_DIMS, IBL_DIMS, 3, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = false, .is_cube = true } );
   gfx_framebuffer_t convoluting_framebuffer = gfx_create_framebuffer( IBL_DIMS, IBL_DIMS, true );
   gfx_shader_t convoluting_shader           = gfx_create_shader_program_from_files( "cube.vert", "cube_convolution.frag" );
 
   gfx_cubemap_seamless( true );
   { // pass to create irradiance map from cube map
     gfx_viewport( 0, 0, IBL_DIMS, IBL_DIMS );
-    gfx_bind_framebuffer( &convoluting_framebuffer );
     mat4 I     = identity_mat4();
     mat4 P     = perspective( 90.0f, 1.0f, 0.1f, 100.0f );
     mat4 Vs[6] = {
@@ -189,6 +188,9 @@ int main() {
     };
     for ( int i = 0; i < 6; i++ ) {
       gfx_framebuffer_bind_cube_face( convoluting_framebuffer, irradiance_texture, i, 0 );
+      bool ret = gfx_framebuffer_status( convoluting_framebuffer );
+      if ( !ret ) { fprintf( stderr, "ERROR: convoluting_framebuffer\n" ); }
+      gfx_bind_framebuffer( &convoluting_framebuffer );
       gfx_clear_colour_and_depth_buffers( 0.0f, 0.0f, 0.0f, 0.0f );
       gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, convoluting_shader, P.m, Vs[i].m, I.m, &cube_texture, 1 );
     }
@@ -203,8 +205,8 @@ int main() {
     ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_hdr = true, .is_srgb = true, .cube_max_mip_level = prefilter_max_mip_levels } );
   gfx_shader_t prefilter_shader           = gfx_create_shader_program_from_files( "cube.vert", "cube_prefilter.frag" );
   gfx_framebuffer_t prefilter_framebuffer = gfx_create_framebuffer( prefilter_map_dims, prefilter_map_dims, true );
+
   { // create prefilter map
-    // gfx_bind_framebuffer( &prefilter_framebuffer );
     mat4 I     = identity_mat4();
     mat4 P     = perspective( 90.0f, 1.0f, 0.1f, 100.0f );
     mat4 Vs[6] = {
@@ -215,6 +217,7 @@ int main() {
       look_at( ( vec3 ){ 0 }, ( vec3 ){ 0, 0, 1 }, ( vec3 ){ 0, -1, 0 } ),  //
       look_at( ( vec3 ){ 0 }, ( vec3 ){ 0, 0, -1 }, ( vec3 ){ 0, -1, 0 } )  //
     };
+    gfx_bind_framebuffer( &prefilter_framebuffer );
     for ( int mip_level = 0; mip_level < prefilter_max_mip_levels; mip_level++ ) {
       float roughness = (float)mip_level / (float)( prefilter_max_mip_levels - 1.0f );
       gfx_uniform1f( prefilter_shader, prefilter_shader.u_roughness_factor, roughness );
@@ -228,12 +231,11 @@ int main() {
         gfx_framebuffer_bind_cube_face( prefilter_framebuffer, prefilter_map_texture, i, mip_level );
 
         bool ret = gfx_framebuffer_status( prefilter_framebuffer );
-        if ( !ret ) { fprintf( stderr, "ERROR: resizing framebuffer. mip level %i, face %i, w %i h %i\n", mip_level, i, mip_w, mip_h ); }
-        // cube map face and width and height should be equal https://stackoverflow.com/questions/37232110/opengl-cubemap-writing-to-mipmap
+        if ( !ret ) { fprintf( stderr, "ERROR: prefilter_framebuffer. mip level %i, face %i, w %i h %i\n", mip_level, i, mip_w, mip_h ); }
 
+        gfx_bind_framebuffer( &prefilter_framebuffer );
         gfx_clear_colour_and_depth_buffers( 0.0f, 0.0f, 0.0f, 0.0f );
-
-        gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, prefilter_shader, P.m, Vs[i].m, I.m, &prefilter_map_texture, 1 );
+        gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, prefilter_shader, P.m, Vs[i].m, I.m, &cube_texture, 1 );
       }
     }
     gfx_bind_framebuffer( NULL );
@@ -247,7 +249,7 @@ int main() {
   float cam_x_deg = 0.0f, cam_y_deg = 0.0f;
   double prev_s = gfx_get_time_s();
 
-  bool background_show_irradiance = false;
+  int background_image_mode = 0;
 
   while ( !gfx_should_window_close() ) {
     double curr_s    = gfx_get_time_s();
@@ -258,7 +260,7 @@ int main() {
     if ( input_is_key_held( input_turn_down_key ) ) { cam_x_deg -= 90.0f * elapsed_s; }
     if ( input_is_key_held( input_turn_left_key ) ) { cam_y_deg += 90.0f * elapsed_s; }
     if ( input_is_key_held( input_turn_right_key ) ) { cam_y_deg -= 90.0f * elapsed_s; }
-    if ( input_was_key_pressed( 'I' ) ) { background_show_irradiance = !background_show_irradiance; }
+    if ( input_was_key_pressed( 'I' ) ) { background_image_mode = ( background_image_mode + 1 ) % 3; }
 
     mat4 cam_R_x     = rot_x_deg_mat4( -cam_x_deg );
     mat4 cam_R_y     = rot_y_deg_mat4( -cam_y_deg );
@@ -280,10 +282,16 @@ int main() {
       mat4 M_envmap = scale_mat4( ( vec3 ){ 10, 10, 10 } );
       gfx_depth_mask( false );
       // SWITCH TO irradiance_texture to test
-      if ( background_show_irradiance ) {
-        gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &irradiance_texture, 1 );
-      } else {
+      switch ( background_image_mode ) {
+      case 0: {
         gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &cube_texture, 1 );
+      } break;
+      case 1: {
+        gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &irradiance_texture, 1 );
+      } break;
+      case 2: {
+        gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, cube_shader, P.m, V_envmap.m, M_envmap.m, &prefilter_map_texture, 1 );
+      } break;
       }
       gfx_depth_mask( true );
     }
