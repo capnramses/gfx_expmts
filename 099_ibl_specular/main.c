@@ -198,7 +198,7 @@ int main() {
   }
 
   // new stuff
-  // TODO(Anton) need property to say use RGB16F for format. maybe .is_hdr ??
+  // NOTE: viewing the prefilter map at LODs shows distinct colour differences between cube sides but its otherwise okay. limitation of source LDR image?
   int prefilter_map_dims                  = 128; // can be higher for more detailed surfaces
   int prefilter_max_mip_levels            = 5;
   gfx_texture_t prefilter_map_texture     = gfx_create_cube_texture_from_mem( NULL, prefilter_map_dims, prefilter_map_dims, 3,
