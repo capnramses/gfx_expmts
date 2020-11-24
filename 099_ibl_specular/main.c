@@ -139,7 +139,7 @@ gfx_texture_t cubemap_from_images() {
   int x = 0, y = 0, comp = 0;
   for ( int i = 0; i < 6; i++ ) {
     img_ptr[i] = stbi_load( img_paths[i], &x, &y, &comp, 0 );
-    if ( !img_paths ) { fprintf( stderr, "ERROR loading `%s`\n", img_paths[i] ); }
+    if ( !img_ptr[i] ) { fprintf( stderr, "ERROR loading `%s`\n", img_paths[i] ); }
   }
   tex = gfx_create_cube_texture_from_mem( img_ptr, x, y, comp, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_srgb = true } );
   for ( int i = 0; i < 6; i++ ) { free( img_ptr[i] ); }
@@ -150,7 +150,7 @@ int main() {
   // load a sphere mesh
   vec3 verts[4096];
   uint32_t indices[4096];
-  int n_verts = 0, n_indices = 0;
+  uint32_t n_verts = 0, n_indices = 0;
   _gen_uv_sphere( 16, 16, 1.0f, verts, &n_verts, indices, &n_indices );
   printf( "UV sphere generated: %u verts, %u indices\n", n_verts, n_indices );
   _dump_obj( verts, indices, n_verts, n_indices );
@@ -164,15 +164,14 @@ int main() {
 
   gfx_mesh_t sphere_mesh =
     gfx_create_mesh_from_mem( &verts[0].x, 3, NULL, 0, NULL, 0, NULL, 0, indices, sizeof( uint32_t ) * n_indices, GFX_INDICES_TYPE_UINT32, n_verts, false );
-  gfx_shader_t sphere_shader       = gfx_create_shader_program_from_files( "sphere.vert", "sphere_gltf.frag" );
-  gfx_shader_t cube_shader         = gfx_create_shader_program_from_files( "cube.vert", "cube.frag" );
-  gfx_texture_t cube_texture       = cubemap_from_images();
+  gfx_shader_t sphere_shader = gfx_create_shader_program_from_files( "sphere.vert", "sphere_gltf.frag" );
+  gfx_shader_t cube_shader   = gfx_create_shader_program_from_files( "cube.vert", "cube.frag" );
+  gfx_texture_t cube_texture = cubemap_from_images();
+  // TODO(Anton) does not need mips.
   gfx_texture_t irradiance_texture = gfx_create_cube_texture_from_mem(
     NULL, IBL_DIMS, IBL_DIMS, 3, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_srgb = true } );
   gfx_framebuffer_t convoluting_framebuffer = gfx_create_framebuffer( IBL_DIMS, IBL_DIMS, true );
   gfx_shader_t convoluting_shader           = gfx_create_shader_program_from_files( "cube.vert", "cube_convolution.frag" );
-
-  vec3 light_pos_wor_initial = ( vec3 ){ 0, 5, 10 };
 
   gfx_cubemap_seamless( true );
   { // pass to create irradiance map from cube map
@@ -189,12 +188,58 @@ int main() {
       look_at( ( vec3 ){ 0 }, ( vec3 ){ 0, 0, -1 }, ( vec3 ){ 0, -1, 0 } )  //
     };
     for ( int i = 0; i < 6; i++ ) {
-      gfx_framebuffer_bind_cube_face( convoluting_framebuffer, irradiance_texture, i );
+      gfx_framebuffer_bind_cube_face( convoluting_framebuffer, irradiance_texture, i, 0 );
       gfx_clear_colour_and_depth_buffers( 0.0f, 0.0f, 0.0f, 0.0f );
       gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, convoluting_shader, P.m, Vs[i].m, I.m, &cube_texture, 1 );
     }
     gfx_bind_framebuffer( NULL );
   }
+
+  // new stuff
+  // TODO(Anton) need property to say use RGB16F for format. maybe .is_hdr ??
+  int prefilter_map_dims                  = 128; // can be higher for more detailed surfaces
+  int prefilter_max_mip_levels            = 5;
+  gfx_texture_t prefilter_map_texture     = gfx_create_cube_texture_from_mem( NULL, prefilter_map_dims, prefilter_map_dims, 3,
+    ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_cube = true, .is_hdr = true, .is_srgb = true, .cube_max_mip_level = prefilter_max_mip_levels } );
+  gfx_shader_t prefilter_shader           = gfx_create_shader_program_from_files( "cube.vert", "cube_prefilter.frag" );
+  gfx_framebuffer_t prefilter_framebuffer = gfx_create_framebuffer( prefilter_map_dims, prefilter_map_dims, true );
+  { // create prefilter map
+    // gfx_bind_framebuffer( &prefilter_framebuffer );
+    mat4 I     = identity_mat4();
+    mat4 P     = perspective( 90.0f, 1.0f, 0.1f, 100.0f );
+    mat4 Vs[6] = {
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ 1, 0, 0 }, ( vec3 ){ 0, -1, 0 } ),  //
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ -1, 0, 0 }, ( vec3 ){ 0, -1, 0 } ), //
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ 0, 1, 0 }, ( vec3 ){ 0, 0, 1 } ),   //
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ 0, -1, 0 }, ( vec3 ){ 0, 0, -1 } ), //
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ 0, 0, 1 }, ( vec3 ){ 0, -1, 0 } ),  //
+      look_at( ( vec3 ){ 0 }, ( vec3 ){ 0, 0, -1 }, ( vec3 ){ 0, -1, 0 } )  //
+    };
+    for ( int mip_level = 0; mip_level < prefilter_max_mip_levels; mip_level++ ) {
+      float roughness = (float)mip_level / (float)( prefilter_max_mip_levels - 1.0f );
+      gfx_uniform1f( prefilter_shader, prefilter_shader.u_roughness_factor, roughness );
+
+      int mip_w = prefilter_map_dims * pow( 0.5, (double)mip_level );
+      int mip_h = prefilter_map_dims * pow( 0.5, (double)mip_level );
+      gfx_framebuffer_update_depth_texture_dims( prefilter_framebuffer, mip_w, mip_h );
+      gfx_viewport( 0, 0, prefilter_map_dims, prefilter_map_dims );
+
+      for ( int i = 0; i < 6; i++ ) {
+        gfx_framebuffer_bind_cube_face( prefilter_framebuffer, prefilter_map_texture, i, mip_level );
+
+        bool ret = gfx_framebuffer_status( prefilter_framebuffer );
+        if ( !ret ) { fprintf( stderr, "ERROR: resizing framebuffer. mip level %i, face %i, w %i h %i\n", mip_level, i, mip_w, mip_h ); }
+        // cube map face and width and height should be equal https://stackoverflow.com/questions/37232110/opengl-cubemap-writing-to-mipmap
+
+        gfx_clear_colour_and_depth_buffers( 0.0f, 0.0f, 0.0f, 0.0f );
+
+        gfx_draw_mesh( gfx_cube_mesh, GFX_PT_TRIANGLES, prefilter_shader, P.m, Vs[i].m, I.m, &prefilter_map_texture, 1 );
+      }
+    }
+    gfx_bind_framebuffer( NULL );
+  }
+
+  vec3 light_pos_wor_initial = ( vec3 ){ 0, 5, 10 };
 
   // gfx_wireframe_mode();
   // gfx_backface_culling( false );

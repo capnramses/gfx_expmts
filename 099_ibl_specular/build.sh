@@ -1,5 +1,5 @@
 #!/bin/bash
-gcc \
+gcc -Wall -g \
 main.c \
 gfx.c \
 apg_maths.c \

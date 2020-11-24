@@ -1,0 +1,62 @@
+  Lo( p, ω_o ) = ∫Ω( k_d * c/π + k_s * ( DFG ) / ( 4( ω_o ⋅ n )( ω_i ⋅ n ) ) ) * L_i( p, ωi ) n ⋅ ω_i * dω_i
+
+* we did the k_d * c/pi bit already for the diffuse part of IBL
+* k_s isn't linear though -> it varies based on the light and view vectors
+
+"You'll notice that the Cook-Torrance specular portion (multiplied by kS) isn't constant over the integral and is dependent on the incoming light direction, but also the incoming view direction."
+
+-> Epic uses a split-sum approximation to deal with this.
+* two parts of equation to individually convolute and later combine in shader
+- uses an HDR env map as convolution input
+- pre-compute the specular part too (move diffuse terms out of integral).
+
+Cook-Torrance BRDF:
+f_r( p, w_i, w_o ) = (DFG) / ( 4 * ( w_o dot n) * ( w_i dot n ) )
+note: 2 direction vectors (w_i, w_o) - can't sample using both at once in real time.
+
+Epic's split sum (two integerals):
+Lo( p , ω_o ) = ∫Ω L_i( p, ω_i )dω_i ∗ ∫Ω f_r(p, ω_i, ω_o )n dot ω_i * dω_i
+                 first part                 second part
+
+first part:  "pre-filtered environment map" (convoluted) --> similar to irradiance map for diffuse IBL but takes roughness into account.
+             use MIP level as roughness dimension to store different images (blurrier when rougher as the go down to smallest image)
+
+* view direction is assumed to be the same as the sample direction. looks good but loses grazing reflections in the map.
+vec3 N = normalize( w_o );
+vec3 R = N;
+vec3 V = R;
+
+second part:
+* BRDF of the specular integral
+* first variable: roughness
+* second variable: calculate angle between normal n and incoming light direction w_i = n dot w_i
+* create a lookup texture (LUT) "BRDF integration map". red = scale, bias = green.
+-->> i guess this green splash is the 'lobe' for specular BRDF
+
+horizontal axis 0-1 = n dot w_i
+vertical axis = roughness input
+
+https://learnopengl.com/PBR/IBL/Specular-IBL has:
+
+float lod             = getMipLevelFromRoughness(roughness);                      // divided amongst number of mip levels in image i guess
+vec3 prefilteredColor = textureCubeLod(PrefilteredEnvMap, refVec, lod);
+vec2 envBRDF          = texture2D(BRDFIntegrationMap, vec2(NdotV, roughness)).xy; // LUT
+vec3 indirectSpecular = prefilteredColor * (F * envBRDF.x + envBRDF.y)            // interesting scale (red) is added to bias (green) here
+
+* a pseudo-random 'importance sampling' is used to get specular reflection directions off microfacets around halfway vector
+- a monte-carlo integration using Hammersley Sequence is used. we get a sequence sample i over N samples.
+
+float RadicalInverse_VdC( uint bits ) {
+	bits = (bits << 16u) | (bits >> 16u);
+	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+	return float(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+// ----------------------------------------------------------------------------
+vec2 Hammersley( uint i, uint N ) {
+	return vec2(float(i)/float(N), RadicalInverse_VdC(i));
+}  
+
+* for GLSL and ES without bit ops you can use an alternative version
