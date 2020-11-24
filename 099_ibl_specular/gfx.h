@@ -27,14 +27,19 @@ typedef struct gfx_shader_t {
   // mat4
   int u_P, u_V, u_M;
   // int
-  int u_texture_a;                 // default to value 0
-  int u_texture_b;                 // default to value 1
+  int u_texture_a; // default to value 0
+  int u_texture_b; // default to value 1
+
   int u_texture_albedo;            // default to value 0
   int u_texture_metal_roughness;   // default to value 1
   int u_texture_emissive;          // default to value 2
   int u_texture_ambient_occlusion; // default to value 3
   int u_texture_normal;            // default to value 4
   int u_texture_environment;       // default to value 5
+  int u_texture_irradiance_map;    // default to value 6
+  int u_texture_prefilter_map;     // default to value 7
+  int u_texture_brdf_lut;          // default to value 8
+
   // vec3
   int u_cam_pos_wor;
   int u_light_pos_wor;
@@ -132,6 +137,9 @@ typedef enum gfx_texture_unit_t {
   GFX_TEXTURE_UNIT_AMBIENT_OCCLUSION = 3,
   GFX_TEXTURE_UNIT_NORMAL            = 4,
   GFX_TEXTURE_UNIT_ENVIRONMENT       = 5,
+  GFX_TEXTURE_UNIT_IRRADIANCE        = 6,
+  GFX_TEXTURE_UNIT_PREFILTER         = 7,
+  GFX_TEXTURE_UNIT_BRDF_LUT          = 8,
   GFX_TEXTURE_UNIT_MAX
 } gfx_texture_unit_t;
 

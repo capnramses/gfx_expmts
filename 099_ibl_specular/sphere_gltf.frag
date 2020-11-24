@@ -7,6 +7,8 @@ in vec3 v_p_wor;
 in vec3 v_n_wor;
 
 uniform samplerCube u_texture_irradiance_map;
+uniform samplerCube u_texture_prefilter_map;
+uniform sampler2D   u_texture_brdf_lut;
 
 uniform float u_roughness_factor;
 uniform float u_metallic_factor;
@@ -256,6 +258,8 @@ void main() {
 		vec3 albedo = gold;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
 		float metal = clamp( u_metallic_factor, 0.01, 1.0 );
 		float roughness = clamp( u_roughness_factor, 0.01, 1.0 );
+			// IOR term but we use metal term to differentiate from a dead-on angle.
+			vec3 f0       = mix( vec3( 0.04 ), albedo, metal ); // F0 is the base reflectivity of the surface - calculated using index of refraction IOR
 
 		vec3 v_to_p_dir_wor   = normalize( u_cam_pos_wor - v_p_wor );     // V
 		vec3 L_o              = vec3( 0.0 ); // total reflected light
@@ -270,8 +274,6 @@ void main() {
 
 			vec3 radiance       = light_colour * attenuation; // NB more correct atten with inverse-square available when gamma correcting
 			// Cook-Torrance specular term
-			// IOR term but we use metal term to differentiate from a dead-on angle.
-			vec3 f0       = mix( vec3( 0.04 ), albedo, metal ); // F0 is the base reflectivity of the surface - calculated using index of refraction IOR
 			float h_dot_v = clamp( dot( h_wor, v_to_p_dir_wor ), 0.0, 1.0 );
 			vec3 F        = f_fresnel_schlick( h_dot_v, f0 );
 			float n_dot_h = clamp( dot( n_wor, h_wor ), 0.0, 1.0 );
@@ -291,14 +293,30 @@ void main() {
 
 		float ao = 1.0; // TODO later - load from image!
 		vec3 ambient = vec3( 0.03 ) * albedo * ao;
+
+		vec3 prefilteredColor;
 		{ // IBL
+			// LUT
+			vec3 f        = fresnel_schlick_roughness( max( dot( n_wor, v_to_p_dir_wor ), 0.0 ), f0, roughness );
+
+			// diffuse IBL
 			float n_dot_v = clamp( dot( n_wor, v_to_p_dir_wor ), 0.0, 1.0 );
-			vec3 k_s = fresnel_schlick_roughness( clamp( n_dot_v, 0.0, 1.0 ), f0, roughness );
+			vec3 k_s = f;
 			vec3 k_d = 1.0 - k_s;
 			k_d *= ( 1.0 - metal );
 			vec3 irradiance_rgb = texture( u_texture_irradiance_map, n_wor ).rgb;
 			vec3 diffuse = irradiance_rgb * albedo;
-			ambient = k_d * diffuse * ao;
+
+			// specular IBL
+			// prefilter
+			vec3 reflection_wor = reflect( -v_to_p_dir_wor, n_wor );   
+			const float MAX_REFLECTION_LOD = 4.0;
+		//	prefilteredColor = textureLod( u_texture_prefilter_map, reflection_wor, roughness * MAX_REFLECTION_LOD ).rgb;
+			prefilteredColor = textureLod( u_texture_prefilter_map, reflection_wor, roughness * MAX_REFLECTION_LOD ).rgb;  
+			vec2 envBRDF  = texture( u_texture_brdf_lut, vec2( max( dot( n_wor, v_to_p_dir_wor ), 0.0), roughness ) ).rg;
+			vec3 specular = prefilteredColor * (f * envBRDF.x + envBRDF.y);  
+
+			ambient = ( k_d * diffuse + specular ) * ao;
 		}
 		rgb  = clamp( ambient, vec3( 0.0 ), vec3( 1.0 ) ) + clamp( L_o, vec3( 0.0 ), vec3( 1.0 ) );
 
@@ -309,7 +327,7 @@ void main() {
 	}
 #endif
 
-	//	rgb = irradiance_rgb;
+	//	rgb = prefilteredColor;
 	////
 #else
 	vec3 rgb = blinn_phong( n_wor, u_light_pos_wor, vec3( 0.8 ) );

@@ -337,6 +337,12 @@ int main() {
 
     vec4 light_pos_curr_wor_xyzw = mult_mat4_vec4( R_light, v4_v3f( light_pos_wor_initial, 1.0 ) );
 
+    gfx_texture_t pbr_textures[GFX_TEXTURE_UNIT_MAX];
+    pbr_textures[GFX_TEXTURE_UNIT_ENVIRONMENT] = cube_texture;
+    pbr_textures[GFX_TEXTURE_UNIT_IRRADIANCE]  = irradiance_texture;
+    pbr_textures[GFX_TEXTURE_UNIT_PREFILTER]   = prefilter_map_texture;
+    pbr_textures[GFX_TEXTURE_UNIT_BRDF_LUT]    = brdf_lut_texture;
+
     int n_across = 5;
     int n_down   = 5;
     for ( int yi = 0; yi < n_down; yi++ ) {
@@ -356,7 +362,7 @@ int main() {
         gfx_uniform3f( sphere_shader, sphere_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
         gfx_uniform3f( sphere_shader, sphere_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
 
-        gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, &irradiance_texture, 1 );
+        gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
       }
     }
 

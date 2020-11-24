@@ -411,6 +411,9 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   shader.u_texture_ambient_occlusion = glGetUniformLocation( shader.program_gl, "u_texture_ambient_occlusion" );
   shader.u_texture_normal            = glGetUniformLocation( shader.program_gl, "u_texture_normal" );
   shader.u_texture_environment       = glGetUniformLocation( shader.program_gl, "u_texture_environment" );
+  shader.u_texture_irradiance_map    = glGetUniformLocation( shader.program_gl, "u_texture_irradiance_map" );
+  shader.u_texture_prefilter_map     = glGetUniformLocation( shader.program_gl, "u_texture_prefilter_map" );
+  shader.u_texture_brdf_lut          = glGetUniformLocation( shader.program_gl, "u_texture_brdf_lut" );
   shader.u_alpha                     = glGetUniformLocation( shader.program_gl, "u_alpha" );
   shader.u_base_colour_rgba          = glGetUniformLocation( shader.program_gl, "u_base_colour_rgba" );
   shader.u_roughness_factor          = glGetUniformLocation( shader.program_gl, "u_roughness_factor" );
@@ -426,6 +429,9 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   glProgramUniform1i( shader.program_gl, shader.u_texture_ambient_occlusion, GFX_TEXTURE_UNIT_AMBIENT_OCCLUSION );
   glProgramUniform1i( shader.program_gl, shader.u_texture_normal, GFX_TEXTURE_UNIT_NORMAL );
   glProgramUniform1i( shader.program_gl, shader.u_texture_environment, GFX_TEXTURE_UNIT_ENVIRONMENT );
+  glProgramUniform1i( shader.program_gl, shader.u_texture_irradiance_map, GFX_TEXTURE_UNIT_IRRADIANCE );
+  glProgramUniform1i( shader.program_gl, shader.u_texture_prefilter_map, GFX_TEXTURE_UNIT_PREFILTER );
+  glProgramUniform1i( shader.program_gl, shader.u_texture_brdf_lut, GFX_TEXTURE_UNIT_BRDF_LUT );
 
   bool linked = true;
   int params  = -1;
