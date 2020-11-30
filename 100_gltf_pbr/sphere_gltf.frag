@@ -15,6 +15,7 @@ uniform float u_metallic_factor;
 
 uniform vec3 u_cam_pos_wor;
 uniform vec3 u_light_pos_wor;
+uniform vec3 u_base_colour_rgba;
 
 out vec4 o_frag_colour;
 
@@ -22,14 +23,12 @@ vec3 blinn_phong( vec3 n, vec3 light_pos, vec3 light_rgb ) {
 	vec3 dir_to_light = normalize( u_light_pos_wor - v_p_wor );
 	vec3 dir_to_viewer = normalize( u_cam_pos_wor - v_p_wor );
 
-	vec3 base_colour = vec3( 1.0, 0.0, 0.0 );
-
 	vec3 l_a = light_rgb;
-	vec3 k_a = base_colour * 0.05;
+	vec3 k_a = u_base_colour_rgba.rgb * 0.05;
 	vec3 i_a = l_a * k_a;
 
 	vec3 l_s = light_rgb;
-	vec3 k_s = base_colour * ( 1.0 - u_roughness_factor );
+	vec3 k_s = u_base_colour_rgba.rgb * ( 1.0 - u_roughness_factor );
 	float specular_exponent = 50.0; // specular 'power'
 	vec3 half_way = normalize( dir_to_viewer + dir_to_light );
 	float dot_s = clamp( dot( half_way, n ), 0.0, 1.0 );
@@ -37,7 +36,7 @@ vec3 blinn_phong( vec3 n, vec3 light_pos, vec3 light_rgb ) {
 	vec3 i_s = l_s * k_s * specular_factor * u_metallic_factor;
 
 	vec3 l_d = light_rgb;
-	vec3 k_d = ( vec3( 1.0 ) - k_s ) * base_colour; // NOTE(Anton) aping energy conservation here
+	vec3 k_d = ( vec3( 1.0 ) - k_s ) * u_base_colour_rgba.rgb; // NOTE(Anton) aping energy conservation here
 	float dot_d = clamp( dot( n, dir_to_light ), 0.0, 1.0 );
 	vec3 i_d = l_d * k_d * dot_d;
 
@@ -255,7 +254,7 @@ void main() {
 		vec3 purple = vec3( 1.0, 0.0, 1.0 );
 
 
-		vec3 albedo = Al;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
+		vec3 albedo = u_base_colour_rgba.rgb;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
 		float metal = clamp( u_metallic_factor, 0.01, 1.0 );
 		float roughness = clamp( u_roughness_factor, 0.01, 1.0 );
 			// IOR term but we use metal term to differentiate from a dead-on angle.
@@ -313,7 +312,7 @@ void main() {
 			const float MAX_REFLECTION_LOD = 4.0;
 			prefilteredColor = textureLod( u_texture_prefilter_map, reflection_wor, roughness * MAX_REFLECTION_LOD ).rgb;  
 			vec2 envBRDF  = texture( u_texture_brdf_lut, vec2( max( dot( n_wor, v_to_p_dir_wor ), 0.0), roughness ) ).rg;
-			vec3 specular = prefilteredColor * (f * envBRDF.x + envBRDF.y);  
+			vec3 specular = prefilteredColor * (f * envBRDF.x + envBRDF.y) * albedo;   // NOTE(Anton) added *albedo here because it was making it white!//
 
 			ambient = ( k_d * diffuse + specular ) * ao;
 		}

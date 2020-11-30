@@ -158,6 +158,11 @@ int main( int argc, char** argv ) {
     return 0;
   }
 
+  gfx_start( "PBR - Image-Based-Lighting demo", 1024, 1024, false );
+  input_init();
+  gfx_cubemap_seamless( true );
+
+  // note: requires a GL context to load into buffers
   gltf_scene_t gltf_scene = { 0 };
   { // load gltf
     printf( "loading `%s`\n", argv[1] );
@@ -177,10 +182,6 @@ int main( int argc, char** argv ) {
   // load a shader with a UBO for PBR stuff
 
   // loop over nxm spheres with varying inputs
-
-  gfx_start( "PBR - Image-Based-Lighting demo", 1024, 1024, false );
-  input_init();
-  gfx_cubemap_seamless( true );
 
   gfx_mesh_t sphere_mesh =
     gfx_create_mesh_from_mem( &verts[0].x, 3, NULL, 0, NULL, 0, NULL, 0, indices, sizeof( uint32_t ) * n_indices, GFX_INDICES_TYPE_UINT32, n_verts, false );
@@ -366,6 +367,7 @@ int main( int argc, char** argv ) {
 
     int n_across = 5;
     int n_down   = 5;
+#ifdef SPHERES
     for ( int yi = 0; yi < n_down; yi++ ) {
       float y = (float)yi * 3.0f - ( ( n_down - 1 ) * 3 * 0.5f );
       for ( int xi = 0; xi < n_across; xi++ ) {
@@ -384,6 +386,26 @@ int main( int argc, char** argv ) {
         gfx_uniform3f( sphere_shader, sphere_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
 
         gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
+      }
+    }
+#endif
+
+    { // render the glTF scene
+      float curr_s = (float)gfx_get_time_s();
+      mat4 S       = scale_mat4( ( vec3 ){ 4, 4, 4 } );
+      mat4 T       = translate_mat4( ( vec3 ){ .x = sinf( curr_s ), .y = 0, .z = 0 } );
+      mat4 Rx      = rot_x_deg_mat4( curr_s * 5.5f );
+      mat4 Ry      = rot_y_deg_mat4( curr_s * 10.0f );
+      mat4 R       = mult_mat4_mat4( Ry, Rx );
+      mat4 TR      = mult_mat4_mat4( T, R );
+      mat4 M       = mult_mat4_mat4( TR, S );
+      gfx_uniform1f( sphere_shader, sphere_shader.u_roughness_factor, 0.2f );
+      gfx_uniform1f( sphere_shader, sphere_shader.u_metallic_factor, 1.0f );
+      gfx_uniform3f( sphere_shader, sphere_shader.u_base_colour_rgba, 1.0f, 0.0f, 0.0f );
+      gfx_uniform3f( sphere_shader, sphere_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
+      gfx_uniform3f( sphere_shader, sphere_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
+      for ( uint32_t mi = 0; mi < gltf_scene.n_meshes; mi++ ) {
+        gfx_draw_mesh( gltf_scene.meshes_ptr[mi], GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
       }
     }
 

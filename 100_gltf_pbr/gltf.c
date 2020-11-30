@@ -28,10 +28,91 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
   }
 
   { // create gfx resources from gltf data
-    gltf_scene_ptr->n_meshes   = (uint32_t)data_ptr->meshes_count;
+    gltf_scene_ptr->n_meshes = (uint32_t)data_ptr->meshes_count;
+    printf( "allocating %u meshes\n", gltf_scene_ptr->n_meshes );
     gltf_scene_ptr->meshes_ptr = calloc( gltf_scene_ptr->n_meshes, sizeof( gfx_mesh_t ) );
-    for ( uint32_t i = 0; i < gltf_scene_ptr->n_meshes; i++ ) {}
-  }
+    // In glTF, meshes are defined as arrays of primitives
+    for ( uint32_t i = 0; i < gltf_scene_ptr->n_meshes; i++ ) {
+      if ( data_ptr->meshes[i].primitives_count > 1 ) {
+        fprintf( stderr, "ERROR: mesh %u has %u primitives and I assume 1 primitive == 1 mesh\n", i, (uint32_t)data_ptr->meshes[i].primitives_count );
+        cgltf_free( data_ptr );
+        return false;
+      }
+
+      // From spec:
+      // Primitives specify one or more vertex attributes. Indexed primitives also define an indices property.
+      // Each primitive also specifies a material and a primitive type that corresponds to the GPU primitive type (e.g., triangle set).
+      // Implementation note: Splitting one mesh into primitives could be useful to limit number of indices per draw call.
+      // If material is not specified, then a default material is used (base colour 1,1,1,1, metal and roughness set to 1).
+      for ( uint32_t j = 0; j < (uint32_t)data_ptr->meshes[i].primitives_count; j++ ) {
+        // get indices here
+        cgltf_accessor* indices_acc_ptr = data_ptr->meshes[i].primitives[j].indices;
+        uint32_t n_indices              = (uint32_t)indices_acc_ptr->count;
+        size_t indices_sz               = n_indices * sizeof( uint16_t );
+        gfx_indices_type_t indices_type = GFX_INDICES_TYPE_UINT16; // 1==uint16_t
+        /* https://github.com/KhronosGroup/glTF-Tutorials/blob/master/gltfTutorial/gltfTutorial_005_BuffersBufferViewsAccessors.md
+        The first accessor refers to the bufferView with index 0, which defines the part of the buffer data that contains the indices.
+        Its type is "SCALAR", and its componentType is 5123 (UNSIGNED_SHORT). This means that the indices are stored as scalar unsigned short values.
+        */
+        uint8_t* indices_bytes_ptr = (uint8_t*)indices_acc_ptr->buffer_view->buffer->data;
+        uint16_t* indices_ptr      = (uint16_t*)&indices_bytes_ptr[indices_acc_ptr->buffer_view->offset];
+        float *points_ptr = NULL, *texcoords_ptr = NULL, *colours_ptr = NULL, *normals_ptr = NULL;
+        uint32_t n_vertices = 0;
+
+        for ( int k = 0; k < (int)data_ptr->meshes[i].primitives[j].attributes_count; k++ ) {
+          printf( "mesh %i) primitive %i) `%s`::%i\n", i, j, data_ptr->meshes[i].primitives[j].attributes[k].name,
+            data_ptr->meshes[i].primitives[j].attributes[k].index );
+
+          if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_position ) {
+            //
+            cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
+            n_vertices          = (uint32_t)acc->count; // note gltf position is a vec3 so this is number of vertices, not number of floats
+            printf( "n verts = %u\n", n_vertices );
+
+            if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_position ) {
+              cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
+              n_vertices          = (int)acc->count; // note gltf position is a vec3 so this is number of vertices, not number of floats
+              uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
+              points_ptr          = (float*)&bytes_ptr[acc->buffer_view->offset];
+
+// TODO first validate hasmin hasmax
+#if 0
+              float min_x   = acc->min[0];
+              float min_y   = acc->min[1];
+              float min_z   = acc->min[2];
+              float max_x   = acc->max[0];
+              float max_y   = acc->max[1];
+              float max_z   = acc->max[2];
+              float biggest = fabs( min_x );
+              if ( fabs( min_y ) > biggest ) { biggest = fabs( min_y ); }
+              if ( fabs( min_z ) > biggest ) { biggest = fabs( min_z ); }
+              if ( fabs( max_x ) > biggest ) { biggest = fabs( max_x ); }
+              if ( fabs( max_y ) > biggest ) { biggest = fabs( max_y ); }
+              if ( fabs( max_z ) > biggest ) { biggest = fabs( max_z ); }
+              scale_to_fit = 1.0 / biggest;
+#endif
+
+            } else if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_texcoord ) {
+              cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
+              uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
+              texcoords_ptr       = (float*)&bytes_ptr[acc->buffer_view->offset];
+            } else if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_color ) {
+              cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
+              uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
+              colours_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
+            } else if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_normal ) {
+              cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
+              uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
+              normals_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
+            } // endif
+
+          } // endif
+        }   // endfor k vertex attributes
+        gltf_scene_ptr->meshes_ptr[i] =
+          gfx_create_mesh_from_mem( points_ptr, 3, texcoords_ptr, 2, normals_ptr, 3, colours_ptr, 3, indices_ptr, indices_sz, indices_type, n_vertices, false );
+      } // endfor j primitives
+    }   // endfor i meshes
+  }     // endblock gltf->gfx meshes
 
   cgltf_free( data_ptr );
   return true;
@@ -39,6 +120,7 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
 
 bool gltf_free( gltf_scene_t* gltf_scene_ptr ) {
   if ( !gltf_scene_ptr || !gltf_scene_ptr->meshes_ptr ) { return false; }
+  for ( uint32_t i = 0; i < gltf_scene_ptr->n_meshes; i++ ) { gfx_delete_mesh( &gltf_scene_ptr->meshes_ptr[i] ); }
   free( gltf_scene_ptr->meshes_ptr );
   *gltf_scene_ptr = ( gltf_scene_t ){ .n_meshes = 0 };
   return true;

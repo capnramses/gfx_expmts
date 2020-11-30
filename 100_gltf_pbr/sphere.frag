@@ -12,6 +12,7 @@ uniform float u_metallic_factor;
 
 uniform vec3 u_cam_pos_wor;
 uniform vec3 u_light_pos_wor;
+uniform vec3 u_base_colour_rgb;
 
 out vec4 o_frag_colour;
 
@@ -19,14 +20,14 @@ vec3 blinn_phong( vec3 n, vec3 light_pos, vec3 light_rgb ) {
 	vec3 dir_to_light = normalize( u_light_pos_wor - v_p_wor );
 	vec3 dir_to_viewer = normalize( u_cam_pos_wor - v_p_wor );
 
-	vec3 base_colour = vec3( 1.0, 0.0, 0.0 );
+	//vec3 u_base_colour_rgb = vec3( 1.0, 0.0, 0.0 );
 
 	vec3 l_a = light_rgb;
-	vec3 k_a = base_colour * 0.05;
+	vec3 k_a = u_base_colour_rgb * 0.05;
 	vec3 i_a = l_a * k_a;
 
 	vec3 l_s = light_rgb;
-	vec3 k_s = base_colour * ( 1.0 - u_roughness_factor );
+	vec3 k_s = u_base_colour_rgb * ( 1.0 - u_roughness_factor );
 	float specular_exponent = 50.0; // specular 'power'
 	vec3 half_way = normalize( dir_to_viewer + dir_to_light );
 	float dot_s = clamp( dot( half_way, n ), 0.0, 1.0 );
@@ -34,7 +35,7 @@ vec3 blinn_phong( vec3 n, vec3 light_pos, vec3 light_rgb ) {
 	vec3 i_s = l_s * k_s * specular_factor * u_metallic_factor;
 
 	vec3 l_d = light_rgb;
-	vec3 k_d = ( vec3( 1.0 ) - k_s ) * base_colour; // NOTE(Anton) aping energy conservation here
+	vec3 k_d = ( vec3( 1.0 ) - k_s ) * u_base_colour_rgb; // NOTE(Anton) aping energy conservation here
 	float dot_d = clamp( dot( n, dir_to_light ), 0.0, 1.0 );
 	vec3 i_d = l_d * k_d * dot_d;
 
