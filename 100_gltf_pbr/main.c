@@ -169,6 +169,8 @@ int main( int argc, char** argv ) {
     bool res = gltf_load( argv[1], &gltf_scene );
     if ( !res ) { return 1; }
     printf( "loaded %u meshes from GLTF file\n", gltf_scene.n_meshes );
+
+    gltf_print_material_summary( gltf_scene.material );
   }
 
   // load a sphere mesh
@@ -182,9 +184,6 @@ int main( int argc, char** argv ) {
   // load a shader with a UBO for PBR stuff
 
   // loop over nxm spheres with varying inputs
-
-  gfx_mesh_t sphere_mesh =
-    gfx_create_mesh_from_mem( &verts[0].x, 3, NULL, 0, NULL, 0, NULL, 0, indices, sizeof( uint32_t ) * n_indices, GFX_INDICES_TYPE_UINT32, n_verts, false );
   gfx_shader_t pbr_shader    = gfx_create_shader_program_from_files( "pbr.vert", "pbr.frag" );
   gfx_shader_t cube_shader   = gfx_create_shader_program_from_files( "cube.vert", "cube.frag" );
   gfx_texture_t cube_texture = cubemap_from_images();
@@ -365,31 +364,6 @@ int main( int argc, char** argv ) {
     pbr_textures[GFX_TEXTURE_UNIT_PREFILTER]   = prefilter_map_texture;
     pbr_textures[GFX_TEXTURE_UNIT_BRDF_LUT]    = brdf_lut_texture;
 
-    int n_across = 5;
-    int n_down   = 5;
-#ifdef SPHERES
-    for ( int yi = 0; yi < n_down; yi++ ) {
-      float y = (float)yi * 3.0f - ( ( n_down - 1 ) * 3 * 0.5f );
-      for ( int xi = 0; xi < n_across; xi++ ) {
-        // u_roughness_factor
-        float x = (float)xi * 3.0f - ( ( n_across - 1 ) * 3 * 0.5f );
-        mat4 T  = translate_mat4( ( vec3 ){ x, y, 0 } );
-        mat4 R  = rot_y_deg_mat4( gfx_get_time_s() * 10.0 );
-        mat4 M  = mult_mat4_mat4( T, R );
-
-        float roughness = (float)xi / (float)( n_across - 1 );
-        float metallic  = (float)yi / (float)( n_down - 1 );
-        // printf( "roughness = %f, metallic = %f\n", roughness, metallic );
-        gfx_uniform1f( pbr_shader, pbr_shader.u_roughness_factor, roughness );
-        gfx_uniform1f( pbr_shader, pbr_shader.u_metallic_factor, metallic );
-        gfx_uniform3f( pbr_shader, pbr_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
-        gfx_uniform3f( pbr_shader, pbr_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
-
-        gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, pbr_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
-      }
-    }
-#endif
-
     { // render the glTF scene
       float curr_s = (float)gfx_get_time_s();
       mat4 S       = scale_mat4( ( vec3 ){ 4, 4, 4 } );
@@ -399,11 +373,30 @@ int main( int argc, char** argv ) {
       mat4 R       = mult_mat4_mat4( Ry, Rx );
       mat4 TR      = mult_mat4_mat4( T, R );
       mat4 M       = mult_mat4_mat4( TR, S );
-      gfx_uniform1f( pbr_shader, pbr_shader.u_roughness_factor, 0.2f );
-      gfx_uniform1f( pbr_shader, pbr_shader.u_metallic_factor, 1.0f );
-      gfx_uniform4f( pbr_shader, pbr_shader.u_base_colour_rgba, 0.8f, 0.6f, 0.5f, 1.0f );
+      gfx_uniform1f( pbr_shader, pbr_shader.u_roughness_factor, gltf_scene.material.roughness_f );
+      gfx_uniform1f( pbr_shader, pbr_shader.u_metallic_factor, gltf_scene.material.metallic_f );
+      gfx_uniform4f( pbr_shader, pbr_shader.u_base_colour_rgba, gltf_scene.material.base_colour_rgba[0], gltf_scene.material.base_colour_rgba[1],
+        gltf_scene.material.base_colour_rgba[2], gltf_scene.material.base_colour_rgba[3] );
+      // TODO(Anton) emissive RGB uniform
       gfx_uniform3f( pbr_shader, pbr_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
       gfx_uniform3f( pbr_shader, pbr_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
+
+      if ( gltf_scene.material.base_colour_texture_idx > -1 ) {
+        pbr_textures[GFX_TEXTURE_UNIT_ALBEDO] = gltf_scene.textures_ptr[gltf_scene.material.base_colour_texture_idx];
+      }
+      if ( gltf_scene.material.metal_roughness_texture_idx > -1 ) {
+        pbr_textures[GFX_TEXTURE_UNIT_METAL_ROUGHNESS] = gltf_scene.textures_ptr[gltf_scene.material.metal_roughness_texture_idx];
+      }
+      if ( gltf_scene.material.emissive_texture_idx > -1 ) {
+        pbr_textures[GFX_TEXTURE_UNIT_EMISSIVE] = gltf_scene.textures_ptr[gltf_scene.material.emissive_texture_idx];
+      }
+      if ( gltf_scene.material.ambient_occlusion_texture_idx > -1 ) {
+        pbr_textures[GFX_TEXTURE_UNIT_AMBIENT_OCCLUSION] = gltf_scene.textures_ptr[gltf_scene.material.ambient_occlusion_texture_idx];
+      }
+      if ( gltf_scene.material.normal_texture_idx > -1 ) {
+        pbr_textures[GFX_TEXTURE_UNIT_NORMAL] = gltf_scene.textures_ptr[gltf_scene.material.normal_texture_idx];
+      }
+
       for ( uint32_t mi = 0; mi < gltf_scene.n_meshes; mi++ ) {
         gfx_draw_mesh( gltf_scene.meshes_ptr[mi], GFX_PT_TRIANGLES, pbr_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
       }

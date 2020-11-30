@@ -47,6 +47,30 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
     return false;
   }
 
+  { // load images into a master list of scene textures. materials are just indices into this
+    gltf_scene_ptr->n_textures = (uint32_t)data_ptr->images_count;
+    printf( "%u textures\n", gltf_scene_ptr->n_textures );
+    gltf_scene_ptr->textures_ptr = calloc( sizeof( gfx_texture_t ), gltf_scene_ptr->n_textures );
+
+    for ( uint32_t i = 0; i < (uint32_t)gltf_scene_ptr->n_textures; i++ ) {
+      if ( data_ptr->images[i].uri != NULL ) {
+        char full_path[2048];
+        strcpy( full_path, asset_path );
+        strcat( full_path, data_ptr->images[i].uri );
+        printf( "loading from %s\n", full_path );
+        int x = 0, y = 0, comp = 0;
+        unsigned char* img_ptr = stbi_load( full_path, &x, &y, &comp, 0 );
+        if ( !img_ptr ) {
+          fprintf( stderr, "ERROR loading image: `%s`\n", full_path );
+          cgltf_free( data_ptr );
+          return 1;
+        }
+      } else {
+        printf( "UNHANDLED: image %i is embedded\n", i );
+      }
+    }
+  }
+
   { // create gfx resources from gltf data
     gltf_scene_ptr->n_meshes = (uint32_t)data_ptr->meshes_count;
     printf( "allocating %u meshes\n", gltf_scene_ptr->n_meshes );
@@ -124,33 +148,62 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
         } // endfor k vertex attributes
         gltf_scene_ptr->meshes_ptr[i] =
           gfx_create_mesh_from_mem( points_ptr, 3, texcoords_ptr, 2, normals_ptr, 3, colours_ptr, 3, indices_ptr, indices_sz, indices_type, n_vertices, false );
+
+        // set up material for mesh (link texture 'views' to loaded images as an index)
+        gltf_scene_ptr->material = gltf_default_material();
+        if ( data_ptr->meshes[i].primitives[j].material ) {
+          if ( data_ptr->meshes[i].primitives[j].material->name ) {
+            printf( "creating material `%s` for primitive\n", data_ptr->meshes[i].primitives[j].material->name );
+            strncat( gltf_scene_ptr->material.name, data_ptr->meshes[i].primitives[j].material->name, 1023 );
+          }
+
+          // m_r
+          if ( data_ptr->meshes[i].primitives[j].material->has_pbr_metallic_roughness ) {
+            cgltf_pbr_metallic_roughness m_r = data_ptr->meshes[i].primitives[j].material->pbr_metallic_roughness;
+
+            memcpy( &gltf_scene_ptr->material.base_colour_rgba, m_r.base_color_factor, sizeof( float ) * 4 );
+            gltf_scene_ptr->material.metallic_f  = m_r.metallic_factor;
+            gltf_scene_ptr->material.roughness_f = m_r.roughness_factor;
+
+            cgltf_texture_view albedo_view      = m_r.base_color_texture;
+            cgltf_texture_view metal_rough_view = m_r.metallic_roughness_texture;
+            // NOTE(Anton) maybe there is a LUT for this to help speed up large scene loads
+            for ( uint32_t i = 0; i < (uint32_t)gltf_scene_ptr->n_textures; i++ ) {
+              if ( albedo_view.texture && albedo_view.texture->image ) {
+                if ( &data_ptr->images[i] == albedo_view.texture->image ) { gltf_scene_ptr->material.base_colour_texture_idx = i; }
+              }
+              if ( metal_rough_view.texture && metal_rough_view.texture->image ) {
+                if ( &data_ptr->images[i] == metal_rough_view.texture->image ) { gltf_scene_ptr->material.metal_roughness_texture_idx = i; }
+              }
+            }
+          } // endif m_r
+
+          cgltf_texture_view normal_view    = data_ptr->meshes[i].primitives[j].material->normal_texture;
+          cgltf_texture_view occlusion_view = data_ptr->meshes[i].primitives[j].material->occlusion_texture;
+          cgltf_texture_view emissive_view  = data_ptr->meshes[i].primitives[j].material->emissive_texture;
+          for ( uint32_t i = 0; i < (uint32_t)gltf_scene_ptr->n_textures; i++ ) {
+            if ( normal_view.texture && normal_view.texture->image ) {
+              if ( &data_ptr->images[i] == normal_view.texture->image ) { gltf_scene_ptr->material.normal_texture_idx = i; }
+            }
+            if ( occlusion_view.texture && occlusion_view.texture->image ) {
+              if ( &data_ptr->images[i] == occlusion_view.texture->image ) { gltf_scene_ptr->material.ambient_occlusion_texture_idx = i; }
+            }
+            if ( emissive_view.texture && emissive_view.texture->image ) {
+              if ( &data_ptr->images[i] == emissive_view.texture->image ) { gltf_scene_ptr->material.emissive_texture_idx = i; }
+            }
+          }
+          memcpy( &gltf_scene_ptr->material.emissive_rgb, data_ptr->meshes[i].primitives[j].material->emissive_factor, sizeof( float ) * 3 );
+          gltf_scene_ptr->material.unlit = data_ptr->meshes[i].primitives[j].material->unlit;
+          // NB(Anton) extensions can be here too
+
+        } // endif material
+
       } // endfor j primitives
     }   // endfor i meshes
   }     // endblock gltf->gfx meshes
 
   // NOTE(Anton) assuming here that cgltf doesn't load images into buffers
   // TODO(Anton) doesn't work with embedded binary images -- no idea how this works yet.
-  { // set up textures
-    gltf_scene_ptr->n_textures = (uint32_t)data_ptr->images_count;
-    printf( "%i textures\n", gltf_scene_ptr->n_textures );
-    for ( uint32_t i = 0; i < gltf_scene_ptr->n_textures; i++ ) {
-      if ( data_ptr->images[i].uri != NULL ) {
-        char full_path[2048];
-        strcpy( full_path, asset_path );
-        strcat( full_path, data_ptr->images[i].uri );
-        printf( "loading from %s\n", full_path );
-        int x = 0, y = 0, comp = 0;
-        unsigned char* img_ptr = stbi_load( full_path, &x, &y, &comp, 0 );
-        if ( !img_ptr ) {
-          fprintf( stderr, "ERROR loading image: `%s`\n", full_path );
-          cgltf_free( data_ptr );
-          return 1;
-        }
-      } else {
-        printf( "UNHANDLED: image %i is embedded\n", i );
-      }
-    } // endfor textures
-  }
 
   cgltf_free( data_ptr );
   return true;
@@ -159,7 +212,39 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
 bool gltf_free( gltf_scene_t* gltf_scene_ptr ) {
   if ( !gltf_scene_ptr || !gltf_scene_ptr->meshes_ptr ) { return false; }
   for ( uint32_t i = 0; i < gltf_scene_ptr->n_meshes; i++ ) { gfx_delete_mesh( &gltf_scene_ptr->meshes_ptr[i] ); }
+  for ( uint32_t i = 0; i < gltf_scene_ptr->n_textures; i++ ) { gfx_delete_texture( &gltf_scene_ptr->textures_ptr[i] ); }
   free( gltf_scene_ptr->meshes_ptr );
+  free( gltf_scene_ptr->textures_ptr );
   *gltf_scene_ptr = ( gltf_scene_t ){ .n_meshes = 0 };
   return true;
+}
+
+gltf_material_t gltf_default_material() {
+  return ( gltf_material_t ){ // as defined in spec. texture index -1 means 'use the constant factors instead'
+    .name[0]                       = '\0',
+    .base_colour_texture_idx       = -1,
+    .metal_roughness_texture_idx   = -1,
+    .base_colour_rgba              = { 1.0f },
+    .metallic_f                    = 1.0f,
+    .roughness_f                   = 1.0f,
+    .emissive_texture_idx          = -1,
+    .emissive_rgb                  = { 0.0f },
+    .ambient_occlusion_texture_idx = -1,
+    .normal_texture_idx            = -1,
+    .unlit                         = false
+  };
+}
+
+void gltf_print_material_summary( gltf_material_t mat ) {
+  printf( "material name:\t\t\t%s\n", mat.name );
+  printf( "base_colour_texture_idx:\t%i\n", mat.base_colour_texture_idx );
+  printf( "metal_roughness_texture_idx:\t%i\n", mat.metal_roughness_texture_idx );
+  printf( "emissive_texture_idx:\t\t%i\n", mat.emissive_texture_idx );
+  printf( "ambient_occlusion_texture_idx:\t%i\n", mat.ambient_occlusion_texture_idx );
+  printf( "normal_texture_idx:\t\t%i\n", mat.normal_texture_idx );
+  printf( "base_colour_rgba:\t\t%.2f %.2f %.2f %.2f\n", mat.base_colour_rgba[0], mat.base_colour_rgba[1], mat.base_colour_rgba[2], mat.base_colour_rgba[3] );
+  printf( "metallic_f:\t\t\t%.2f\n", mat.metallic_f );
+  printf( "roughness_f:\t\t\t%.2f\n", mat.roughness_f );
+  printf( "emissive_rgb:\t\t\t%.2f %.2f %.2f\n", mat.emissive_rgb[0], mat.emissive_rgb[1], mat.emissive_rgb[2] );
+  printf( "unlit:\t\t\t\t%i\n", (int)mat.unlit );
 }
