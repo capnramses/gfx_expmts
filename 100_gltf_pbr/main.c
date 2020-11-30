@@ -154,8 +154,13 @@ gfx_texture_t cubemap_from_images() {
 
 int main( int argc, char** argv ) {
   if ( argc < 2 ) {
-    printf( "usage: ./a.out MY_MESH.GLTF\n" );
+    printf( "usage: ./a.out MY_MESH.GLTF [optional scale factor]\n" );
     return 0;
+  }
+  float scale_mod = 1.0f;
+  if ( argc > 2 ) {
+    scale_mod = (float)atof( argv[2] );
+    printf( "scaling by %f\n", scale_mod );
   }
 
   gfx_start( "PBR - Image-Based-Lighting demo", 1024, 1024, false );
@@ -366,7 +371,7 @@ int main( int argc, char** argv ) {
 
     { // render the glTF scene
       float curr_s = (float)gfx_get_time_s();
-      mat4 S       = scale_mat4( ( vec3 ){ 4, 4, 4 } );
+      mat4 S       = scale_mat4( ( vec3 ){ scale_mod, scale_mod, scale_mod } );
       mat4 T       = translate_mat4( ( vec3 ){ .x = sinf( curr_s ), .y = 0, .z = 0 } );
       mat4 Rx      = rot_x_deg_mat4( curr_s * 5.5f );
       mat4 Ry      = rot_y_deg_mat4( curr_s * 10.0f );
