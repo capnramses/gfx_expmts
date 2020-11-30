@@ -15,7 +15,7 @@ uniform float u_metallic_factor;
 
 uniform vec3 u_cam_pos_wor;
 uniform vec3 u_light_pos_wor;
-uniform vec3 u_base_colour_rgba;
+uniform vec4 u_base_colour_rgba;
 
 out vec4 o_frag_colour;
 

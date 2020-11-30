@@ -401,7 +401,7 @@ int main( int argc, char** argv ) {
       mat4 M       = mult_mat4_mat4( TR, S );
       gfx_uniform1f( pbr_shader, pbr_shader.u_roughness_factor, 0.2f );
       gfx_uniform1f( pbr_shader, pbr_shader.u_metallic_factor, 1.0f );
-      gfx_uniform3f( pbr_shader, pbr_shader.u_base_colour_rgba, 1.0f, 0.0f, 0.0f );
+      gfx_uniform4f( pbr_shader, pbr_shader.u_base_colour_rgba, 1.0f, 0.0f, 0.0f, 1.0f );
       gfx_uniform3f( pbr_shader, pbr_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
       gfx_uniform3f( pbr_shader, pbr_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
       for ( uint32_t mi = 0; mi < gltf_scene.n_meshes; mi++ ) {
