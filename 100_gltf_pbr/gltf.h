@@ -5,7 +5,9 @@
 
 typedef struct gltf_scene_t {
   gfx_mesh_t* meshes_ptr;
+  gfx_texture_t* textures_ptr;
   uint32_t n_meshes;
+  uint32_t n_textures;
 } gltf_scene_t;
 
 bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr );

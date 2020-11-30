@@ -1,9 +1,29 @@
 #include "gltf.h"
 #define CGLTF_IMPLEMENTATION
 #include "cgltf/cgltf.h"
+// NB assuming already included
+#include "stb/stb_image.h"
 
 bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
   if ( !filename || !gltf_scene_ptr ) { return false; }
+
+  char asset_path[2048];
+  { // work out subfolder to find relative path to images etc
+    asset_path[0]  = '\0';
+    int last_slash = -1;
+    int len        = strlen( filename );
+    for ( int i = 0; i < len; i++ ) {
+      if ( filename[i] == '\\' || filename[i] == '/' ) { last_slash = i; }
+    }
+    if ( last_slash > -1 ) {
+      strncpy( asset_path, filename, last_slash + 1 );
+      asset_path[last_slash + 1] = '\0';
+      printf( "using asset path: `%s`\n", asset_path );
+      for ( int i = 0; i < last_slash + 1; i++ ) {
+        if ( asset_path[i] == '\\' ) { asset_path[i] = '/'; }
+      }
+    }
+  }
 
   // format mirrors glTF spec https://github.com/KhronosGroup/glTF/tree/master/specification/2.0
   cgltf_data* data_ptr  = NULL;
@@ -107,6 +127,30 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
       } // endfor j primitives
     }   // endfor i meshes
   }     // endblock gltf->gfx meshes
+
+  // NOTE(Anton) assuming here that cgltf doesn't load images into buffers
+  // TODO(Anton) doesn't work with embedded binary images -- no idea how this works yet.
+  { // set up textures
+    gltf_scene_ptr->n_textures = (uint32_t)data_ptr->images_count;
+    printf( "%i textures\n", gltf_scene_ptr->n_textures );
+    for ( uint32_t i = 0; i < gltf_scene_ptr->n_textures; i++ ) {
+      if ( data_ptr->images[i].uri != NULL ) {
+        char full_path[2048];
+        strcpy( full_path, asset_path );
+        strcat( full_path, data_ptr->images[i].uri );
+        printf( "loading from %s\n", full_path );
+        int x = 0, y = 0, comp = 0;
+        unsigned char* img_ptr = stbi_load( full_path, &x, &y, &comp, 0 );
+        if ( !img_ptr ) {
+          fprintf( stderr, "ERROR loading image: `%s`\n", full_path );
+          cgltf_free( data_ptr );
+          return 1;
+        }
+      } else {
+        printf( "UNHANDLED: image %i is embedded\n", i );
+      }
+    } // endfor textures
+  }
 
   cgltf_free( data_ptr );
   return true;
