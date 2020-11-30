@@ -104,7 +104,8 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr, bool calc_ta
         uint8_t* indices_bytes_ptr = (uint8_t*)indices_acc_ptr->buffer_view->buffer->data;
         uint16_t* indices_ptr      = (uint16_t*)&indices_bytes_ptr[indices_acc_ptr->buffer_view->offset];
         float *points_ptr = NULL, *texcoords_ptr = NULL, *colours_ptr = NULL, *normals_ptr = NULL;
-        uint32_t n_vertices = 0;
+        uint32_t n_vertices        = 0;
+        cgltf_primitive_type ptype = data_ptr->meshes[i].primitives[j].type;
 
         for ( int k = 0; k < (int)data_ptr->meshes[i].primitives[j].attributes_count; k++ ) {
           printf( "mesh %i) primitive %i) `%s`::%i\n", i, j, data_ptr->meshes[i].primitives[j].attributes[k].name,
@@ -114,6 +115,11 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr, bool calc_ta
             cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
             n_vertices          = (int)acc->count; // note gltf position is a vec3 so this is number of vertices, not number of floats
             printf( "n verts = %u\n", n_vertices );
+            if ( ptype != cgltf_primitive_type_triangles ) {
+              fprintf( stderr, "WARNING ptype != triangles!\n" );
+            } else {
+              printf( "ptype = triangles - %u vertices = %f triangles\n", n_vertices, (float)n_vertices / 3.0f );
+            }
             uint8_t* bytes_ptr = (uint8_t*)acc->buffer_view->buffer->data;
             points_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
 

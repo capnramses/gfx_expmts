@@ -1,3 +1,13 @@
+/*
+NOTES
+
+* parsing the json with cGLTF is making it _far_ more complex than it would be just parsing with cJSON or similar directly
+( the JSON structure of GLTF supports array indices to look up textures etc so we can kick a lot of this pointer / view madness )
+EXCEPT
+* still have to read in the buffers after resolving the URIs
+-> consider making own cJSON-based GLTF parser
+*/
+
 #pragma once
 #include "gfx.h"
 #include <stdbool.h>

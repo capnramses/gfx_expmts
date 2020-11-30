@@ -240,18 +240,28 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
   mesh->n_vertices = n_vertices;
   mesh->dynamic    = dynamic;
 
+  mesh->indices_type = indices_type;
+  mesh->n_indices    = 0;
+  if ( indices_buffer_sz > 0 ) {
+    switch ( indices_type ) {
+    case GFX_INDICES_TYPE_UBYTE: mesh->n_indices = indices_buffer_sz; break;      // ubyte
+    case GFX_INDICES_TYPE_UINT16: mesh->n_indices = indices_buffer_sz / 2; break; // ushort
+    case GFX_INDICES_TYPE_UINT32: mesh->n_indices = indices_buffer_sz / 4; break; // uint
+    default: assert( false && "unhandled indices type" ); break;
+    }
+  }
+
   float* tan_ptr = NULL;
 
   // NOTE: assumes triangles here
   if ( calc_tangents ) {
     assert( points_buffer && 3 == n_points_comps );
     assert( texcoords_buffer && 2 == n_texcoord_comps );
-    tan_ptr = malloc( sizeof( float ) * 3 * n_vertices );
+    size_t tans_sz = sizeof( float ) * 3 * n_vertices;
+    tan_ptr        = malloc( tans_sz );
 
-    if ( indices_buffer && mesh->indices_vbo && mesh->n_indices > 0 ) {
-      tan_ptr = malloc( sizeof( float ) * 3 * n_vertices );
+    if ( indices_buffer && mesh->indices_vbo && indices_buffer_sz > 0 ) {
       printf( "storing tangents...2 for %i indices\n", mesh->n_indices );
-
       // NB idx is an index into indices!! and i'm using i as the actual vector array index
       for ( size_t idx = 0; idx < mesh->n_indices; idx += 3 ) {
         size_t index_a = 0, index_b = 0, index_c = 0;
@@ -276,6 +286,7 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
         }; break; // uint
         default: assert( false && "unhandled indices type" ); break;
         }
+
         vec3 pos[3];
         memcpy( &pos[0].x, &points_buffer[index_a * n_points_comps], n_points_comps * sizeof( float ) );
         memcpy( &pos[1].x, &points_buffer[index_b * n_points_comps], n_points_comps * sizeof( float ) );
@@ -289,7 +300,8 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
         vec2 delta_uv_a = sub_vec2_vec2( uv[1], uv[0] );
         vec2 delta_uv_b = sub_vec2_vec2( uv[2], uv[0] );
         float denom     = delta_uv_a.x * delta_uv_b.y - delta_uv_a.y * delta_uv_b.x;
-        assert( denom != 0.0f );
+        // NB this is true for Damaged Helmet
+        if ( 0.0f == denom ) { denom = 0.0001f; }
         float r  = 1.0f / denom;
         vec3 tan = ( vec3 ){
           .x = r * ( delta_uv_b.y * edge_a.x - delta_uv_a.y * edge_b.x ), //
@@ -297,14 +309,18 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
           .z = r * ( delta_uv_b.y * edge_a.z - delta_uv_a.y * edge_b.z )  //
         };
         // each triangle has 1 tangent ( same for all 3 vertices )
+        if ( index_c * 3 * sizeof( float ) >= tans_sz ) {
+          fprintf( stderr, "ERROR: (non-indexed) at vert idx=%i. index a =%i, b= %i, c=%i, and total sz = %u\n", idx, index_a, index_b, index_c, tans_sz );
+        }
+        assert( index_c * 3 * sizeof( float ) < tans_sz );
         memcpy( &tan_ptr[index_a * 3], &tan.x, sizeof( float ) * 3 );
         memcpy( &tan_ptr[index_b * 3], &tan.x, sizeof( float ) * 3 );
         memcpy( &tan_ptr[index_c * 3], &tan.x, sizeof( float ) * 3 );
-        printf( "stored tan %i,%i,%i\n", index_a, index_b, index_c );
+        // printf( "stored tan %i,%i,%i\n", index_a, index_b, index_c );
       } // endfor each triangle
 
     } else {
-      printf( "storing tangents...2 for %i vertices\n", mesh->n_vertices );
+      printf( "storing tangents...2 for %i vertices (%u comps)\n", mesh->n_vertices );
 
       // NB idx is an index into indices!! and i'm using i as the actual vector array index
       for ( size_t idx = 0; idx < mesh->n_vertices; idx += 3 ) {
@@ -332,10 +348,14 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
           .z = r * ( delta_uv_b.y * edge_a.z - delta_uv_a.y * edge_b.z )  //
         };
         // each triangle has 1 tangent ( same for all 3 vertices )
+        if ( index_c * 3 * sizeof( float ) >= tans_sz ) {
+          fprintf( stderr, "ERROR: (non-indexed) at vert idx=%i. index a =%i, b= %i, c=%i, and total sz = %u\n", idx, index_a, index_b, index_c, tans_sz );
+        }
+        assert( index_c * 3 * sizeof( float ) < tans_sz );
         memcpy( &tan_ptr[index_a * 3], &tan.x, sizeof( float ) * 3 );
         memcpy( &tan_ptr[index_b * 3], &tan.x, sizeof( float ) * 3 );
         memcpy( &tan_ptr[index_c * 3], &tan.x, sizeof( float ) * 3 );
-        printf( "stored tan %i,%i,%i\n", index_a, index_b, index_c );
+        // printf( "stored tan %i,%i,%i\n", index_a, index_b, index_c );
       } // endfor each triangle
     }
     //
@@ -380,16 +400,6 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
   }
   if ( indices_buffer && mesh->indices_vbo ) {
-    mesh->indices_type = indices_type;
-    mesh->n_indices    = 0;
-    if ( indices_buffer_sz > 0 ) {
-      switch ( indices_type ) {
-      case 0: mesh->n_indices = indices_buffer_sz; break;     // ubyte
-      case 1: mesh->n_indices = indices_buffer_sz / 2; break; // ushort
-      case 2: mesh->n_indices = indices_buffer_sz / 4; break; // uint
-      default: break;
-      }
-    }
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, mesh->indices_vbo );
     glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices_buffer_sz, indices_buffer, usage );
   }

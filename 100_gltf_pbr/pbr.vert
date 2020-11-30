@@ -23,11 +23,11 @@ void main() {
 	{
 		vec3 n_wor         = normalize( v_n_wor );
 		vec3 tangent_wor   = normalize( vec3( u_M * vec4( a_vtan, 0.0 ) ) );
-		vec3 bitangent_wor = normalize( cross( n_wor, tangent_wor ) ) * -1.0; // * tan.w
+		vec3 bitangent_wor = normalize( cross( n_wor, tangent_wor ) ); // * tan.w
 		// transpose(TBN) goes from world to tangent space
 		// TBN goes from tangent to world space
 		TBN = mat3( tangent_wor, bitangent_wor, n_wor );
-		v_tan = bitangent_wor;
+		v_tan = a_vtan;
 	}
 
 	gl_Position = u_P * u_V * vec4( v_p_wor, 1.0 );
