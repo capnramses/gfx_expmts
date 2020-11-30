@@ -185,7 +185,7 @@ int main( int argc, char** argv ) {
 
   gfx_mesh_t sphere_mesh =
     gfx_create_mesh_from_mem( &verts[0].x, 3, NULL, 0, NULL, 0, NULL, 0, indices, sizeof( uint32_t ) * n_indices, GFX_INDICES_TYPE_UINT32, n_verts, false );
-  gfx_shader_t sphere_shader = gfx_create_shader_program_from_files( "sphere.vert", "sphere_gltf.frag" );
+  gfx_shader_t pbr_shader    = gfx_create_shader_program_from_files( "pbr.vert", "pbr.frag" );
   gfx_shader_t cube_shader   = gfx_create_shader_program_from_files( "cube.vert", "cube.frag" );
   gfx_texture_t cube_texture = cubemap_from_images();
   // TODO(Anton) does not need mips.
@@ -380,12 +380,12 @@ int main( int argc, char** argv ) {
         float roughness = (float)xi / (float)( n_across - 1 );
         float metallic  = (float)yi / (float)( n_down - 1 );
         // printf( "roughness = %f, metallic = %f\n", roughness, metallic );
-        gfx_uniform1f( sphere_shader, sphere_shader.u_roughness_factor, roughness );
-        gfx_uniform1f( sphere_shader, sphere_shader.u_metallic_factor, metallic );
-        gfx_uniform3f( sphere_shader, sphere_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
-        gfx_uniform3f( sphere_shader, sphere_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
+        gfx_uniform1f( pbr_shader, pbr_shader.u_roughness_factor, roughness );
+        gfx_uniform1f( pbr_shader, pbr_shader.u_metallic_factor, metallic );
+        gfx_uniform3f( pbr_shader, pbr_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
+        gfx_uniform3f( pbr_shader, pbr_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
 
-        gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
+        gfx_draw_mesh( sphere_mesh, GFX_PT_TRIANGLES, pbr_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
       }
     }
 #endif
@@ -399,13 +399,13 @@ int main( int argc, char** argv ) {
       mat4 R       = mult_mat4_mat4( Ry, Rx );
       mat4 TR      = mult_mat4_mat4( T, R );
       mat4 M       = mult_mat4_mat4( TR, S );
-      gfx_uniform1f( sphere_shader, sphere_shader.u_roughness_factor, 0.2f );
-      gfx_uniform1f( sphere_shader, sphere_shader.u_metallic_factor, 1.0f );
-      gfx_uniform3f( sphere_shader, sphere_shader.u_base_colour_rgba, 1.0f, 0.0f, 0.0f );
-      gfx_uniform3f( sphere_shader, sphere_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
-      gfx_uniform3f( sphere_shader, sphere_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
+      gfx_uniform1f( pbr_shader, pbr_shader.u_roughness_factor, 0.2f );
+      gfx_uniform1f( pbr_shader, pbr_shader.u_metallic_factor, 1.0f );
+      gfx_uniform3f( pbr_shader, pbr_shader.u_base_colour_rgba, 1.0f, 0.0f, 0.0f );
+      gfx_uniform3f( pbr_shader, pbr_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
+      gfx_uniform3f( pbr_shader, pbr_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
       for ( uint32_t mi = 0; mi < gltf_scene.n_meshes; mi++ ) {
-        gfx_draw_mesh( gltf_scene.meshes_ptr[mi], GFX_PT_TRIANGLES, sphere_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
+        gfx_draw_mesh( gltf_scene.meshes_ptr[mi], GFX_PT_TRIANGLES, pbr_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
       }
     }
 
