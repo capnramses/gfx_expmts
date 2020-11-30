@@ -2,6 +2,7 @@
 gcc -Wall -g \
 main.c \
 gfx.c \
+gltf.c \
 apg_maths.c \
 apg_ply.c \
 input.c \

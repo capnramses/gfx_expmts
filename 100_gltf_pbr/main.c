@@ -65,6 +65,7 @@ Plan
 // - put a light-coloured sphere on the light position
 
 #include "gfx.h"
+#include "gltf.h"
 #include "apg_maths.h"
 #include "input.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -151,7 +152,20 @@ gfx_texture_t cubemap_from_images() {
   return tex;
 }
 
-int main() {
+int main( int argc, char** argv ) {
+  if ( argc < 2 ) {
+    printf( "usage: ./a.out MY_MESH.GLTF\n" );
+    return 0;
+  }
+
+  gltf_scene_t gltf_scene = { 0 };
+  { // load gltf
+    printf( "loading `%s`\n", argv[1] );
+    bool res = gltf_load( argv[1], &gltf_scene );
+    if ( !res ) { return 1; }
+    printf( "loaded %u meshes from GLTF file\n", gltf_scene.n_meshes );
+  }
+
   // load a sphere mesh
   vec3 verts[4096];
   uint32_t indices[4096];
@@ -384,8 +398,10 @@ int main() {
   }
 
   gfx_stop();
-
+  bool res = gltf_free( &gltf_scene );
+  if ( !res ) { fprintf( stderr, "ERROR: freeing gltf scene\n" ); }
   //
 
+  printf( "done\n" );
   return 0;
 }
