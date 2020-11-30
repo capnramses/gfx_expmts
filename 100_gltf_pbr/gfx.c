@@ -1,5 +1,6 @@
 #include "gfx.h"
 #include "glcontext.h"
+#include "apg_maths.h"
 #include "apg_ply.h"
 #include <assert.h>
 #include <stdio.h>
@@ -10,6 +11,7 @@
 #define GFX_SHADER_BINDING_VT 1
 #define GFX_SHADER_BINDING_VN 2
 #define GFX_SHADER_BINDING_VC 3
+#define GFX_SHADER_BINDING_VTAN 4
 #define GFX_MAX_SHADER_STR 20000
 
 GLFWwindow* gfx_window_ptr; // extern in apg_glcontext.h
@@ -96,7 +98,7 @@ bool gfx_start( const char* window_title, int w, int h, bool fullscreen ) {
   }
   {
     float ss_quad_pos[] = { -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0 };
-    gfx_ss_quad_mesh    = gfx_create_mesh_from_mem( ss_quad_pos, 2, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 0, 4, false );
+    gfx_ss_quad_mesh    = gfx_create_mesh_from_mem( ss_quad_pos, 2, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 0, 4, false, false );
   }
   { //
     gfx_cube_mesh  = ( gfx_mesh_t ){ .n_vertices = 36 };
@@ -200,7 +202,7 @@ gfx_mesh_t gfx_create_mesh_from_mem(                                            
   const float* normals_buffer, int n_normal_comps,                                       //
   const float* colours_buffer, int n_colours_comps,                                      //
   const void* indices_buffer, size_t indices_buffer_sz, gfx_indices_type_t indices_type, //
-  int n_vertices, bool dynamic ) {
+  int n_vertices, bool dynamic, bool calc_tangents ) {
   gfx_mesh_t mesh = ( gfx_mesh_t ){ .indices_type = indices_type, .n_vertices = n_vertices, .dynamic = dynamic };
 
   if ( !points_buffer || n_points_comps <= 0 ) {
@@ -210,13 +212,14 @@ gfx_mesh_t gfx_create_mesh_from_mem(                                            
 
   glGenVertexArrays( 1, &mesh.vao );
   glGenBuffers( 1, &mesh.points_vbo );
+  if ( calc_tangents ) { glGenBuffers( 1, &mesh.tangents_vbo ); }
   if ( colours_buffer && n_colours_comps > 0 ) { glGenBuffers( 1, &mesh.colours_vbo ); }
   if ( texcoords_buffer && n_texcoord_comps > 0 ) { glGenBuffers( 1, &mesh.texcoords_vbo ); }
   if ( normals_buffer && n_normal_comps > 0 ) { glGenBuffers( 1, &mesh.normals_vbo ); }
   if ( indices_buffer ) { glGenBuffers( 1, &mesh.indices_vbo ); }
 
   gfx_update_mesh_from_mem( &mesh, points_buffer, n_points_comps, texcoords_buffer, n_texcoord_comps, normals_buffer, n_normal_comps, colours_buffer,
-    n_colours_comps, indices_buffer, indices_buffer_sz, indices_type, n_vertices, dynamic );
+    n_colours_comps, indices_buffer, indices_buffer_sz, indices_type, n_vertices, dynamic, calc_tangents );
 
   return mesh;
 }
@@ -227,7 +230,7 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
   const float* normals_buffer, int n_normal_comps,                                       //
   const float* colours_buffer, int n_colours_comps,                                      //
   const void* indices_buffer, size_t indices_buffer_sz, gfx_indices_type_t indices_type, //
-  int n_vertices, bool dynamic ) {
+  int n_vertices, bool dynamic, bool calc_tangents ) {
   assert( points_buffer && n_points_comps > 0 );
   if ( !points_buffer || n_points_comps <= 0 ) { return; }
   assert( mesh && mesh->vao && mesh->points_vbo );
@@ -236,6 +239,109 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
   GLenum usage     = !dynamic ? GL_STATIC_DRAW : GL_DYNAMIC_DRAW;
   mesh->n_vertices = n_vertices;
   mesh->dynamic    = dynamic;
+
+  float* tan_ptr = NULL;
+
+  // NOTE: assumes triangles here
+  if ( calc_tangents ) {
+    assert( points_buffer && 3 == n_points_comps );
+    assert( texcoords_buffer && 2 == n_texcoord_comps );
+    tan_ptr = malloc( sizeof( float ) * 3 * n_vertices );
+
+    if ( indices_buffer && mesh->indices_vbo && mesh->n_indices > 0 ) {
+      tan_ptr = malloc( sizeof( float ) * 3 * n_vertices );
+      printf( "storing tangents...2 for %i indices\n", mesh->n_indices );
+
+      // NB idx is an index into indices!! and i'm using i as the actual vector array index
+      for ( size_t idx = 0; idx < mesh->n_indices; idx += 3 ) {
+        size_t index_a = 0, index_b = 0, index_c = 0;
+        switch ( indices_type ) {
+        case GFX_INDICES_TYPE_UBYTE: {
+          uint8_t* indices_ptr = (uint8_t*)indices_buffer;
+          index_a              = indices_ptr[idx + 0];
+          index_b              = indices_ptr[idx + 1];
+          index_c              = indices_ptr[idx + 2];
+        }; break; // ubyte
+        case GFX_INDICES_TYPE_UINT16: {
+          uint16_t* indices_ptr = (uint16_t*)indices_buffer;
+          index_a               = indices_ptr[idx + 0];
+          index_b               = indices_ptr[idx + 1];
+          index_c               = indices_ptr[idx + 2];
+        }; break; // ushort
+        case GFX_INDICES_TYPE_UINT32: {
+          uint32_t* indices_ptr = (uint32_t*)indices_buffer;
+          index_a               = indices_ptr[idx + 0];
+          index_b               = indices_ptr[idx + 1];
+          index_c               = indices_ptr[idx + 2];
+        }; break; // uint
+        default: assert( false && "unhandled indices type" ); break;
+        }
+        vec3 pos[3];
+        memcpy( &pos[0].x, &points_buffer[index_a * n_points_comps], n_points_comps * sizeof( float ) );
+        memcpy( &pos[1].x, &points_buffer[index_b * n_points_comps], n_points_comps * sizeof( float ) );
+        memcpy( &pos[2].x, &points_buffer[index_c * n_points_comps], n_points_comps * sizeof( float ) );
+        vec2 uv[3];
+        memcpy( &uv[0].x, &texcoords_buffer[index_a * n_texcoord_comps], n_texcoord_comps * sizeof( float ) );
+        memcpy( &uv[1].x, &texcoords_buffer[index_b * n_texcoord_comps], n_texcoord_comps * sizeof( float ) );
+        memcpy( &uv[2].x, &texcoords_buffer[index_c * n_texcoord_comps], n_texcoord_comps * sizeof( float ) );
+        vec3 edge_a     = sub_vec3_vec3( pos[1], pos[0] );
+        vec3 edge_b     = sub_vec3_vec3( pos[2], pos[0] );
+        vec2 delta_uv_a = sub_vec2_vec2( uv[1], uv[0] );
+        vec2 delta_uv_b = sub_vec2_vec2( uv[2], uv[0] );
+        float denom     = delta_uv_a.x * delta_uv_b.y - delta_uv_a.y * delta_uv_b.x;
+        assert( denom != 0.0f );
+        float r  = 1.0f / denom;
+        vec3 tan = ( vec3 ){
+          .x = r * ( delta_uv_b.y * edge_a.x - delta_uv_a.y * edge_b.x ), //
+          .y = r * ( delta_uv_b.y * edge_a.y - delta_uv_a.y * edge_b.y ), //
+          .z = r * ( delta_uv_b.y * edge_a.z - delta_uv_a.y * edge_b.z )  //
+        };
+        // each triangle has 1 tangent ( same for all 3 vertices )
+        memcpy( &tan_ptr[index_a * 3], &tan.x, sizeof( float ) * 3 );
+        memcpy( &tan_ptr[index_b * 3], &tan.x, sizeof( float ) * 3 );
+        memcpy( &tan_ptr[index_c * 3], &tan.x, sizeof( float ) * 3 );
+        printf( "stored tan %i,%i,%i\n", index_a, index_b, index_c );
+      } // endfor each triangle
+
+    } else {
+      printf( "storing tangents...2 for %i vertices\n", mesh->n_vertices );
+
+      // NB idx is an index into indices!! and i'm using i as the actual vector array index
+      for ( size_t idx = 0; idx < mesh->n_vertices; idx += 3 ) {
+        size_t index_a = idx, index_b = idx + 1, index_c = idx + 2;
+
+        vec3 pos[3];
+        memcpy( &pos[0].x, &points_buffer[index_a * n_points_comps], n_points_comps * sizeof( float ) );
+        memcpy( &pos[1].x, &points_buffer[index_b * n_points_comps], n_points_comps * sizeof( float ) );
+        memcpy( &pos[2].x, &points_buffer[index_c * n_points_comps], n_points_comps * sizeof( float ) );
+        vec2 uv[3];
+        memcpy( &uv[0].x, &texcoords_buffer[index_a * n_texcoord_comps], n_texcoord_comps * sizeof( float ) );
+        memcpy( &uv[1].x, &texcoords_buffer[index_b * n_texcoord_comps], n_texcoord_comps * sizeof( float ) );
+        memcpy( &uv[2].x, &texcoords_buffer[index_c * n_texcoord_comps], n_texcoord_comps * sizeof( float ) );
+        vec3 edge_a     = sub_vec3_vec3( pos[1], pos[0] );
+        vec3 edge_b     = sub_vec3_vec3( pos[2], pos[0] );
+        vec2 delta_uv_a = sub_vec2_vec2( uv[1], uv[0] );
+        vec2 delta_uv_b = sub_vec2_vec2( uv[2], uv[0] );
+        float denom     = delta_uv_a.x * delta_uv_b.y - delta_uv_a.y * delta_uv_b.x;
+        // NB this is true for Damaged Helmet
+        if ( 0.0f == denom ) { denom = 0.0001f; }
+        float r  = 1.0f / denom;
+        vec3 tan = ( vec3 ){
+          .x = r * ( delta_uv_b.y * edge_a.x - delta_uv_a.y * edge_b.x ), //
+          .y = r * ( delta_uv_b.y * edge_a.y - delta_uv_a.y * edge_b.y ), //
+          .z = r * ( delta_uv_b.y * edge_a.z - delta_uv_a.y * edge_b.z )  //
+        };
+        // each triangle has 1 tangent ( same for all 3 vertices )
+        memcpy( &tan_ptr[index_a * 3], &tan.x, sizeof( float ) * 3 );
+        memcpy( &tan_ptr[index_b * 3], &tan.x, sizeof( float ) * 3 );
+        memcpy( &tan_ptr[index_c * 3], &tan.x, sizeof( float ) * 3 );
+        printf( "stored tan %i,%i,%i\n", index_a, index_b, index_c );
+      } // endfor each triangle
+    }
+    //
+    //
+    //
+  }
 
   glBindVertexArray( mesh->vao );
   {
@@ -266,6 +372,13 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
     glVertexAttribPointer( GFX_SHADER_BINDING_VC, n_colours_comps, GL_FLOAT, GL_FALSE, 0, NULL );
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
   }
+  if ( tan_ptr && mesh->tangents_vbo ) {
+    glBindBuffer( GL_ARRAY_BUFFER, mesh->tangents_vbo );
+    glBufferData( GL_ARRAY_BUFFER, sizeof( float ) * 3 * n_vertices, tan_ptr, usage );
+    glEnableVertexAttribArray( GFX_SHADER_BINDING_VTAN );
+    glVertexAttribPointer( GFX_SHADER_BINDING_VTAN, 3, GL_FLOAT, GL_FALSE, 0, NULL );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+  }
   if ( indices_buffer && mesh->indices_vbo ) {
     mesh->indices_type = indices_type;
     mesh->n_indices    = 0;
@@ -281,10 +394,12 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
     glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices_buffer_sz, indices_buffer, usage );
   }
   glBindVertexArray( 0 );
+
+  if ( tan_ptr ) { free( tan_ptr ); }
 }
 
 // requires apg_ply
-gfx_mesh_t gfx_mesh_create_from_ply( const char* ply_filename ) {
+gfx_mesh_t gfx_mesh_create_from_ply( const char* ply_filename, bool calc_tangents ) {
   gfx_mesh_t mesh = ( gfx_mesh_t ){ .n_vertices = 0 };
   if ( !ply_filename ) { return mesh; }
   apg_ply_t ply = ( apg_ply_t ){ .n_vertices = 0 };
@@ -308,7 +423,7 @@ gfx_mesh_t gfx_mesh_create_from_ply( const char* ply_filename ) {
   }
 
   mesh = gfx_create_mesh_from_mem( ply.positions_ptr, ply.n_positions_comps, ply.texcoords_ptr, ply.n_texcoords_comps, ply.normals_ptr, ply.n_normals_comps,
-    rgb_f, ply.n_colours_comps, NULL, 0, GFX_INDICES_TYPE_UBYTE, ply.n_vertices, false );
+    rgb_f, ply.n_colours_comps, NULL, 0, GFX_INDICES_TYPE_UBYTE, ply.n_vertices, false, calc_tangents );
 
   apg_ply_free( &ply );
   free( rgb_f );
@@ -320,6 +435,7 @@ void gfx_delete_mesh( gfx_mesh_t* mesh ) {
   assert( mesh );
 
   if ( mesh->indices_vbo ) { glDeleteBuffers( 1, &mesh->indices_vbo ); }
+  if ( mesh->tangents_vbo ) { glDeleteBuffers( 1, &mesh->tangents_vbo ); }
   if ( mesh->colours_vbo ) { glDeleteBuffers( 1, &mesh->colours_vbo ); }
   if ( mesh->normals_vbo ) { glDeleteBuffers( 1, &mesh->normals_vbo ); }
   if ( mesh->texcoords_vbo ) { glDeleteBuffers( 1, &mesh->texcoords_vbo ); }
@@ -396,6 +512,7 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   glBindAttribLocation( shader.program_gl, GFX_SHADER_BINDING_VT, "a_vt" );
   glBindAttribLocation( shader.program_gl, GFX_SHADER_BINDING_VN, "a_vn" );
   glBindAttribLocation( shader.program_gl, GFX_SHADER_BINDING_VC, "a_vc" );
+  glBindAttribLocation( shader.program_gl, GFX_SHADER_BINDING_VTAN, "a_vtan" );
   glLinkProgram( shader.program_gl );
   glDeleteShader( vs );
   glDeleteShader( fs );

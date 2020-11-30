@@ -6,10 +6,18 @@
 in vec3 v_p_wor;
 in vec2 v_st;
 in vec3 v_n_wor;
+in vec3 v_tan;
+in mat3 TBN;
 
 uniform samplerCube u_texture_irradiance_map;
 uniform samplerCube u_texture_prefilter_map;
 uniform sampler2D   u_texture_brdf_lut;
+
+uniform sampler2D u_texture_albedo;
+uniform sampler2D u_texture_metal_roughness;
+uniform sampler2D u_texture_emissive;
+uniform sampler2D u_texture_ambient_occlusion;
+uniform sampler2D u_texture_normal;
 
 uniform float u_roughness_factor;
 uniform float u_metallic_factor;
@@ -118,12 +126,28 @@ void main() {
 		vec3 red    = vec3( 1.0, 0.0, 0.0 );
 		vec3 purple = vec3( 1.0, 0.0, 1.0 );
 
+		// TODO(Anton):
+		// "If the metallic map has gray values lower than 235 sRGB you need to lower the “raw” metal reflectance value in the base color."
+		vec3 albedo_texel_rgb = texture( u_texture_albedo, v_st ).rgb;
+		// weirdly i think gb are used but not B so vec2 makes no sense
+		vec3 metal_roughness_texel_rgb = texture( u_texture_metal_roughness, v_st ).rgb;
+		vec3 emissive_texel_rgb = texture( u_texture_emissive, v_st ).rgb;
+		vec3 ambient_occlusion_texel_rgb = texture( u_texture_ambient_occlusion, v_st ).rgb;
+		vec3 normal_texel_rgb = texture( u_texture_normal, v_st ).rgb;
+		vec3 n_tan = normalize( normal_texel_rgb * 2.0 - 1.0 );
+		n_wor = normalize( TBN * n_tan );
 
-		vec3 albedo = u_base_colour_rgba.rgb;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
-		float metal = clamp( u_metallic_factor, 0.01, 1.0 );
-		float roughness = clamp( u_roughness_factor, 0.01, 1.0 );
-			// IOR term but we use metal term to differentiate from a dead-on angle.
-			vec3 f0       = mix( vec3( 0.04 ), albedo, metal ); // F0 is the base reflectivity of the surface - calculated using index of refraction IOR
+		vec3 albedo     = pow( albedo_texel_rgb, vec3( 2.2 ) );
+		float metal     = metal_roughness_texel_rgb.b; // NOTE(Anton) not sure if linear!
+		float roughness = metal_roughness_texel_rgb.g; // NOTE(Anton) not sure if linear!
+		float ao        = ambient_occlusion_texel_rgb.r;
+		 // TODO later - ambient factor if no texture
+		//vec3 albedo = u_base_colour_rgba.rgb;//vec3( 1.0, 0.71, 0.29 );//vec3( 1.00, 0.86, 0.57 );//vec3( 1.0, 0.0, 0.0 );
+	  //float metal = clamp( u_metallic_factor, 0.01, 1.0 );
+		//float roughness = clamp( u_roughness_factor, 0.01, 1.0 );
+			
+		// IOR term but we use metal term to differentiate from a dead-on angle.
+		vec3 f0       = mix( vec3( 0.04 ), albedo, metal ); // F0 is the base reflectivity of the surface - calculated using index of refraction IOR
 
 		vec3 v_to_p_dir_wor   = normalize( u_cam_pos_wor - v_p_wor );     // V
 		vec3 L_o              = vec3( 0.0 ); // total reflected light
@@ -155,7 +179,6 @@ void main() {
     	L_o += ( k_d * albedo / M_PI + specular ) * radiance * n_dot_l;
 		//////
 
-		float ao = 1.0; // TODO later - load from image!
 		vec3 ambient = vec3( 0.03 ) * albedo * ao;
 
 		vec3 prefilteredColor;
@@ -195,6 +218,8 @@ void main() {
 #else
 	vec3 rgb = blinn_phong( n_wor, u_light_pos_wor, vec3( 0.8 ) );
 #endif
+
+	rgb += emissive_texel_rgb;
 
 	o_frag_colour.rgb = vec3( rgb );
 	o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );

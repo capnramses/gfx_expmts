@@ -166,7 +166,7 @@ int main( int argc, char** argv ) {
   gltf_scene_t gltf_scene = { 0 };
   { // load gltf
     printf( "loading `%s`\n", argv[1] );
-    bool res = gltf_load( argv[1], &gltf_scene );
+    bool res = gltf_load( argv[1], &gltf_scene, true );
     if ( !res ) { return 1; }
     printf( "loaded %u meshes from GLTF file\n", gltf_scene.n_meshes );
 

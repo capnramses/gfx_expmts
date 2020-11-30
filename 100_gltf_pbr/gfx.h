@@ -14,7 +14,7 @@ typedef enum gfx_indices_type_t { GFX_INDICES_TYPE_UBYTE = 0, GFX_INDICES_TYPE_U
 
 typedef struct gfx_mesh_t {
   uint32_t vao;
-  uint32_t points_vbo, texcoords_vbo, normals_vbo, colours_vbo, indices_vbo;
+  uint32_t points_vbo, texcoords_vbo, normals_vbo, colours_vbo, tangents_vbo, indices_vbo;
   size_t n_vertices;
   size_t n_indices;
   gfx_indices_type_t indices_type; // 0=ubyte, 1=ushort, 2=uint
@@ -80,7 +80,7 @@ gfx_mesh_t gfx_create_mesh_from_mem(                                            
   const float* normals_buffer, int n_normal_comps,                                       //
   const float* colours_buffer, int n_colours_comps,                                      //
   const void* indices_buffer, size_t indices_buffer_sz, gfx_indices_type_t indices_type, //
-  int n_vertices, bool dynamic );
+  int n_vertices, bool dynamic, bool calc_tangents );
 
 void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                         //
   const float* points_buffer, int n_points_comps,                                        //
@@ -88,10 +88,10 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
   const float* normals_buffer, int n_normal_comps,                                       //
   const float* colours_buffer, int n_colours_comps,                                      //
   const void* indices_buffer, size_t indices_buffer_sz, gfx_indices_type_t indices_type, //
-  int n_vertices, bool dynamic );
+  int n_vertices, bool dynamic, bool calc_tangents );
 
 // requires apg_ply
-gfx_mesh_t gfx_mesh_create_from_ply( const char* ply_filename );
+gfx_mesh_t gfx_mesh_create_from_ply( const char* ply_filename, bool calc_tangents );
 
 void gfx_delete_mesh( gfx_mesh_t* mesh );
 

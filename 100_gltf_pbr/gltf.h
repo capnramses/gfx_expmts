@@ -32,7 +32,7 @@ typedef struct gltf_scene_t {
   gltf_material_t material;
 } gltf_scene_t;
 
-bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr );
+bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr, bool calc_tangents );
 
 bool gltf_free( gltf_scene_t* gltf_scene_ptr );
 

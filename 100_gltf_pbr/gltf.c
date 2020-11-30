@@ -4,7 +4,7 @@
 // NB assuming already included
 #include "stb/stb_image.h"
 
-bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
+bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr, bool calc_tangents ) {
   if ( !filename || !gltf_scene_ptr ) { return false; }
 
   char asset_path[2048];
@@ -65,6 +65,9 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
           cgltf_free( data_ptr );
           return 1;
         }
+        // NOTE -- not all are sRGB so not using flag here and doing pow() in shader instead
+        gltf_scene_ptr->textures_ptr[i] =
+          gfx_create_texture_from_mem( img_ptr, x, y, comp, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .repeats = true } );
       } else {
         printf( "UNHANDLED: image %i is embedded\n", i );
       }
@@ -146,8 +149,9 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
           } // endif
 
         } // endfor k vertex attributes
-        gltf_scene_ptr->meshes_ptr[i] =
-          gfx_create_mesh_from_mem( points_ptr, 3, texcoords_ptr, 2, normals_ptr, 3, colours_ptr, 3, indices_ptr, indices_sz, indices_type, n_vertices, false );
+
+        gltf_scene_ptr->meshes_ptr[i] = gfx_create_mesh_from_mem(
+          points_ptr, 3, texcoords_ptr, 2, normals_ptr, 3, colours_ptr, 3, indices_ptr, indices_sz, indices_type, n_vertices, false, calc_tangents );
 
         // set up material for mesh (link texture 'views' to loaded images as an index)
         gltf_scene_ptr->material = gltf_default_material();
