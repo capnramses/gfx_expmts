@@ -64,16 +64,11 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
             data_ptr->meshes[i].primitives[j].attributes[k].index );
 
           if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_position ) {
-            //
             cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
-            n_vertices          = (uint32_t)acc->count; // note gltf position is a vec3 so this is number of vertices, not number of floats
+            n_vertices          = (int)acc->count; // note gltf position is a vec3 so this is number of vertices, not number of floats
             printf( "n verts = %u\n", n_vertices );
-
-            if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_position ) {
-              cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
-              n_vertices          = (int)acc->count; // note gltf position is a vec3 so this is number of vertices, not number of floats
-              uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
-              points_ptr          = (float*)&bytes_ptr[acc->buffer_view->offset];
+            uint8_t* bytes_ptr = (uint8_t*)acc->buffer_view->buffer->data;
+            points_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
 
 // TODO first validate hasmin hasmax
 #if 0
@@ -92,22 +87,21 @@ bool gltf_load( const char* filename, gltf_scene_t* gltf_scene_ptr ) {
               scale_to_fit = 1.0 / biggest;
 #endif
 
-            } else if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_texcoord ) {
-              cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
-              uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
-              texcoords_ptr       = (float*)&bytes_ptr[acc->buffer_view->offset];
-            } else if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_color ) {
-              cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
-              uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
-              colours_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
-            } else if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_normal ) {
-              cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
-              uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
-              normals_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
-            } // endif
-
+          } else if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_texcoord ) {
+            cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
+            uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
+            texcoords_ptr       = (float*)&bytes_ptr[acc->buffer_view->offset];
+          } else if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_color ) {
+            cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
+            uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
+            colours_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
+          } else if ( data_ptr->meshes[i].primitives[j].attributes[k].type == cgltf_attribute_type_normal ) {
+            cgltf_accessor* acc = data_ptr->meshes[i].primitives[j].attributes[k].data;
+            uint8_t* bytes_ptr  = (uint8_t*)acc->buffer_view->buffer->data;
+            normals_ptr         = (float*)&bytes_ptr[acc->buffer_view->offset];
           } // endif
-        }   // endfor k vertex attributes
+
+        } // endfor k vertex attributes
         gltf_scene_ptr->meshes_ptr[i] =
           gfx_create_mesh_from_mem( points_ptr, 3, texcoords_ptr, 2, normals_ptr, 3, colours_ptr, 3, indices_ptr, indices_sz, indices_type, n_vertices, false );
       } // endfor j primitives
