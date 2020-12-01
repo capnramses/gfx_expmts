@@ -247,16 +247,22 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
     cJSON* doubleSided_ptr      = cJSON_GetObjectItem( m_ptr, "doubleSided" );
     cJSON* pbr_ptr              = cJSON_GetObjectItem( m_ptr, "pbrMetallicRoughness" );
 
-    gltf_ptr->materials_ptr[m].normal_texture_idx    = -1;
-    gltf_ptr->materials_ptr[m].occlusion_texture_idx = -1;
+    gltf_ptr->materials_ptr[m].normal_texture_idx                                    = -1;
+    gltf_ptr->materials_ptr[m].occlusion_texture_idx                                 = -1;
+    gltf_ptr->materials_ptr[m].pbr_metallic_roughness.base_colour_texture_idx        = -1;
+    gltf_ptr->materials_ptr[m].pbr_metallic_roughness.metallic_roughness_texture_idx = -1;
     if ( normalTexture_ptr ) { gltf_ptr->materials_ptr[m].normal_texture_idx = normalTexture_ptr->valueint; }
     if ( occlusionTexture_ptr ) { gltf_ptr->materials_ptr[m].occlusion_texture_idx = occlusionTexture_ptr->valueint; }
     if ( alphaMode_ptr ) { gltf_ptr->materials_ptr[m].alpha_blend = true; }
     if ( doubleSided_ptr ) { gltf_ptr->materials_ptr[m].is_doubled_sided = true; }
     if ( name_ptr ) { strncat( gltf_ptr->materials_ptr[m].name_str, name_ptr->valuestring, GLTF_NAME_MAX - 1 ); }
     if ( pbr_ptr ) {
-      gltf_ptr->materials_ptr[m].pbr_metallic_roughness.base_colour_texture_idx        = cJSON_GetObjectItem( pbr_ptr, "baseColorTexture" )->valueint;
-      gltf_ptr->materials_ptr[m].pbr_metallic_roughness.metallic_roughness_texture_idx = cJSON_GetObjectItem( pbr_ptr, "metallicRoughnessTexture" )->valueint;
+      cJSON* baseColorTexture_ptr         = cJSON_GetObjectItem( pbr_ptr, "baseColorTexture" );
+      cJSON* metallicRoughnessTexture_ptr = cJSON_GetObjectItem( pbr_ptr, "metallicRoughnessTexture" );
+      if ( baseColorTexture_ptr ) { gltf_ptr->materials_ptr[m].pbr_metallic_roughness.base_colour_texture_idx = baseColorTexture_ptr->valueint; }
+      if ( metallicRoughnessTexture_ptr ) {
+        gltf_ptr->materials_ptr[m].pbr_metallic_roughness.metallic_roughness_texture_idx = metallicRoughnessTexture_ptr->valueint;
+      }
     }
   }
 
