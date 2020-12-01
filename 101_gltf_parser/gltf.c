@@ -68,7 +68,9 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
   cJSON* scenes_ptr       = cJSON_GetObjectItem( json_ptr, "scenes" );
   cJSON* textures_ptr     = cJSON_GetObjectItem( json_ptr, "textures" );
 
+  //
   // count top-level array elements
+  //
   if ( accessors_ptr && cJSON_IsArray( accessors_ptr ) ) { gltf_ptr->n_accessors = cJSON_GetArraySize( accessors_ptr ); }
   if ( buffers_ptr && cJSON_IsArray( buffers_ptr ) ) { gltf_ptr->n_buffers = cJSON_GetArraySize( buffers_ptr ); }
   if ( buffer_views_ptr && cJSON_IsArray( buffer_views_ptr ) ) { gltf_ptr->n_buffer_views = cJSON_GetArraySize( buffer_views_ptr ); }
@@ -80,7 +82,9 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
   if ( scenes_ptr && cJSON_IsArray( scenes_ptr ) ) { gltf_ptr->n_scenes = cJSON_GetArraySize( scenes_ptr ); }
   if ( textures_ptr && cJSON_IsArray( textures_ptr ) ) { gltf_ptr->n_textures = cJSON_GetArraySize( textures_ptr ); }
 
+  //
   // alloc structs
+  //
   if ( gltf_ptr->n_accessors > 0 ) {
     gltf_ptr->accessors_ptr = calloc( sizeof( gltf_accessor_t ), gltf_ptr->n_accessors );
     assert( gltf_ptr->accessors_ptr );
@@ -180,7 +184,7 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
       gltf_ptr->accessors_ptr[a].min[1]  = (float)cJSON_GetArrayItem( min_ptr, 1 )->valuedouble;
       gltf_ptr->accessors_ptr[a].min[2]  = (float)cJSON_GetArrayItem( min_ptr, 2 )->valuedouble;
     }
-    if ( name_ptr ) { strncat( gltf_ptr->accessors_ptr[a].name_str, name_ptr->valuestring, 255 ); }
+    if ( name_ptr ) { strncat( gltf_ptr->accessors_ptr[a].name_str, name_ptr->valuestring, GLTF_NAME_MAX - 1 ); }
     if ( type_ptr ) {
       if ( strncmp( type_ptr->valuestring, "SCALAR", 10 ) == 0 ) {
         gltf_ptr->accessors_ptr[a].type = GLTF_SCALAR;
@@ -206,7 +210,7 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
     cJSON* byteLength_ptr = cJSON_GetObjectItem( b_ptr, "byteLength" );
     cJSON* uri_ptr        = cJSON_GetObjectItem( b_ptr, "uri" );
     if ( byteLength_ptr ) { gltf_ptr->buffers_ptr[b].byte_length = byteLength_ptr->valueint; }
-    if ( uri_ptr ) { strncat( gltf_ptr->buffers_ptr[b].uri_str, uri_ptr->valuestring, 1023 ); }
+    if ( uri_ptr ) { strncat( gltf_ptr->buffers_ptr[b].uri_str, uri_ptr->valuestring, GLTF_URI_MAX - 1 ); }
   } // endfor n_buffers
 
   // "bufferViews"
@@ -223,17 +227,45 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
     if ( byteOffset_ptr ) { gltf_ptr->buffer_views_ptr[bv].byte_offset = byteOffset_ptr->valueint; }
     if ( byteLength_ptr ) { gltf_ptr->buffer_views_ptr[bv].byte_length = byteLength_ptr->valueint; }
     if ( byteStride_ptr ) { gltf_ptr->buffer_views_ptr[bv].byte_stride = byteStride_ptr->valueint; }
-    if ( name_ptr ) { strncat( gltf_ptr->buffer_views_ptr[bv].name_str, name_ptr->valuestring, 255 ); }
+    if ( name_ptr ) { strncat( gltf_ptr->buffer_views_ptr[bv].name_str, name_ptr->valuestring, GLTF_NAME_MAX - 1 ); }
   } // endfor n_buffer_views
 
+  // "images"
+  for ( int i = 0; i < gltf_ptr->n_images; i++ ) {
+    cJSON* i_ptr   = cJSON_GetArrayItem( images_ptr, i );
+    cJSON* uri_ptr = cJSON_GetObjectItem( i_ptr, "uri" );
+    if ( uri_ptr ) { strncat( gltf_ptr->images_ptr[i].uri_str, uri_ptr->valuestring, GLTF_URI_MAX - 1 ); }
+  }
+
   // "materials"
+  for ( int m = 0; m < gltf_ptr->n_materials; m++ ) {
+    cJSON* m_ptr                = cJSON_GetArrayItem( materials_ptr, m );
+    cJSON* name_ptr             = cJSON_GetObjectItem( m_ptr, "name" );
+    cJSON* normalTexture_ptr    = cJSON_GetObjectItem( m_ptr, "normalTexture" );
+    cJSON* occlusionTexture_ptr = cJSON_GetObjectItem( m_ptr, "occlusionTexture" );
+    cJSON* alphaMode_ptr        = cJSON_GetObjectItem( m_ptr, "alphaMode" );
+    cJSON* doubleSided_ptr      = cJSON_GetObjectItem( m_ptr, "doubleSided" );
+    cJSON* pbr_ptr              = cJSON_GetObjectItem( m_ptr, "pbrMetallicRoughness" );
+
+    gltf_ptr->materials_ptr[m].normal_texture_idx    = -1;
+    gltf_ptr->materials_ptr[m].occlusion_texture_idx = -1;
+    if ( normalTexture_ptr ) { gltf_ptr->materials_ptr[m].normal_texture_idx = normalTexture_ptr->valueint; }
+    if ( occlusionTexture_ptr ) { gltf_ptr->materials_ptr[m].occlusion_texture_idx = occlusionTexture_ptr->valueint; }
+    if ( alphaMode_ptr ) { gltf_ptr->materials_ptr[m].alpha_blend = true; }
+    if ( doubleSided_ptr ) { gltf_ptr->materials_ptr[m].is_doubled_sided = true; }
+    if ( name_ptr ) { strncat( gltf_ptr->materials_ptr[m].name_str, name_ptr->valuestring, GLTF_NAME_MAX - 1 ); }
+    if ( pbr_ptr ) {
+      gltf_ptr->materials_ptr[m].pbr_metallic_roughness.base_colour_texture_idx        = cJSON_GetObjectItem( pbr_ptr, "baseColorTexture" )->valueint;
+      gltf_ptr->materials_ptr[m].pbr_metallic_roughness.metallic_roughness_texture_idx = cJSON_GetObjectItem( pbr_ptr, "metallicRoughnessTexture" )->valueint;
+    }
+  }
 
   // "meshes"
   for ( int m = 0; m < gltf_ptr->n_meshes; m++ ) {
     cJSON* mesh_ptr = cJSON_GetArrayItem( meshes_ptr, m );
 
     cJSON* name_ptr = cJSON_GetObjectItem( mesh_ptr, "name" );
-    if ( name_ptr ) { strncat( gltf_ptr->meshes_ptr[m].name_str, name_ptr->valuestring, 255 ); }
+    if ( name_ptr ) { strncat( gltf_ptr->meshes_ptr[m].name_str, name_ptr->valuestring, GLTF_NAME_MAX - 1 ); }
 
     cJSON* primitives_ptr = cJSON_GetObjectItem( mesh_ptr, "primitives" );
     for ( int p = 0; p < gltf_ptr->meshes_ptr[m].n_primitives; p++ ) {
@@ -272,7 +304,22 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
     cJSON* mesh_ptr                 = cJSON_GetObjectItem( node_ptr, "mesh" );
     if ( mesh_ptr ) { gltf_ptr->nodes_ptr[n].mesh_idx = mesh_ptr->valueint; }
     cJSON* name_ptr = cJSON_GetObjectItem( node_ptr, "name" );
-    if ( name_ptr ) { strncat( gltf_ptr->nodes_ptr[n].name_str, name_ptr->valuestring, 255 ); }
+    if ( name_ptr ) { strncat( gltf_ptr->nodes_ptr[n].name_str, name_ptr->valuestring, GLTF_NAME_MAX - 1 ); }
+  }
+
+  // samplers
+  for ( int s = 0; s < gltf_ptr->n_samplers; s++ ) {
+    cJSON* s_ptr         = cJSON_GetArrayItem( samplers_ptr, s );
+    cJSON* magFilter_ptr = cJSON_GetObjectItem( s_ptr, "magFilter" );
+    cJSON* minFilter_ptr = cJSON_GetObjectItem( s_ptr, "minFilter" );
+    if ( magFilter_ptr ) {
+      gltf_ptr->samplers_ptr[s].mag_filter     = samplers_ptr->valueint;
+      gltf_ptr->samplers_ptr[s].has_mag_filter = true;
+    }
+    if ( minFilter_ptr ) {
+      gltf_ptr->samplers_ptr[s].min_filter     = samplers_ptr->valueint;
+      gltf_ptr->samplers_ptr[s].has_min_filter = true;
+    }
   }
 
   // "scenes"
@@ -282,6 +329,17 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
     for ( int n = 0; n < gltf_ptr->scenes_ptr[s].n_node_idxs; n++ ) {
       gltf_ptr->scenes_ptr[s].node_idxs_ptr[n] = cJSON_GetArrayItem( nodes_list_ptr, n )->valueint;
     }
+  }
+
+  // "textures"
+  for ( int t = 0; t < gltf_ptr->n_textures; t++ ) {
+    cJSON* t_ptr       = cJSON_GetArrayItem( textures_ptr, t );
+    cJSON* sampler_ptr = cJSON_GetObjectItem( t_ptr, "sampler" );
+    cJSON* source_ptr  = cJSON_GetObjectItem( t_ptr, "source" );
+    cJSON* name_ptr    = cJSON_GetObjectItem( t_ptr, "name" );
+    if ( sampler_ptr ) { gltf_ptr->textures_ptr[t].sampler_idx = sampler_ptr->valueint; }
+    if ( source_ptr ) { gltf_ptr->textures_ptr[t].source_idx = source_ptr->valueint; }
+    if ( name_ptr ) { strncat( gltf_ptr->textures_ptr[t].name_str, name_ptr->valuestring, GLTF_NAME_MAX - 1 ); }
   }
 
   cJSON_Delete( json_ptr );

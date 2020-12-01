@@ -1,6 +1,9 @@
 #pragma once
 #include <stdbool.h>
 
+#define GLTF_URI_MAX 1024
+#define GLTF_NAME_MAX 256
+
 // This struct represents an element of the top-level "nodes" array.
 typedef struct gltf_node_t {
   char name_str[256];
@@ -92,13 +95,14 @@ typedef struct gltf_material_t {
   float emissive_factor[3];
   bool has_emissive_factor;
   bool is_doubled_sided;
+  bool alpha_blend;
   char name_str[256];
 } gltf_material_t;
 
 // This struct represents an element of the top-level "images" array.
 // URI to a JPG or PNG or a base64 encoded embedded image.
 typedef struct gltf_image_t {
-  char uri_str[1024]; // e.g. "Default_albedo.jpg"
+  char uri_str[GLTF_URI_MAX]; // e.g. "Default_albedo.jpg"
 } gltf_image_t;
 
 // This struct represents an element of the top-level "textures" array.
@@ -106,6 +110,7 @@ typedef struct gltf_image_t {
 typedef struct gltf_texture_t {
   int sampler_idx;
   int source_idx; // image array index
+  char name_str[256];
 } gltf_texture_t;
 
 // This struct represents an element of the top-level "samplers" array.
@@ -120,16 +125,16 @@ typedef struct gltf_sampler_t {
 // This is the master struct matching the top-level {} in a .gltf file.
 typedef struct gltf_t {
   // major arrays at top level
-  gltf_scene_t* scenes_ptr;             // "scenes"
-  gltf_node_t* nodes_ptr;               // "nodes"
-  gltf_mesh_t* meshes_ptr;              // "meshes"
   gltf_accessor_t* accessors_ptr;       // "accessors"
-  gltf_buffer_view_t* buffer_views_ptr; // "bufferViews"
   gltf_buffer_t* buffers_ptr;           // "buffers"
-  gltf_material_t* materials_ptr;       // "materials"
-  gltf_texture_t* textures_ptr;         // "textures"
+  gltf_buffer_view_t* buffer_views_ptr; // "bufferViews"
   gltf_image_t* images_ptr;             // "images"
+  gltf_material_t* materials_ptr;       // "materials"
+  gltf_mesh_t* meshes_ptr;              // "meshes"
+  gltf_node_t* nodes_ptr;               // "nodes"
   gltf_sampler_t* samplers_ptr;         // "samplers"
+  gltf_scene_t* scenes_ptr;             // "scenes"
+  gltf_texture_t* textures_ptr;         // "textures"
 
   // counts of major array elements
   int n_scenes; // NB: scenes are optional
