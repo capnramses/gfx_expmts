@@ -155,3 +155,5 @@ typedef struct gltf_t {
 bool gltf_read( const char* filename, gltf_t* gltf_ptr );
 bool gltf_free( gltf_t* gltf_ptr );
 void gltf_print( const gltf_t* gltf_ptr );
+int gltf_bytes_for_component(  gltf_component_type_t comp_type );
+int gltf_comps_in_type( gltf_type_t type );

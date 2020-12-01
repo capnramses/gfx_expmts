@@ -261,7 +261,6 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
     tan_ptr        = malloc( tans_sz );
 
     if ( indices_buffer && mesh->indices_vbo && indices_buffer_sz > 0 ) {
-      printf( "storing tangents...2 for %i indices\n", mesh->n_indices );
       // NB idx is an index into indices!! and i'm using i as the actual vector array index
       for ( size_t idx = 0; idx < mesh->n_indices; idx += 3 ) {
         size_t index_a = 0, index_b = 0, index_c = 0;
@@ -310,7 +309,7 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
         };
         // each triangle has 1 tangent ( same for all 3 vertices )
         if ( index_c * 3 * sizeof( float ) >= tans_sz ) {
-          fprintf( stderr, "ERROR: (non-indexed) at vert idx=%i. index a =%i, b= %i, c=%i, and total sz = %u\n", idx, index_a, index_b, index_c, tans_sz );
+          fprintf( stderr, "ERROR: (non-indexed) at vert idx=%i. index a =%i, b= %i, c=%i, and total sz = %u\n", (int)idx, (int)index_a, (int)index_b, (int)index_c, (uint32_t)tans_sz );
         }
         assert( index_c * 3 * sizeof( float ) < tans_sz );
         memcpy( &tan_ptr[index_a * 3], &tan.x, sizeof( float ) * 3 );
@@ -320,8 +319,6 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
       } // endfor each triangle
 
     } else {
-      printf( "storing tangents...2 for %i vertices (%u comps)\n", mesh->n_vertices );
-
       // NB idx is an index into indices!! and i'm using i as the actual vector array index
       for ( size_t idx = 0; idx < mesh->n_vertices; idx += 3 ) {
         size_t index_a = idx, index_b = idx + 1, index_c = idx + 2;
@@ -349,7 +346,7 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
         };
         // each triangle has 1 tangent ( same for all 3 vertices )
         if ( index_c * 3 * sizeof( float ) >= tans_sz ) {
-          fprintf( stderr, "ERROR: (non-indexed) at vert idx=%i. index a =%i, b= %i, c=%i, and total sz = %u\n", idx, index_a, index_b, index_c, tans_sz );
+          fprintf( stderr, "ERROR: (non-indexed) at vert idx=%i. index a =%i, b= %i, c=%i, and total sz = %u\n", (int)idx, (int)index_a, (int)index_b, (int)index_c, (uint32_t)tans_sz );
         }
         assert( index_c * 3 * sizeof( float ) < tans_sz );
         memcpy( &tan_ptr[index_a * 3], &tan.x, sizeof( float ) * 3 );

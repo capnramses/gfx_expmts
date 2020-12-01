@@ -15,7 +15,7 @@ typedef struct _entire_file_t {
 RETURNS
 - true on success. record->data is allocated memory and must be freed by the caller.
 - false on any error. Any allocated memory is freed if false is returned */
-static bool _read_entire_file( const char* filename, _entire_file_t* record ) {
+static bool gltf_read_entire_file( const char* filename, _entire_file_t* record ) {
   FILE* fp = fopen( filename, "rb" );
   if ( !fp ) { return false; }
   fseek( fp, 0L, SEEK_END );
@@ -35,7 +35,7 @@ static bool _read_entire_file( const char* filename, _entire_file_t* record ) {
 // NB If I wrote my own JSON parser it could directly copy into these structs... (I end up with like 3 versions of file data in mem)
 bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
   _entire_file_t record = { 0 };
-  bool ret              = _read_entire_file( filename, &record );
+  bool ret              = gltf_read_entire_file( filename, &record );
   if ( !ret ) { return false; }
 
   char* json_char_ptr = (char*)record.data;
@@ -462,4 +462,31 @@ void gltf_print( const gltf_t* gltf_ptr ) {
     printf( "    byte length \t= %i\n", gltf_ptr->buffers_ptr[b].byte_length );
     printf( "    uri \t\t= %s\n", gltf_ptr->buffers_ptr[b].uri_str );
   } //
+}
+
+int gltf_bytes_for_component( gltf_component_type_t comp_type ) {
+  switch ( comp_type ) {
+  case GLTF_BYTE: return 1;
+  case GLTF_UNSIGNED_BYTE: return 1;
+  case GLTF_SHORT: return 2;
+  case GLTF_UNSIGNED_SHORT: return 2;
+  case GLTF_UNSIGNED_INT: return 4;
+  case GLTF_FLOAT: return 4;
+  default: break;
+  }
+  return 0;
+}
+
+int gltf_comps_in_type( gltf_type_t type ) {
+  switch ( type ) {
+  case GLTF_SCALAR: return 1;
+  case GLTF_VEC2: return 2;
+  case GLTF_VEC3: return 3;
+  case GLTF_VEC4: return 4;
+  case GLTF_MAT2: return 4;
+  case GLTF_MAT3: return 9;
+  case GLTF_MAT4: return 16;
+  default: break;
+  }
+  return 0;
 }
