@@ -110,16 +110,16 @@ typedef struct gltf_texture_t {
 
 // This struct represents an element of the top-level "samplers" array.
 // Ignored for now.
-typedef struct gltf_samplers_t {
+typedef struct gltf_sampler_t {
   int mag_filter; // GL enum number
   int min_filter; // GL enum number
   bool has_mag_filter;
   bool has_min_filter;
-} gltf_samplers_t;
+} gltf_sampler_t;
 
 // This is the master struct matching the top-level {} in a .gltf file.
 typedef struct gltf_t {
-	// major arrays at top level
+  // major arrays at top level
   gltf_scene_t* scenes_ptr;             // "scenes"
   gltf_node_t* nodes_ptr;               // "nodes"
   gltf_mesh_t* meshes_ptr;              // "meshes"
@@ -129,7 +129,7 @@ typedef struct gltf_t {
   gltf_material_t* materials_ptr;       // "materials"
   gltf_texture_t* textures_ptr;         // "textures"
   gltf_image_t* images_ptr;             // "images"
-  gltf_samplers_t* samplers_ptr;        // "samplers"
+  gltf_sampler_t* samplers_ptr;         // "samplers"
 
   // counts of major array elements
   int n_scenes; // NB: scenes are optional
@@ -144,7 +144,7 @@ typedef struct gltf_t {
   int n_images;
 
   int default_scene_idx; // "scene"
-  char version_str[16]; // "version"
+  char version_str[16];  // "version"
 } gltf_t;
 
 bool gltf_read( const char* filename, gltf_t* gltf_ptr );

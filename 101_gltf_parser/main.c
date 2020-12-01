@@ -14,8 +14,8 @@ int main( int argc, char** argv ) {
     return 1;
   }
   gltf_print( &gltf );
-  gltf_free( &gltf );
 
+  gltf_free( &gltf );
   printf( "done\n" );
   return 0;
 }
