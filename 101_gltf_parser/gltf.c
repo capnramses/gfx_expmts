@@ -230,6 +230,55 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
     } // endfor accessors
   }   // endif accessors_ptr
 
+  // "bufferViews"
+  cJSON* buffer_views_ptr = cJSON_GetObjectItem( json_ptr, "bufferViews" );
+  if ( buffer_views_ptr && cJSON_IsArray( buffer_views_ptr ) ) {
+    gltf_ptr->n_buffer_views   = cJSON_GetArraySize( buffer_views_ptr );
+    gltf_ptr->buffer_views_ptr = calloc( sizeof( gltf_buffer_view_t ), gltf_ptr->n_buffer_views );
+    if ( !gltf_ptr->buffer_views_ptr ) {
+      fprintf( stderr, "ERROR: gltf. OOM buffer_views_ptr\n" );
+      cJSON_Delete( json_ptr );
+      free( record.data );
+      return false;
+    }
+    for ( int bv = 0; bv < gltf_ptr->n_buffer_views; bv++ ) {
+      cJSON* bv_ptr = cJSON_GetArrayItem( buffer_views_ptr, bv );
+
+      cJSON* buffer_ptr     = cJSON_GetObjectItem( bv_ptr, "buffer" );
+      cJSON* byteOffset_ptr = cJSON_GetObjectItem( bv_ptr, "byteOffset" );
+      cJSON* byteLength_ptr = cJSON_GetObjectItem( bv_ptr, "byteLength" );
+      cJSON* byteStride_ptr = cJSON_GetObjectItem( bv_ptr, "byteStride" );
+      cJSON* name_ptr       = cJSON_GetObjectItem( bv_ptr, "name" );
+
+      if ( buffer_ptr ) { gltf_ptr->buffer_views_ptr[bv].buffer_idx = buffer_ptr->valueint; }
+      if ( byteOffset_ptr ) { gltf_ptr->buffer_views_ptr[bv].byte_offset = byteOffset_ptr->valueint; }
+      if ( byteLength_ptr ) { gltf_ptr->buffer_views_ptr[bv].byte_length = byteLength_ptr->valueint; }
+      if ( byteStride_ptr ) { gltf_ptr->buffer_views_ptr[bv].byte_stride = byteStride_ptr->valueint; }
+      if ( name_ptr ) { strncat( gltf_ptr->buffer_views_ptr[bv].name_str, name_ptr->valuestring, 255 ); }
+
+    } // endfor n_buffer_views
+  }   // endif buffer_views_ptr
+
+  // "buffers"
+  cJSON* buffers_ptr = cJSON_GetObjectItem( json_ptr, "buffers" );
+  if ( buffers_ptr && cJSON_IsArray( buffers_ptr ) ) {
+    gltf_ptr->n_buffers   = cJSON_GetArraySize( buffers_ptr );
+    gltf_ptr->buffers_ptr = calloc( sizeof( gltf_buffer_t ), gltf_ptr->n_buffers );
+    if ( !gltf_ptr->buffers_ptr ) {
+      fprintf( stderr, "ERROR: gltf. OOM buffers_ptr\n" );
+      cJSON_Delete( json_ptr );
+      free( record.data );
+      return false;
+    }
+    for ( int b = 0; b < gltf_ptr->n_buffers; b++ ) {
+      cJSON* b_ptr          = cJSON_GetArrayItem( buffers_ptr, b );
+      cJSON* byteLength_ptr = cJSON_GetObjectItem( b_ptr, "byteLength" );
+      cJSON* uri_ptr        = cJSON_GetObjectItem( b_ptr, "uri" );
+      if ( byteLength_ptr ) { gltf_ptr->buffers_ptr[b].byte_length = byteLength_ptr->valueint; }
+      if ( uri_ptr ) { strncat( gltf_ptr->buffers_ptr[b].uri_str, uri_ptr->valuestring, 1023 ); }
+    } // endfor n_buffers
+  }   // endif buffers_ptr
+
   cJSON_Delete( json_ptr );
   free( record.data );
   return true;
@@ -251,6 +300,8 @@ bool gltf_free( gltf_t* gltf_ptr ) {
     free( gltf_ptr->meshes_ptr );
   }
   if ( gltf_ptr->accessors_ptr ) { free( gltf_ptr->accessors_ptr ); }
+  if ( gltf_ptr->buffer_views_ptr ) { free( gltf_ptr->buffer_views_ptr ); }
+  if ( gltf_ptr->buffers_ptr ) { free( gltf_ptr->buffers_ptr ); }
   memset( gltf_ptr, 0, sizeof( gltf_t ) );
   return true;
 }
@@ -321,4 +372,20 @@ void gltf_print( const gltf_t* gltf_ptr ) {
     }
     printf( "    name \t\t= %s\n", gltf_ptr->accessors_ptr[a].name_str );
   }
+
+  printf( "\nbuffer views:\n" );
+  for ( int bv = 0; bv < gltf_ptr->n_buffer_views; bv++ ) {
+    printf( "  buffer views %i:\n", bv );
+    printf( "    buffer \t\t= %i\n", gltf_ptr->buffer_views_ptr[bv].buffer_idx );
+    printf( "    byte offset \t= %i\n", gltf_ptr->buffer_views_ptr[bv].byte_offset );
+    printf( "    byte length \t= %i\n", gltf_ptr->buffer_views_ptr[bv].byte_length );
+    printf( "    byte stride \t= %i\n", gltf_ptr->buffer_views_ptr[bv].byte_stride );
+    printf( "    name \t\t= %s\n", gltf_ptr->buffer_views_ptr[bv].name_str );
+  }
+
+  printf( "\nbuffers:\n" );
+  for ( int b = 0; b < gltf_ptr->n_buffers; b++ ) {
+    printf( "    byte length \t= %i\n", gltf_ptr->buffers_ptr[b].byte_length );
+    printf( "    uri \t\t= %s\n", gltf_ptr->buffers_ptr[b].uri_str );
+  } //
 }

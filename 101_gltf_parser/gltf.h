@@ -61,22 +61,90 @@ typedef struct gltf_accessor_t {
   // NB there exists also a "sparse" type structure here
 } gltf_accessor_t;
 
+// This struct represents an element of the top-level "bufferViews" array.
+typedef struct gltf_buffer_view_t {
+  int buffer_idx;
+  int byte_offset;
+  int byte_length;
+  int byte_stride; // NB: Usually this is just the size of eg the vec4 data type.
+  char name_str[256];
+} gltf_buffer_view_t;
+
+// This struct represents an element of the top-level "buffers" array.
+typedef struct gltf_buffer_t {
+  char uri_str[1024]; // e.g. "FlightHelmet.bin"
+  int byte_length;    // e.g. 3227148
+} gltf_buffer_t;
+
+// This struct represents the "pbrMetallicRoughness" {} object within a material.
+typedef struct gltf_pbr_metallic_roughness_t {
+  int base_colour_texture_idx;
+  int metallic_roughness_texture_idx;
+} gltf_pbr_metallic_roughness_t;
+
+// This struct represents an element of the top-level "materials" array.
+// Lighting models, texture indices, any constants, and eg doubleSided flags.
+typedef struct gltf_material_t {
+  gltf_pbr_metallic_roughness_t pbr_metallic_roughness;
+  int normal_texture_idx;
+  int occlusion_texture_idx;
+  int emissive_texture_idx;
+  float emissive_factor[3];
+  bool has_emissive_factor;
+  bool is_doubled_sided;
+  char name_str[256];
+} gltf_material_t;
+
+// This struct represents an element of the top-level "images" array.
+// URI to a JPG or PNG or a base64 encoded embedded image.
+typedef struct gltf_image_t {
+  char uri_str[1024]; // e.g. "Default_albedo.jpg"
+} gltf_image_t;
+
+// This struct represents an element of the top-level "textures" array.
+// Just match image array element with sampler array element.
+typedef struct gltf_texture_t {
+  int sampler_idx;
+  int source_idx; // image array index
+} gltf_texture_t;
+
+// This struct represents an element of the top-level "samplers" array.
+// Ignored for now.
+typedef struct gltf_samplers_t {
+  int mag_filter; // GL enum number
+  int min_filter; // GL enum number
+  bool has_mag_filter;
+  bool has_min_filter;
+} gltf_samplers_t;
+
 // This is the master struct matching the top-level {} in a .gltf file.
 typedef struct gltf_t {
-  gltf_scene_t* scenes_ptr;       // "scenes"
-  gltf_node_t* nodes_ptr;         // "nodes"
-  gltf_mesh_t* meshes_ptr;        // "meshes"
-  gltf_accessor_t* accessors_ptr; // "accessors"
+	// major arrays at top level
+  gltf_scene_t* scenes_ptr;             // "scenes"
+  gltf_node_t* nodes_ptr;               // "nodes"
+  gltf_mesh_t* meshes_ptr;              // "meshes"
+  gltf_accessor_t* accessors_ptr;       // "accessors"
+  gltf_buffer_view_t* buffer_views_ptr; // "bufferViews"
+  gltf_buffer_t* buffers_ptr;           // "buffers"
+  gltf_material_t* materials_ptr;       // "materials"
+  gltf_texture_t* textures_ptr;         // "textures"
+  gltf_image_t* images_ptr;             // "images"
+  gltf_samplers_t* samplers_ptr;        // "samplers"
 
-  char version_str[16]; // "version"
-
-  // counts of stuff
+  // counts of major array elements
   int n_scenes; // NB: scenes are optional
   int n_nodes;  // NB: nodes are optional
   int n_meshes;
   int n_accessors;
+  int n_buffer_views;
+  int n_buffers;
+  int n_materials;
+  int n_textures;
+  int n_samplers;
+  int n_images;
 
   int default_scene_idx; // "scene"
+  char version_str[16]; // "version"
 } gltf_t;
 
 bool gltf_read( const char* filename, gltf_t* gltf_ptr );
