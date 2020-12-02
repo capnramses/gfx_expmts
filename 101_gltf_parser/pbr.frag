@@ -128,7 +128,8 @@ void main() {
 
 		// TODO(Anton):
 		// "If the metallic map has gray values lower than 235 sRGB you need to lower the “raw” metal reflectance value in the base color."
-		vec3 albedo_texel_rgb = texture( u_texture_albedo, v_st ).rgb;
+		vec4 src_rgba = texture( u_texture_albedo, v_st ).rgba;
+		vec3 albedo_texel_rgb = src_rgba.rgb;
 		// weirdly i think gb are used but not B so vec2 makes no sense
 		vec3 metal_roughness_texel_rgb = texture( u_texture_metal_roughness, v_st ).rgb;
 		vec3 emissive_texel_rgb = texture( u_texture_emissive, v_st ).rgb;
@@ -223,6 +224,6 @@ void main() {
 
 	o_frag_colour.rgb = vec3( rgb );
 	o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );
-	o_frag_colour.a = 1.0;
+	o_frag_colour.a = src_rgba.a;
 
 }

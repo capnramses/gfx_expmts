@@ -213,10 +213,13 @@ int main( int argc, char** argv ) {
     {
       float scale_mod = 18.0f;
       mat4 S          = scale_mat4( ( vec3 ){ scale_mod, scale_mod, scale_mod } );
-      mat4 R          = identity_mat4(); // rot_x_deg_mat4( 90.0f );
+      mat4 R          = rot_y_deg_mat4( gfx_get_time_s() );
       mat4 RS         = mult_mat4_mat4( R, S );
       mat4 T          = translate_mat4( ( vec3 ){ 0, -5, 0 } );
       mat4 M          = mult_mat4_mat4( T, RS );
+
+      gfx_uniform3f( pbr_shader, pbr_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
+      gfx_uniform3f( pbr_shader, pbr_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
 
       for ( int i = 0; i < gltf.n_meshes; i++ ) {
         gfx_uniform1f( pbr_shader, pbr_shader.u_roughness_factor, 1.0f );
@@ -250,8 +253,13 @@ int main( int argc, char** argv ) {
           pbr_textures[GFX_TEXTURE_UNIT_EMISSIVE] = gltf.textures_ptr[em_iidx];
         }
 
+        if ( gltf.gltf.materials_ptr[mat_idx].alpha_blend ) { gfx_alpha_blend( true ); }
+				if ( gltf.gltf.materials_ptr[mat_idx].is_doubled_sided ) { gfx_backface_culling( false ); }
+
         // TODO set up materials
         gfx_draw_mesh( gltf.meshes_ptr[i], GFX_PT_TRIANGLES, pbr_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
+        gfx_alpha_blend( false );
+				gfx_backface_culling( true );
       }
     }
 #if 0

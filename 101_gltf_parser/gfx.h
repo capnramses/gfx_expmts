@@ -64,6 +64,7 @@ void gfx_viewport( int x, int y, int w, int h );
 void gfx_clear_colour_and_depth_buffers( float r, float g, float b, float a );
 void gfx_swap_buffer();
 void gfx_poll_events();
+void gfx_alpha_blend( bool enable );
 void gfx_backface_culling( bool enable );
 void gfx_depth_mask( bool enable );
 void gfx_cubemap_seamless( bool enable );

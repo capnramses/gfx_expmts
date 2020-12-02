@@ -170,6 +170,15 @@ void gfx_poll_events() {
   glfwPollEvents();
 }
 
+void gfx_alpha_blend( bool enable ) {
+  if ( enable ) {
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glEnable( GL_BLEND );
+  } else {
+    glDisable( GL_BLEND );
+  }
+}
+
 void gfx_backface_culling( bool enable ) {
   if ( enable ) {
     glCullFace( GL_BACK );
@@ -309,7 +318,8 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
         };
         // each triangle has 1 tangent ( same for all 3 vertices )
         if ( index_c * 3 * sizeof( float ) >= tans_sz ) {
-          fprintf( stderr, "ERROR: (non-indexed) at vert idx=%i. index a =%i, b= %i, c=%i, and total sz = %u\n", (int)idx, (int)index_a, (int)index_b, (int)index_c, (uint32_t)tans_sz );
+          fprintf( stderr, "ERROR: (non-indexed) at vert idx=%i. index a =%i, b= %i, c=%i, and total sz = %u\n", (int)idx, (int)index_a, (int)index_b,
+            (int)index_c, (uint32_t)tans_sz );
         }
         assert( index_c * 3 * sizeof( float ) < tans_sz );
         memcpy( &tan_ptr[index_a * 3], &tan.x, sizeof( float ) * 3 );
@@ -346,7 +356,8 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,                                
         };
         // each triangle has 1 tangent ( same for all 3 vertices )
         if ( index_c * 3 * sizeof( float ) >= tans_sz ) {
-          fprintf( stderr, "ERROR: (non-indexed) at vert idx=%i. index a =%i, b= %i, c=%i, and total sz = %u\n", (int)idx, (int)index_a, (int)index_b, (int)index_c, (uint32_t)tans_sz );
+          fprintf( stderr, "ERROR: (non-indexed) at vert idx=%i. index a =%i, b= %i, c=%i, and total sz = %u\n", (int)idx, (int)index_a, (int)index_b,
+            (int)index_c, (uint32_t)tans_sz );
         }
         assert( index_c * 3 * sizeof( float ) < tans_sz );
         memcpy( &tan_ptr[index_a * 3], &tan.x, sizeof( float ) * 3 );
