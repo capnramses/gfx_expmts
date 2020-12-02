@@ -211,10 +211,12 @@ int main( int argc, char** argv ) {
     pbr_textures[GFX_TEXTURE_UNIT_BRDF_LUT]    = brdf_lut_texture;
 
     {
-      float scale_mod = 5.0f;
+      float scale_mod = 18.0f;
       mat4 S          = scale_mat4( ( vec3 ){ scale_mod, scale_mod, scale_mod } );
-			mat4 R = rot_x_deg_mat4( 90.0f );
-			mat4 M = mult_mat4_mat4( R, S );
+      mat4 R          = identity_mat4(); // rot_x_deg_mat4( 90.0f );
+      mat4 RS         = mult_mat4_mat4( R, S );
+      mat4 T          = translate_mat4( ( vec3 ){ 0, -5, 0 } );
+      mat4 M          = mult_mat4_mat4( T, RS );
 
       for ( int i = 0; i < gltf.n_meshes; i++ ) {
         gfx_uniform1f( pbr_shader, pbr_shader.u_roughness_factor, 1.0f );

@@ -37,13 +37,14 @@ static uint8_t* _byte_pointer_for_attrib( const gltf_t* gltf_ptr, const _entire_
 
   // accessor
   int buffer_view_idx             = gltf_ptr->accessors_ptr[attrib_accessor_idx].buffer_view_idx;
+  int accessor_byte_offset        = gltf_ptr->accessors_ptr[attrib_accessor_idx].byte_offset;
   gltf_component_type_t comp_type = gltf_ptr->accessors_ptr[attrib_accessor_idx].component_type; // # bytes per component
   *count                          = gltf_ptr->accessors_ptr[attrib_accessor_idx].count;
   gltf_type_t type                = gltf_ptr->accessors_ptr[attrib_accessor_idx].type;
 
   // buffer view
-  int buffer_idx  = gltf_ptr->buffer_views_ptr[buffer_view_idx].buffer_idx;
-  int byte_offset = gltf_ptr->buffer_views_ptr[buffer_view_idx].byte_offset;
+  int buffer_idx         = gltf_ptr->buffer_views_ptr[buffer_view_idx].buffer_idx;
+  int buffer_byte_offset = gltf_ptr->buffer_views_ptr[buffer_view_idx].byte_offset;
   // int byte_length = gltf_ptr->buffer_views_ptr[buffer_view_idx].byte_length;
   // int byte_stride = gltf_ptr->buffer_views_ptr[buffer_view_idx].byte_stride; // NOTE(Anton) ignored until interleaved mesh found
 
@@ -51,6 +52,7 @@ static uint8_t* _byte_pointer_for_attrib( const gltf_t* gltf_ptr, const _entire_
   uint8_t* byte_ptr   = (uint8_t*)buffers_ptr[buffer_idx].data;
   int bytes_per_comp  = gltf_bytes_for_component( comp_type );
   int comps_per_vert  = gltf_comps_in_type( type );
+  int byte_offset     = accessor_byte_offset + buffer_byte_offset; // weird but in spec
   uint8_t* attrib_ptr = &byte_ptr[byte_offset];
   return attrib_ptr;
 }
@@ -103,7 +105,7 @@ bool gfx_gltf_load( const char* filename, gfx_gltf_t* gfx_gltf_ptr ) {
   gfx_gltf_ptr->meshes_ptr = calloc( sizeof( gfx_mesh_t ), gfx_gltf_ptr->n_meshes );
   if ( !gfx_gltf_ptr->meshes_ptr ) { return false; }
 
-	gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr = calloc( sizeof( int ), gfx_gltf_ptr->n_meshes );
+  gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr = calloc( sizeof( int ), gfx_gltf_ptr->n_meshes );
   if ( !gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr ) { return false; }
 
   // load images -> textures
@@ -162,16 +164,15 @@ bool gfx_gltf_load( const char* filename, gfx_gltf_t* gfx_gltf_ptr ) {
           (uint16_t*)_byte_pointer_for_attrib( &gfx_gltf_ptr->gltf, buffer_records_ptr, gfx_gltf_ptr->gltf.meshes_ptr[m].primitives_ptr[p].indices_idx, &n_indices );
       }
 
-
       printf( "mesh %i n_vertices = %i n_indices= %i\n", gfx_mesh_idx, n_vertices, n_indices );
-    
-			bool calc_tans = true; // TODO(Anton) heap overflow in tan code
-		  gfx_gltf_ptr->meshes_ptr[gfx_mesh_idx] = gfx_create_mesh_from_mem( positions_ptr, 3, texcoords_0_ptr, 2, normals_ptr, 3, NULL, 3, indices_ptr,
+
+      bool calc_tans                         = true; // TODO(Anton) heap overflow in tan code
+      gfx_gltf_ptr->meshes_ptr[gfx_mesh_idx] = gfx_create_mesh_from_mem( positions_ptr, 3, texcoords_0_ptr, 2, normals_ptr, 3, NULL, 3, indices_ptr,
         sizeof( uint16_t ) * n_indices, GFX_INDICES_TYPE_UINT16, n_vertices, false, calc_tans );
 
       // material
-			int mat_idx = gfx_gltf_ptr->gltf.meshes_ptr[m].primitives_ptr[p].material_idx;
-			gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr[m] = mat_idx;
+      int mat_idx                               = gfx_gltf_ptr->gltf.meshes_ptr[m].primitives_ptr[p].material_idx;
+      gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr[m] = mat_idx;
 
       gfx_mesh_idx++;
     }
@@ -197,7 +198,7 @@ bool gfx_gltf_free( gfx_gltf_t* gfx_gltf_ptr ) {
     for ( int i = 0; i < gfx_gltf_ptr->n_meshes; i++ ) { gfx_delete_mesh( &gfx_gltf_ptr->meshes_ptr[i] ); }
     free( gfx_gltf_ptr->meshes_ptr );
   }
-	if (gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr) { free(gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr);}
+  if ( gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr ) { free( gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr ); }
 
   if ( !gltf_free( &gfx_gltf_ptr->gltf ) ) { return false; }
   memset( gfx_gltf_ptr, 0, sizeof( gfx_gltf_t ) );
