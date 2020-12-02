@@ -210,6 +210,48 @@ int main( int argc, char** argv ) {
     pbr_textures[GFX_TEXTURE_UNIT_PREFILTER]   = prefilter_map_texture;
     pbr_textures[GFX_TEXTURE_UNIT_BRDF_LUT]    = brdf_lut_texture;
 
+    {
+      float scale_mod = 5.0f;
+      mat4 S          = scale_mat4( ( vec3 ){ scale_mod, scale_mod, scale_mod } );
+			mat4 R = rot_x_deg_mat4( 90.0f );
+			mat4 M = mult_mat4_mat4( R, S );
+
+      for ( int i = 0; i < gltf.n_meshes; i++ ) {
+        gfx_uniform1f( pbr_shader, pbr_shader.u_roughness_factor, 1.0f );
+        gfx_uniform1f( pbr_shader, pbr_shader.u_metallic_factor, 1.0f );
+        gfx_uniform4f( pbr_shader, pbr_shader.u_base_colour_rgba, 1.0f, 1.0f, 1.0f, 1.0f );
+
+        int mat_idx     = gltf.mat_idx_for_mesh_idx_ptr[i];
+        int albedo_tidx = gltf.gltf.materials_ptr[mat_idx].pbr_metallic_roughness.base_colour_texture_idx;
+        int mr_tidx     = gltf.gltf.materials_ptr[mat_idx].pbr_metallic_roughness.metallic_roughness_texture_idx;
+        int ao_tidx     = gltf.gltf.materials_ptr[mat_idx].occlusion_texture_idx;
+        int nm_tidx     = gltf.gltf.materials_ptr[mat_idx].normal_texture_idx;
+        int em_tidx     = gltf.gltf.materials_ptr[mat_idx].emissive_texture_idx;
+        if ( albedo_tidx > -1 ) {
+          int albedo_iidx                       = gltf.gltf.textures_ptr[albedo_tidx].source_idx;
+          pbr_textures[GFX_TEXTURE_UNIT_ALBEDO] = gltf.textures_ptr[albedo_iidx];
+        }
+        if ( mr_tidx > -1 ) {
+          int mr_iidx                                    = gltf.gltf.textures_ptr[mr_tidx].source_idx;
+          pbr_textures[GFX_TEXTURE_UNIT_METAL_ROUGHNESS] = gltf.textures_ptr[mr_iidx];
+        }
+        if ( ao_tidx > -1 ) {
+          int ao_iidx                                      = gltf.gltf.textures_ptr[ao_tidx].source_idx;
+          pbr_textures[GFX_TEXTURE_UNIT_AMBIENT_OCCLUSION] = gltf.textures_ptr[ao_iidx];
+        }
+        if ( nm_tidx > -1 ) {
+          int nm_iidx                           = gltf.gltf.textures_ptr[nm_tidx].source_idx;
+          pbr_textures[GFX_TEXTURE_UNIT_NORMAL] = gltf.textures_ptr[nm_iidx];
+        }
+        if ( em_tidx > -1 ) {
+          int em_iidx                             = gltf.gltf.textures_ptr[em_tidx].source_idx;
+          pbr_textures[GFX_TEXTURE_UNIT_EMISSIVE] = gltf.textures_ptr[em_iidx];
+        }
+
+        // TODO set up materials
+        gfx_draw_mesh( gltf.meshes_ptr[i], GFX_PT_TRIANGLES, pbr_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
+      }
+    }
 #if 0
     { // render the glTF scene
       float curr_s = (float)gfx_get_time_s();

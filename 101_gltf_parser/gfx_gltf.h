@@ -6,6 +6,7 @@
 typedef struct gfx_gltf_t {
   gltf_t gltf;
   gfx_mesh_t* meshes_ptr;
+	int* mat_idx_for_mesh_idx_ptr;
 	// this array corresponds to the _images_ gltf array (not textures)
   gfx_texture_t* textures_ptr;
   int n_meshes;

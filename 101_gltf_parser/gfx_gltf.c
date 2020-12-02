@@ -51,7 +51,7 @@ static uint8_t* _byte_pointer_for_attrib( const gltf_t* gltf_ptr, const _entire_
   uint8_t* byte_ptr   = (uint8_t*)buffers_ptr[buffer_idx].data;
   int bytes_per_comp  = gltf_bytes_for_component( comp_type );
   int comps_per_vert  = gltf_comps_in_type( type );
-  uint8_t* attrib_ptr = &byte_ptr[byte_offset + bytes_per_comp * comps_per_vert * *count];
+  uint8_t* attrib_ptr = &byte_ptr[byte_offset];
   return attrib_ptr;
 }
 
@@ -102,6 +102,9 @@ bool gfx_gltf_load( const char* filename, gfx_gltf_t* gfx_gltf_ptr ) {
 
   gfx_gltf_ptr->meshes_ptr = calloc( sizeof( gfx_mesh_t ), gfx_gltf_ptr->n_meshes );
   if ( !gfx_gltf_ptr->meshes_ptr ) { return false; }
+
+	gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr = calloc( sizeof( int ), gfx_gltf_ptr->n_meshes );
+  if ( !gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr ) { return false; }
 
   // load images -> textures
   // NOTE: assumes images are all external files here
@@ -162,11 +165,13 @@ bool gfx_gltf_load( const char* filename, gfx_gltf_t* gfx_gltf_ptr ) {
 
       printf( "mesh %i n_vertices = %i n_indices= %i\n", gfx_mesh_idx, n_vertices, n_indices );
     
-			bool calc_tans = false; // TODO(Anton) heap overflow in tan code
+			bool calc_tans = true; // TODO(Anton) heap overflow in tan code
 		  gfx_gltf_ptr->meshes_ptr[gfx_mesh_idx] = gfx_create_mesh_from_mem( positions_ptr, 3, texcoords_0_ptr, 2, normals_ptr, 3, NULL, 3, indices_ptr,
         sizeof( uint16_t ) * n_indices, GFX_INDICES_TYPE_UINT16, n_vertices, false, calc_tans );
 
-      // TODO material
+      // material
+			int mat_idx = gfx_gltf_ptr->gltf.meshes_ptr[m].primitives_ptr[p].material_idx;
+			gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr[m] = mat_idx;
 
       gfx_mesh_idx++;
     }
@@ -192,6 +197,7 @@ bool gfx_gltf_free( gfx_gltf_t* gfx_gltf_ptr ) {
     for ( int i = 0; i < gfx_gltf_ptr->n_meshes; i++ ) { gfx_delete_mesh( &gfx_gltf_ptr->meshes_ptr[i] ); }
     free( gfx_gltf_ptr->meshes_ptr );
   }
+	if (gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr) { free(gfx_gltf_ptr->mat_idx_for_mesh_idx_ptr);}
 
   if ( !gltf_free( &gfx_gltf_ptr->gltf ) ) { return false; }
   memset( gfx_gltf_ptr, 0, sizeof( gfx_gltf_t ) );

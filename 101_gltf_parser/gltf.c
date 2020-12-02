@@ -243,25 +243,37 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
     cJSON* name_ptr             = cJSON_GetObjectItem( m_ptr, "name" );
     cJSON* normalTexture_ptr    = cJSON_GetObjectItem( m_ptr, "normalTexture" );
     cJSON* occlusionTexture_ptr = cJSON_GetObjectItem( m_ptr, "occlusionTexture" );
+    cJSON* emissiveTexture_ptr  = cJSON_GetObjectItem( m_ptr, "emissiveTexture" );
     cJSON* alphaMode_ptr        = cJSON_GetObjectItem( m_ptr, "alphaMode" );
     cJSON* doubleSided_ptr      = cJSON_GetObjectItem( m_ptr, "doubleSided" );
     cJSON* pbr_ptr              = cJSON_GetObjectItem( m_ptr, "pbrMetallicRoughness" );
 
     gltf_ptr->materials_ptr[m].normal_texture_idx                                    = -1;
     gltf_ptr->materials_ptr[m].occlusion_texture_idx                                 = -1;
+    gltf_ptr->materials_ptr[m].emissive_texture_idx                                  = -1;
     gltf_ptr->materials_ptr[m].pbr_metallic_roughness.base_colour_texture_idx        = -1;
     gltf_ptr->materials_ptr[m].pbr_metallic_roughness.metallic_roughness_texture_idx = -1;
-    if ( normalTexture_ptr ) { gltf_ptr->materials_ptr[m].normal_texture_idx = normalTexture_ptr->valueint; }
-    if ( occlusionTexture_ptr ) { gltf_ptr->materials_ptr[m].occlusion_texture_idx = occlusionTexture_ptr->valueint; }
+    if ( normalTexture_ptr && cJSON_HasObjectItem( normalTexture_ptr, "index" ) ) {
+      gltf_ptr->materials_ptr[m].normal_texture_idx = cJSON_GetObjectItem( normalTexture_ptr, "index" )->valueint;
+    }
+    if ( occlusionTexture_ptr && cJSON_HasObjectItem( occlusionTexture_ptr, "index" ) ) {
+      gltf_ptr->materials_ptr[m].occlusion_texture_idx = cJSON_GetObjectItem( occlusionTexture_ptr, "index" )->valueint;
+    }
+    if ( emissiveTexture_ptr && cJSON_HasObjectItem( emissiveTexture_ptr, "index" ) ) {
+      gltf_ptr->materials_ptr[m].emissive_texture_idx = cJSON_GetObjectItem( emissiveTexture_ptr, "index" )->valueint;
+    }
     if ( alphaMode_ptr ) { gltf_ptr->materials_ptr[m].alpha_blend = true; }
     if ( doubleSided_ptr ) { gltf_ptr->materials_ptr[m].is_doubled_sided = true; }
     if ( name_ptr ) { strncat( gltf_ptr->materials_ptr[m].name_str, name_ptr->valuestring, GLTF_NAME_MAX - 1 ); }
     if ( pbr_ptr ) {
       cJSON* baseColorTexture_ptr         = cJSON_GetObjectItem( pbr_ptr, "baseColorTexture" );
       cJSON* metallicRoughnessTexture_ptr = cJSON_GetObjectItem( pbr_ptr, "metallicRoughnessTexture" );
-      if ( baseColorTexture_ptr ) { gltf_ptr->materials_ptr[m].pbr_metallic_roughness.base_colour_texture_idx = baseColorTexture_ptr->valueint; }
-      if ( metallicRoughnessTexture_ptr ) {
-        gltf_ptr->materials_ptr[m].pbr_metallic_roughness.metallic_roughness_texture_idx = metallicRoughnessTexture_ptr->valueint;
+      if ( baseColorTexture_ptr && cJSON_HasObjectItem( baseColorTexture_ptr, "index" ) ) {
+        gltf_ptr->materials_ptr[m].pbr_metallic_roughness.base_colour_texture_idx = cJSON_GetObjectItem( baseColorTexture_ptr, "index" )->valueint;
+      }
+      if ( metallicRoughnessTexture_ptr && cJSON_HasObjectItem( metallicRoughnessTexture_ptr, "index" ) ) {
+        gltf_ptr->materials_ptr[m].pbr_metallic_roughness.metallic_roughness_texture_idx = cJSON_GetObjectItem( metallicRoughnessTexture_ptr, "index" )->valueint;
+        ;
       }
     }
   }
@@ -286,14 +298,21 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
 
       cJSON* attributes_ptr = cJSON_GetObjectItem( primitive_ptr, "attributes" );
       if ( attributes_ptr ) {
-        cJSON* attribute_ptr = cJSON_GetObjectItem( attributes_ptr, "POSITION" );
-        if ( attribute_ptr ) { gltf_ptr->meshes_ptr[m].primitives_ptr[p].attributes.position_idx = attribute_ptr->valueint; }
-        attribute_ptr = cJSON_GetObjectItem( attributes_ptr, "TANGENT" );
-        if ( attribute_ptr ) { gltf_ptr->meshes_ptr[m].primitives_ptr[p].attributes.tangent_idx = attribute_ptr->valueint; }
-        attribute_ptr = cJSON_GetObjectItem( attributes_ptr, "NORMAL" );
-        if ( attribute_ptr ) { gltf_ptr->meshes_ptr[m].primitives_ptr[p].attributes.normal_idx = attribute_ptr->valueint; }
-        attribute_ptr = cJSON_GetObjectItem( attributes_ptr, "TEXCOORD_0" );
-        if ( attribute_ptr ) { gltf_ptr->meshes_ptr[m].primitives_ptr[p].attributes.texcoord_0_idx = attribute_ptr->valueint; }
+        {
+          cJSON* attribute_ptr = cJSON_GetObjectItem( attributes_ptr, "POSITION" );
+          if ( attribute_ptr ) { gltf_ptr->meshes_ptr[m].primitives_ptr[p].attributes.position_idx = attribute_ptr->valueint; }
+        }
+        if ( cJSON_HasObjectItem( attributes_ptr, "TANGENT" ) ) {
+          gltf_ptr->meshes_ptr[m].primitives_ptr[p].attributes.tangent_idx = cJSON_GetObjectItem( attributes_ptr, "TANGENT" )->valueint;
+        }
+        {
+          cJSON* attribute_ptr = cJSON_GetObjectItem( attributes_ptr, "NORMAL" );
+          if ( attribute_ptr ) { gltf_ptr->meshes_ptr[m].primitives_ptr[p].attributes.normal_idx = attribute_ptr->valueint; }
+        }
+        {
+          cJSON* attribute_ptr = cJSON_GetObjectItem( attributes_ptr, "TEXCOORD_0" );
+          if ( attribute_ptr ) { gltf_ptr->meshes_ptr[m].primitives_ptr[p].attributes.texcoord_0_idx = attribute_ptr->valueint; }
+        }
       }
       cJSON* material_ptr = cJSON_GetObjectItem( primitive_ptr, "material" );
       if ( material_ptr ) { gltf_ptr->meshes_ptr[m].primitives_ptr[p].material_idx = material_ptr->valueint; }
@@ -477,8 +496,8 @@ int gltf_bytes_for_component( gltf_component_type_t comp_type ) {
   return 0;
 }
 
-int gltf_comps_in_type( gltf_type_t type ) {
-  switch ( type ) {
+int gltf_comps_in_type( gltf_type_t data_type ) {
+  switch ( data_type ) {
   case GLTF_SCALAR: return 1;
   case GLTF_VEC2: return 2;
   case GLTF_VEC3: return 3;
