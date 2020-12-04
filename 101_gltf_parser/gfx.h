@@ -64,6 +64,7 @@ void gfx_viewport( int x, int y, int w, int h );
 void gfx_clear_colour_and_depth_buffers( float r, float g, float b, float a );
 void gfx_swap_buffer();
 void gfx_poll_events();
+void gfx_depth_testing( bool enable );
 void gfx_alpha_blend( bool enable );
 void gfx_backface_culling( bool enable );
 void gfx_depth_mask( bool enable );
@@ -151,7 +152,7 @@ void gfx_wireframe_mode();
 void gfx_polygon_mode();
 
 double gfx_get_time_s();
-extern gfx_shader_t gfx_default_shader;
+extern gfx_shader_t gfx_default_shader, gfx_textured_quad_shader;
 extern gfx_mesh_t gfx_cube_mesh;
 
 // main properties and bounds outputs of a framebuffer rendering pass. use to daisy-chain passes

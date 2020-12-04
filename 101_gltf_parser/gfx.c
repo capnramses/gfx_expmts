@@ -19,7 +19,7 @@ GLFWwindow* gfx_window_ptr; // extern in apg_glcontext.h
 static GLFWmonitor* gfx_monitor_ptr;
 static int g_win_width = 1920, g_win_height = 1080;
 
-gfx_shader_t gfx_default_shader;
+gfx_shader_t gfx_default_shader, gfx_textured_quad_shader;
 gfx_mesh_t gfx_cube_mesh;
 gfx_mesh_t gfx_ss_quad_mesh;
 
@@ -95,6 +95,28 @@ bool gfx_start( const char* window_title, int w, int h, bool fullscreen ) {
       "}\n";
     gfx_default_shader = gfx_create_shader_program_from_strings( vertex_shader, fragment_shader );
     if ( !gfx_default_shader.loaded ) { return false; }
+  }
+  {
+    const char* vertex_shader =
+      "#version 410 core\n"
+      "in vec2 a_vp;\n"
+      "uniform mat4 u_P, u_V, u_M;\n"
+      "out vec2 v_st;\n"
+      "void main() {\n"
+      "  v_st        = a_vp * 0.5 + 0.5;\n"
+      "  v_st.t      = 1.0 - v_st.t;\n"
+      "  gl_Position = u_P * u_V * u_M * vec4( a_vp, 0.0, 1.0 );\n"
+      "}\n";
+    const char* fragment_shader =
+      "#version 410 core\n"
+      "in vec2 v_st;\n"
+      "uniform sampler2D u_texture_a;\n"
+      "out vec4 o_frag_colour;\n"
+      "void main() {\n"
+      "  o_frag_colour = texture( u_texture_a, v_st );\n"
+      "}\n";
+    gfx_textured_quad_shader = gfx_create_shader_program_from_strings( vertex_shader, fragment_shader );
+    if ( !gfx_textured_quad_shader.loaded ) { return false; }
   }
   {
     float ss_quad_pos[] = { -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0 };
@@ -186,6 +208,14 @@ void gfx_backface_culling( bool enable ) {
     glEnable( GL_CULL_FACE );
   } else {
     glDisable( GL_CULL_FACE );
+  }
+}
+
+void gfx_depth_testing( bool enable ) {
+  if ( enable ) {
+    glDisable( GL_DEPTH_TEST );
+  } else {
+    glEnable( GL_DEPTH_TEST );
   }
 }
 

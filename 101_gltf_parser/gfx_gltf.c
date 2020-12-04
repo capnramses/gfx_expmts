@@ -209,3 +209,22 @@ bool gfx_gltf_free( gfx_gltf_t* gfx_gltf_ptr ) {
 void gfx_gltf_draw( const gfx_gltf_t* gfx_gltf_ptr ) {
   if ( !gfx_gltf_ptr ) { return; }
 }
+
+float gfx_gltf_biggest_xyz( const gfx_gltf_t* gfx_gltf_ptr ) {
+  float the_max = 0.0f;
+  for ( int i = 0; i < gfx_gltf_ptr->gltf.n_accessors; i++ ) {
+    if ( gfx_gltf_ptr->gltf.accessors_ptr[i].has_max ) {
+      for ( int j = 0; j < 3; j++ ) {
+        float c = fabs( gfx_gltf_ptr->gltf.accessors_ptr[i].max[j] );
+        the_max = c > the_max ? c : the_max;
+      }
+    }
+    if ( gfx_gltf_ptr->gltf.accessors_ptr[i].has_min ) {
+			for ( int j = 0; j < 3; j++ ) {
+        float c = fabs( gfx_gltf_ptr->gltf.accessors_ptr[i].min[j] );
+        the_max = c > the_max ? c : the_max;
+      }
+		}
+  }
+	return the_max;
+}

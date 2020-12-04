@@ -1,6 +1,7 @@
 #include "gfx_gltf.h"
 #include "input.h"
 #include "apg_maths.h"
+#include "apg_pixfont.h"
 #include "stb/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb/stb_image_write.h"
@@ -147,11 +148,34 @@ int main( int argc, char** argv ) {
   gfx_gltf_t gltf = { 0 };
   if ( !gfx_gltf_load( argv[1], &gltf ) ) { return 1; }
 
+  gfx_texture_t font_texture = { 0 };
+  {
+    char pix_str[2048];
+    sprintf( pix_str, "File: `%s`\nn_scenes = %i\ndefault scene = %i\nn_nodes = %i\nn_meshes = %i\nn_materials = %i\nnn_textures = %i\n", argv[1],
+      gltf.gltf.n_scenes, gltf.gltf.default_scene_idx, gltf.gltf.n_nodes, gltf.gltf.n_meshes, gltf.gltf.n_materials, gltf.gltf.n_textures );
+    int pix_w = 0, pix_h = 0;
+    int res = apg_pixfont_image_size_for_str( pix_str, &pix_w, &pix_h, 1, 1 );
+    assert( res );
+    uint8_t* pix_mem = calloc( pix_w * pix_h * 4, 1 );
+    assert( pix_mem );
+    res = apg_pixfont_str_into_image( pix_str, pix_mem, pix_w, pix_h, 4, 0xFF, 0xFF, 0x00, 1.0f * 0xFF, 1, 1 );
+    assert( res );
+
+    font_texture = gfx_create_texture_from_mem( pix_mem, pix_w, pix_h, 4, ( gfx_texture_properties_t ){ .bilinear = false } );
+
+    free( pix_mem );
+  }
   float cam_x_deg = 0.0f, cam_y_deg = 0.0f;
   double prev_s = gfx_get_time_s();
 
-  int background_image_mode = 0;
-  bool debug_lut            = false;
+  int background_image_mode  = 0;
+  bool debug_lut             = false;
+  const float cam_move_speed = 1.0f;
+  vec3 cam_pos_wor           = ( vec3 ){ 0, 0.0, 1.25f };
+
+  float scale_mod = 1.0f;
+  float s         = gfx_gltf_biggest_xyz( &gltf );
+  if ( s != 0.0f ) { scale_mod = 1.0f / s; }
 
   while ( !gfx_should_window_close() ) {
     double curr_s    = gfx_get_time_s();
@@ -162,15 +186,20 @@ int main( int argc, char** argv ) {
     if ( input_is_key_held( input_turn_down_key ) ) { cam_x_deg -= 90.0f * elapsed_s; }
     if ( input_is_key_held( input_turn_left_key ) ) { cam_y_deg += 90.0f * elapsed_s; }
     if ( input_is_key_held( input_turn_right_key ) ) { cam_y_deg -= 90.0f * elapsed_s; }
+    if ( input_is_key_held( 'A' ) ) { cam_pos_wor.x -= cam_move_speed * elapsed_s; }
+    if ( input_is_key_held( 'D' ) ) { cam_pos_wor.x += cam_move_speed * elapsed_s; }
+    if ( input_is_key_held( 'Q' ) ) { cam_pos_wor.y -= cam_move_speed * elapsed_s; }
+    if ( input_is_key_held( 'E' ) ) { cam_pos_wor.y += cam_move_speed * elapsed_s; }
+    if ( input_is_key_held( 'W' ) ) { cam_pos_wor.z -= cam_move_speed * elapsed_s; }
+    if ( input_is_key_held( 'S' ) ) { cam_pos_wor.z += cam_move_speed * elapsed_s; }
     if ( input_was_key_pressed( 'I' ) ) { background_image_mode = ( background_image_mode + 1 ) % 3; }
     if ( input_was_key_pressed( 'L' ) ) { debug_lut = !debug_lut; }
 
-    mat4 cam_R_x     = rot_x_deg_mat4( -cam_x_deg );
-    mat4 cam_R_y     = rot_y_deg_mat4( -cam_y_deg );
-    mat4 cam_R       = mult_mat4_mat4( cam_R_x, cam_R_y );
-    vec3 cam_pos_wor = ( vec3 ){ 0, 0, 15.0f };
-    mat4 cam_T       = translate_mat4( ( vec3 ){ .x = 0, .y = 0, .z = -cam_pos_wor.z } );
-    mat4 V           = mult_mat4_mat4( cam_R, cam_T );
+    mat4 cam_R_x = rot_x_deg_mat4( -cam_x_deg );
+    mat4 cam_R_y = rot_y_deg_mat4( -cam_y_deg );
+    mat4 cam_R   = mult_mat4_mat4( cam_R_x, cam_R_y );
+    mat4 cam_T   = translate_mat4( ( vec3 ){ .x = -cam_pos_wor.x, .y = -cam_pos_wor.y, .z = -cam_pos_wor.z } );
+    mat4 V       = mult_mat4_mat4( cam_T, cam_R );
 
     int fb_w = 0, fb_h = 0;
     gfx_framebuffer_dims( &fb_w, &fb_h );
@@ -211,12 +240,11 @@ int main( int argc, char** argv ) {
     pbr_textures[GFX_TEXTURE_UNIT_BRDF_LUT]    = brdf_lut_texture;
 
     {
-      float scale_mod = 18.0f;
-      mat4 S          = scale_mat4( ( vec3 ){ scale_mod, scale_mod, scale_mod } );
-      mat4 R          = rot_y_deg_mat4( gfx_get_time_s() );
-      mat4 RS         = mult_mat4_mat4( R, S );
-      mat4 T          = translate_mat4( ( vec3 ){ 0, -5, 0 } );
-      mat4 M          = mult_mat4_mat4( T, RS );
+      mat4 S  = scale_mat4( ( vec3 ){ scale_mod, scale_mod, scale_mod } );
+      mat4 R  = rot_y_deg_mat4( gfx_get_time_s() );
+      mat4 RS = mult_mat4_mat4( R, S );
+      mat4 T  = translate_mat4( ( vec3 ){ 0, -0.5f, 0 } );
+      mat4 M  = mult_mat4_mat4( T, RS );
 
       gfx_uniform3f( pbr_shader, pbr_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
       gfx_uniform3f( pbr_shader, pbr_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
@@ -254,13 +282,14 @@ int main( int argc, char** argv ) {
         }
 
         if ( gltf.gltf.materials_ptr[mat_idx].alpha_blend ) { gfx_alpha_blend( true ); }
-				if ( gltf.gltf.materials_ptr[mat_idx].is_doubled_sided ) { gfx_backface_culling( false ); }
+        if ( gltf.gltf.materials_ptr[mat_idx].is_doubled_sided ) { gfx_backface_culling( false ); }
 
         // TODO set up materials
         gfx_draw_mesh( gltf.meshes_ptr[i], GFX_PT_TRIANGLES, pbr_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
         gfx_alpha_blend( false );
-				gfx_backface_culling( true );
-      }
+        gfx_backface_culling( true );
+
+      } // endfor meshes
     }
 #if 0
     { // render the glTF scene
@@ -304,6 +333,16 @@ int main( int argc, char** argv ) {
     if ( debug_lut ) {
       mat4 I = identity_mat4();
       gfx_draw_mesh( gfx_ss_quad_mesh, GFX_PT_TRIANGLE_STRIP, quad_shader, I.m, I.m, I.m, &brdf_lut_texture, 1 );
+    }
+
+    if ( fb_w > 0 && fb_h > 0 ) {
+      gfx_viewport( 0, fb_h - font_texture.h, font_texture.w, font_texture.h );
+      gfx_alpha_blend( true );
+      gfx_depth_testing( false );
+      mat4 I = identity_mat4();
+      gfx_draw_mesh( gfx_ss_quad_mesh, GFX_PT_TRIANGLE_STRIP, gfx_textured_quad_shader, I.m, I.m, I.m, &font_texture, 1 );
+      gfx_depth_testing( true );
+      gfx_alpha_blend( false );
     }
 
     gfx_swap_buffer();
