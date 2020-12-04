@@ -142,7 +142,7 @@ int main( int argc, char** argv ) {
     stbi_write_png( "lut.png", 512, 512, 2, img_ptr, 512 * 2 );
     free( img_ptr );
   }
-  vec3 light_pos_wor_initial = ( vec3 ){ 0, 5, 10 };
+  vec3 light_pos_wor_initial = ( vec3 ){ 0, 0.5, 2 };
 
   printf( "Reading `%s`\n", argv[1] );
   gfx_gltf_t gltf = { 0 };

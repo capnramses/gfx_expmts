@@ -213,9 +213,9 @@ void gfx_backface_culling( bool enable ) {
 
 void gfx_depth_testing( bool enable ) {
   if ( enable ) {
-    glDisable( GL_DEPTH_TEST );
-  } else {
     glEnable( GL_DEPTH_TEST );
+  } else {
+    glDisable( GL_DEPTH_TEST );
   }
 }
 
