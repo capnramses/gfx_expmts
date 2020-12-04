@@ -234,7 +234,24 @@ bool gltf_read( const char* filename, gltf_t* gltf_ptr ) {
   for ( int i = 0; i < gltf_ptr->n_images; i++ ) {
     cJSON* i_ptr   = cJSON_GetArrayItem( images_ptr, i );
     cJSON* uri_ptr = cJSON_GetObjectItem( i_ptr, "uri" );
-    if ( uri_ptr ) { strncat( gltf_ptr->images_ptr[i].uri_str, uri_ptr->valuestring, GLTF_URI_MAX - 1 ); }
+
+    if ( uri_ptr ) {
+      int k = 0;
+      // if ( uri_ptr ) { strncat( gltf_ptr->images_ptr[i].uri_str, uri_ptr->valuestring, GLTF_URI_MAX - 1 ); }
+      // replace %20 with ' '
+      int len = strlen( uri_ptr->valuestring );
+      for ( int j = 0; j < len; j++ ) {
+        if ( uri_ptr->valuestring[j] == '%' && uri_ptr->valuestring[j + 1] == '2' && uri_ptr->valuestring[j + 2] == '0' ) {
+					gltf_ptr->images_ptr[i].uri_str[0] = '\0';
+					break;
+          // skip
+        } else {
+           gltf_ptr->images_ptr[i].uri_str[k++] = uri_ptr->valuestring[j];
+        }
+      }
+			gltf_ptr->images_ptr[i].uri_str[k] = '\0';
+			printf("uri image: `%s`\n", gltf_ptr->images_ptr[i].uri_str );
+    }
   }
 
   // "materials"

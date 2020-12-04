@@ -111,6 +111,7 @@ bool gfx_gltf_load( const char* filename, gfx_gltf_t* gfx_gltf_ptr ) {
   // load images -> textures
   // NOTE: assumes images are all external files here
   for ( int i = 0; i < gfx_gltf_ptr->n_textures; i++ ) {
+		if ( gfx_gltf_ptr->gltf.images_ptr[i].uri_str[0] == '\0' ) { continue; }
     int x = 0, y = 0, comp = 0;
     char full_path[2048];
     strcpy( full_path, asset_path );

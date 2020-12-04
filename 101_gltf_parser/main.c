@@ -142,7 +142,7 @@ int main( int argc, char** argv ) {
     stbi_write_png( "lut.png", 512, 512, 2, img_ptr, 512 * 2 );
     free( img_ptr );
   }
-  vec3 light_pos_wor_initial = ( vec3 ){ 0, 0.5, 2 };
+  vec3 light_pos_wor_initial = ( vec3 ){ 0, 0.75, 5 };
 
   printf( "Reading `%s`\n", argv[1] );
   gfx_gltf_t gltf = { 0 };
@@ -231,13 +231,13 @@ int main( int argc, char** argv ) {
     // rotate light around z axis
     mat4 R_light = rot_z_deg_mat4( gfx_get_time_s() * 100.0 );
 
-    vec4 light_pos_curr_wor_xyzw = mult_mat4_vec4( R_light, v4_v3f( light_pos_wor_initial, 1.0 ) );
+    vec4 light_pos_curr_wor_xyzw =  mult_mat4_vec4( R_light, v4_v3f( light_pos_wor_initial, 1.0 ) );
 
-    gfx_texture_t pbr_textures[GFX_TEXTURE_UNIT_MAX];
-    pbr_textures[GFX_TEXTURE_UNIT_ENVIRONMENT] = cube_texture;
-    pbr_textures[GFX_TEXTURE_UNIT_IRRADIANCE]  = irradiance_texture;
-    pbr_textures[GFX_TEXTURE_UNIT_PREFILTER]   = prefilter_map_texture;
-    pbr_textures[GFX_TEXTURE_UNIT_BRDF_LUT]    = brdf_lut_texture;
+    gfx_texture_t pbr_textures[GFX_TEXTURE_UNIT_MAX] = { 0 };
+    pbr_textures[GFX_TEXTURE_UNIT_ENVIRONMENT]       = cube_texture;
+    pbr_textures[GFX_TEXTURE_UNIT_IRRADIANCE]        = irradiance_texture;
+    pbr_textures[GFX_TEXTURE_UNIT_PREFILTER]         = prefilter_map_texture;
+    pbr_textures[GFX_TEXTURE_UNIT_BRDF_LUT]          = brdf_lut_texture;
 
     {
       mat4 S  = scale_mat4( ( vec3 ){ scale_mod, scale_mod, scale_mod } );
@@ -248,6 +248,10 @@ int main( int argc, char** argv ) {
 
       gfx_uniform3f( pbr_shader, pbr_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
       gfx_uniform3f( pbr_shader, pbr_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
+
+      // TODO(Anton) for eg Sponza
+      // use default textures for levels if one is not set
+			// -- prevents reusing textures from previous meshes
 
       for ( int i = 0; i < gltf.n_meshes; i++ ) {
         gfx_uniform1f( pbr_shader, pbr_shader.u_roughness_factor, 1.0f );
@@ -291,45 +295,7 @@ int main( int argc, char** argv ) {
 
       } // endfor meshes
     }
-#if 0
-    { // render the glTF scene
-      float curr_s = (float)gfx_get_time_s();
-      mat4 S       = scale_mat4( ( vec3 ){ scale_mod, scale_mod, scale_mod } );
-      mat4 T       = translate_mat4( ( vec3 ){ .x = sinf( curr_s ), .y = 0, .z = 0 } );
-      mat4 Rx      = rot_x_deg_mat4( curr_s * 5.5f );
-      mat4 Ry      = rot_y_deg_mat4( curr_s * 10.0f );
-      mat4 R       = mult_mat4_mat4( Ry, Rx );
-      mat4 TR      = mult_mat4_mat4( T, R );
-      mat4 M       = mult_mat4_mat4( TR, S );
-      gfx_uniform1f( pbr_shader, pbr_shader.u_roughness_factor, gltf_scene.material.roughness_f );
-      gfx_uniform1f( pbr_shader, pbr_shader.u_metallic_factor, gltf_scene.material.metallic_f );
-      gfx_uniform4f( pbr_shader, pbr_shader.u_base_colour_rgba, gltf_scene.material.base_colour_rgba[0], gltf_scene.material.base_colour_rgba[1],
-        gltf_scene.material.base_colour_rgba[2], gltf_scene.material.base_colour_rgba[3] );
-      // TODO(Anton) emissive RGB uniform
-      gfx_uniform3f( pbr_shader, pbr_shader.u_light_pos_wor, light_pos_curr_wor_xyzw.x, light_pos_curr_wor_xyzw.y, light_pos_curr_wor_xyzw.z );
-      gfx_uniform3f( pbr_shader, pbr_shader.u_cam_pos_wor, cam_pos_wor.x, cam_pos_wor.y, cam_pos_wor.z );
 
-      if ( gltf_scene.material.base_colour_texture_idx > -1 ) {
-        pbr_textures[GFX_TEXTURE_UNIT_ALBEDO] = gltf_scene.textures_ptr[gltf_scene.material.base_colour_texture_idx];
-      }
-      if ( gltf_scene.material.metal_roughness_texture_idx > -1 ) {
-        pbr_textures[GFX_TEXTURE_UNIT_METAL_ROUGHNESS] = gltf_scene.textures_ptr[gltf_scene.material.metal_roughness_texture_idx];
-      }
-      if ( gltf_scene.material.emissive_texture_idx > -1 ) {
-        pbr_textures[GFX_TEXTURE_UNIT_EMISSIVE] = gltf_scene.textures_ptr[gltf_scene.material.emissive_texture_idx];
-      }
-      if ( gltf_scene.material.ambient_occlusion_texture_idx > -1 ) {
-        pbr_textures[GFX_TEXTURE_UNIT_AMBIENT_OCCLUSION] = gltf_scene.textures_ptr[gltf_scene.material.ambient_occlusion_texture_idx];
-      }
-      if ( gltf_scene.material.normal_texture_idx > -1 ) {
-        pbr_textures[GFX_TEXTURE_UNIT_NORMAL] = gltf_scene.textures_ptr[gltf_scene.material.normal_texture_idx];
-      }
-
-      for ( uint32_t mi = 0; mi < gltf_scene.n_meshes; mi++ ) {
-        gfx_draw_mesh( gltf_scene.meshes_ptr[mi], GFX_PT_TRIANGLES, pbr_shader, P.m, V.m, M.m, pbr_textures, GFX_TEXTURE_UNIT_MAX );
-      }
-    }
-#endif
     if ( debug_lut ) {
       mat4 I = identity_mat4();
       gfx_draw_mesh( gfx_ss_quad_mesh, GFX_PT_TRIANGLE_STRIP, quad_shader, I.m, I.m, I.m, &brdf_lut_texture, 1 );
