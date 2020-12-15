@@ -1,7 +1,9 @@
 // based on https://threejsfundamentals.org/threejs/lessons/threejs-webvr.html
 
-import * as THREE from './resources/three/r122/build/three.module.js';
-import {VRButton} from './resources/threejs/r122/examples/jsm/webxr/VRButton.js';
+//import * as THREE from './resources/three/r122/build/three.module.js';
+import * as THREE from './three.js/build/three.module.js';
+import {VRButton} from './three.js/examples/jsm/webxr/VRButton.js';
+//import {VRButton} from './resources/threejs/r122/examples/jsm/webxr/VRButton.js';
 
 function main() {
 	const canvas        = document.getElementById( "canvas" );
@@ -9,11 +11,11 @@ function main() {
   renderer.xr.enabled = true;
   document.body.appendChild( VRButton.createButton( renderer ) );
 	
-	const fov    = 66;
-	const aspect = 2;
-	const near   = 0.01;
-	const far    = 100.0;
-	const camera = new THREE.PerspectiveCamera( fovy, aspect, near, far );	
+	const fovy    = 66;
+	const aspect  = 2;
+	const near    = 0.01;
+	const far     = 100.0;
+	const camera  = new THREE.PerspectiveCamera( fovy, aspect, near, far );	
 	camera.position.set( 0.0, 1.6, 0.0 );
 
 	const scene = new THREE.Scene();
@@ -27,13 +29,13 @@ function main() {
 
 	const geom = new THREE.BoxGeometry( 1, 1, 1 );
 	function make_inst( geom, colour, x ) {
-		const material = new THREE.MeshPhongMaterial( { colour } );
+		const material = new THREE.MeshPhongMaterial( { color:colour } );
 		const cube     = new THREE.Mesh( geom, material );
 		scene.add( cube );
 
 		cube.position.x = x;
 		cube.position.y = 1.6;
-		cube.posizion.z = -2;
+		cube.position.z = -2;
 
 		return cube;
 	}
