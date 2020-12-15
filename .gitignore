@@ -11,6 +11,9 @@ build/
 .vscode/
 Debug/
 
+# security
+*.pem
+
 # runtime outputs
 *.log
 *.tlog
