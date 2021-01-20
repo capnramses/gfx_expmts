@@ -1,4 +1,5 @@
-// https://docs.opencv.org/3.4/da/d0a/group__imgcodecs__c.html
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp> // don't need for this
 #include <opencv2/videoio.hpp>
@@ -36,6 +37,11 @@ int main( int argc, char** argv  ) {
 
 	vid >> frame_img;
 	int frame_idx = 0;
+	
+	// NOTE(Anton) OpenCV uses BGR image data, and stb expects RGB.
+	// so output channels are wrong here. PNG incidentally uses BGR natively.
+	stbi_write_png("frame0000.png",dims.width,dims.height,3,frame_img.data, 3*dims.width);
+
 	while ( !frame_img.empty() ) {
 		cv::imshow( title_str, frame_img );
 
