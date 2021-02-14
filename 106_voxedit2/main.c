@@ -32,23 +32,33 @@ int main() {
     gfx_viewport( 0, 0, fb_w, fb_h );
     gfx_clear_colour_and_depth_buffers( 0.2f, 0.2f, 0.2f, 1.0f );
 
+    /* pop up tile chooser */
+    // TODO
     gfx_draw_textured_quad( texture, ( vec2 ){ 0.5, 0.5 }, ( vec2 ){ 0, 0 }, ( vec2 ){ 1, 1 }, ( vec4 ){ 1, 1, 1, 1 } );
+
+    /* render a single cube for each, with instancing */
+    // TODO
 
     gfx_swap_buffer();
     gfx_poll_events();
-    
-  /* button to save in either ply or a voxel format (just dims and tile types) */
 
-  /* button to load from voxel format */
+    /* button to save in either ply or a voxel format (just dims and tile types) */
+    if ( input_was_key_pressed( 'S' ) ) {
+      printf( "saving...\n" );
+      save_vox( "my.vox" );
+    }
+    /* button to load from voxel format */
+    if ( input_was_key_pressed( 'L' ) ) {
+      printf( "loading...\n" );
+      load_vox( "my.vox" );
+      // TODO validate
+      // TODO update buffer used for palettes
+    }
 
+    /* oct-tree raycast function within chunk. ignore air tiles. */
+
+    // bool ray_aabb( vec3 ray_origin, vec3 ray_direction, vec3 aabb_min, vec3 aabb_max, float tmin, float tmax );
   }
-
-  /* render a single cube for each, with instancing */
-
-  /* oct-tree raycast function within chunk. ignore air tiles. */
-  // bool ray_aabb( vec3 ray_origin, vec3 ray_direction, vec3 aabb_min, vec3 aabb_max, float tmin, float tmax );
-
-  /* pop up tile chooser */
 
   gfx_stop();
 
