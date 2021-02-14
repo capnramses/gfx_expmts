@@ -111,7 +111,9 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 100     | `gltf_pbr`                  | glTF loader combine with PBR shaders.                                      | started             |
 | 101     | `gltf_parser`               | Start of a parser for glTF.                                                | started             |
 | 102     | `threejs_xr`                | Testing VR/AR with Three.js.                                               | started             |
-| 103     | `bresenham3d`               | 3D line drawing with Bresenham.                                            | proposed            |
+| 103     | `opencv_starter`            | Basic OpenCV example.                                                      | working             |
+| 104     | `opencv_mp4`                | Playing a video with OpenCV.                                               | working             |
+| 105     | `bresenham3d`               | 3D line drawing with Bresenham.                                            | proposed            |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
