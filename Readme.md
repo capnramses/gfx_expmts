@@ -109,6 +109,9 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 098     | `cubemap_irradiance`        | PBR image-based lighting example part 1: generating irradiance map.        | working             |
 | 099     | `pbr_ibl_specular`          | PBR Image-Based Lighting complete - specular term and BRDF LUT used.       | working             |
 | 100     | `gltf_pbr`                  | glTF loader combine with PBR shaders.                                      | started             |
+| 101     | `gltf_parser`               | Start of a parser for glTF.                                                | started             |
+| 102     | `threejs_xr`                | Testing VR/AR with Three.js.                                               | started             |
+| 103     | `bresenham3d`               | 3D line drawing with Bresenham.                                            | proposed            |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
