@@ -29,14 +29,26 @@ bool load_vox( const char* filename ) {
 vec3 ray_d_wor_from_mouse( mat4 inv_P, mat4 inv_V ) {
   int win_x = 0, win_y = 0;
   gfx_window_dims( &win_x, &win_y );
-  vec4 ray_eye  = mult_mat4_vec4( inv_P, ( vec4 ){ ( 2.0f * input_mouse_x_win ) / win_x - 1.0f, 1.0f - ( 2.0f * input_mouse_y_win ) / win_y, -1.0, 1.0 } );
-  vec4 tmp_wor  = mult_mat4_vec4( inv_V, ( vec4 ){ ray_eye.x, ray_eye.y, -1.0, 0.0 } );
-  vec3 ray_wor  = normalise_vec3( v3_v4( tmp_wor ) );
+  vec4 ray_eye = mult_mat4_vec4( inv_P, ( vec4 ){ ( 2.0f * input_mouse_x_win ) / win_x - 1.0f, 1.0f - ( 2.0f * input_mouse_y_win ) / win_y, -1.0, 1.0 } );
+  vec4 tmp_wor = mult_mat4_vec4( inv_V, ( vec4 ){ ray_eye.x, ray_eye.y, -1.0, 0.0 } );
+  vec3 ray_wor = normalise_vec3( v3_v4( tmp_wor ) );
   return ray_wor;
 }
 
-bool raycast_voxel( vec3 ray_o, vec3 ray_d ) {
-  bool hit = ray_aabb( ray_o, ray_d, ( vec3 ){ -0.1, -0.1, -0.1 }, ( vec3 ){ 3.2 - 0.1, 6.4 - 0.1, 3.2 - 0.1 }, 0.1, 100 );
+// if we transform the ray from world to local space we can use the same function for any chunk
+bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
+  vec3 ray_d_loc = normalise_vec3( v3_v4( mult_mat4_vec4( inv_M, v4_v3f( ray_d, 0.0f ) ) ) );
+  vec3 ray_o_loc = v3_v4( mult_mat4_vec4( inv_M, v4_v3f( ray_o, 1.0f ) ) );
+  print_vec3( ray_d_loc );
+  print_vec3( ray_o );
+  print_vec3( ray_o_loc );
+
+  // check entire chunk
+  bool hit = ray_aabb( ray_o_loc, ray_d_loc, ( vec3 ){ -0.5, -0.5, -0.5 }, ( vec3 ){ CHUNK_X - 1 + 0.5, CHUNK_Y - 1 + 0.5, CHUNK_Z - 1 + 0.5 }, 0.1, 1000 );
+  if ( !hit ) { return false; }
+  // check 8 subdivisions
+  // hit = ray_obb( box, ray_o, ray_d, &t, &face_num );
+
   return hit;
 }
 
@@ -47,7 +59,9 @@ int main() {
   int fb_w = 0, fb_h = 0;
   gfx_framebuffer_dims( &fb_w, &fb_h );
   camera_t cam = create_cam( (float)fb_w / (float)fb_h );
-  cam.pos      = ( vec3 ){ .x = 1.6, .y = 10, .z = 10 };
+  cam.pos      = ( vec3 ){ .x = 25, .y = 8, .z = 25 };
+  cam.x_degs   = 0;//-45;
+  cam.y_degs   = 45;
   recalc_cam_V( &cam );
 
   gfx_shader_t shader = gfx_create_shader_program_from_files( "instanced.vert", "instanced.frag" );
@@ -67,6 +81,9 @@ int main() {
   }
   gfx_buffer_t voxel_positions = gfx_buffer_create( positions, 3, N_VOXELS, true );
 
+  mat4 M     = scale_mat4( ( vec3 ){ 1, 1, 1 } );
+  mat4 inv_M = inverse_mat4( M );
+
   double prev_s = gfx_get_time_s();
   while ( !gfx_should_window_close() ) {
     double curr_s    = gfx_get_time_s();
@@ -78,7 +95,6 @@ int main() {
     gfx_clear_colour_and_depth_buffers( 0.2f, 0.2f, 0.2f, 1.0f );
 
     recalc_cam_P( &cam, (float)fb_w / (float)fb_h );
-    mat4 M     = scale_mat4( ( vec3 ){ 0.1, 0.1, 0.1 } );
     mat4 inv_P = inverse_mat4( cam.P );
     mat4 inv_V = inverse_mat4( cam.V );
 
@@ -114,7 +130,7 @@ int main() {
       vec3 ray_d_wor = ray_d_wor_from_mouse( inv_P, inv_V );
       printf( "ray_d_wor= " );
       print_vec3( ray_d_wor );
-      if ( raycast_voxel( cam.pos, ray_d_wor ) ) {
+      if ( raycast_voxel( cam.pos, ray_d_wor, inv_M ) ) {
         printf( "HIT\n" );
       } else {
         printf( "MISS\n" );
