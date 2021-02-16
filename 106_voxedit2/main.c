@@ -1,3 +1,4 @@
+#include "camera.h"
 #include "gfx.h"
 #include "input.h"
 #include <stdio.h>
@@ -25,11 +26,34 @@ bool load_vox( const char* filename ) {
   return true;
 }
 
+vec3 ray_d_wor_from_mouse( mat4 inv_P, mat4 inv_V ) {
+  int win_x = 0, win_y = 0;
+  gfx_window_dims( &win_x, &win_y );
+  vec4 ray_clip = ( vec4 ){ ( 2.0f * input_mouse_x_win ) / win_x - 1.0f, 1.0f - ( 2.0f * input_mouse_y_win ) / win_y, -1.0, 1.0 };
+  vec4 ray_eye  = mult_mat4_vec4( inv_P, ray_clip );
+  ray_eye       = ( vec4 ){ ray_eye.x, ray_eye.y, -1.0, 0.0 };
+  vec4 tmp_wor  = mult_mat4_vec4( inv_V, ray_eye );
+  vec3 ray_wor  = normalise_vec3( v3_v4( tmp_wor ) );
+  return ray_wor;
+}
+
+bool raycast_voxel( vec3 ray_o, vec3 ray_d ) {
+  bool hit = ray_aabb( ray_o, ray_d, ( vec3 ){ -0.1, -0.1, -0.1 }, ( vec3 ){ 3.2 - 0.1, 6.4 - 0.1, 3.2 - 0.1 }, 0.1, 100 );
+  return hit;
+}
+
 int main() {
   gfx_start( "Voxedit2 by Anton Gerdelan\n", NULL, false );
+  input_init();
 
-  gfx_shader_t shader   = gfx_create_shader_program_from_files( "instanced.vert", "instanced.frag" );
-  if (shader.program_gl == 0 ) { return 1; }
+  int fb_w = 0, fb_h = 0;
+  gfx_framebuffer_dims( &fb_w, &fb_h );
+  camera_t cam = create_cam( (float)fb_w / (float)fb_h );
+  cam.pos      = ( vec3 ){ .x = 1.6, .y = 10, .z = 10 };
+  recalc_cam_V( &cam );
+
+  gfx_shader_t shader = gfx_create_shader_program_from_files( "instanced.vert", "instanced.frag" );
+  if ( shader.program_gl == 0 ) { return 1; }
   gfx_texture_t texture = gfx_texture_create_from_file( "some_file.png", ( gfx_texture_properties_t ){ .bilinear = 0 } );
   gfx_mesh_t mesh       = gfx_mesh_create_from_ply( "unit_cube.ply" );
   if ( mesh.n_vertices == 0 ) { return 1; }
@@ -45,15 +69,20 @@ int main() {
   }
   gfx_buffer_t voxel_positions = gfx_buffer_create( positions, 3, N_VOXELS, true );
 
+  double prev_s = gfx_get_time_s();
   while ( !gfx_should_window_close() ) {
-    int fb_w = 0, fb_h = 0;
+    double curr_s    = gfx_get_time_s();
+    double elapsed_s = curr_s - prev_s;
+    prev_s           = curr_s;
+
     gfx_framebuffer_dims( &fb_w, &fb_h );
     gfx_viewport( 0, 0, fb_w, fb_h );
     gfx_clear_colour_and_depth_buffers( 0.2f, 0.2f, 0.2f, 1.0f );
 
-    mat4 P = perspective( 66.6f, (float)fb_w / (float)fb_h, 0.1f, 100.0f );
-    mat4 V = look_at( ( vec3 ){ CHUNK_X * 0.1, CHUNK_Y * 0.1 * 3, 10 }, ( vec3 ){ CHUNK_X * 0.1, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
-    mat4 M = scale_mat4( ( vec3 ){ 0.1, 0.1, 0.1 } );
+    recalc_cam_P( &cam, (float)fb_w / (float)fb_h );
+    mat4 M     = scale_mat4( ( vec3 ){ 0.1, 0.1, 0.1 } );
+    mat4 inv_P = inverse_mat4( cam.P );
+    mat4 inv_V = inverse_mat4( cam.V );
 
     /* pop up tile chooser */
     // TODO
@@ -64,9 +93,10 @@ int main() {
     /* render a single cube for each, with instancing */
     // TODO
     int n_instances = N_VOXELS;
-    gfx_draw_mesh_instanced( &shader, P, V, M, mesh.vao, mesh.n_vertices, &texture, 1, n_instances, &voxel_positions, 1 );
+    gfx_draw_mesh_instanced( &shader, cam.P, cam.V, M, mesh.vao, mesh.n_vertices, &texture, 1, n_instances, &voxel_positions, 1 );
 
     gfx_swap_buffer();
+    input_reset_last_polled_input_states();
     gfx_poll_events();
 
     /* button to save in either ply or a voxel format (just dims and tile types) */
@@ -80,6 +110,17 @@ int main() {
       load_vox( "my.vox" );
       // TODO validate
       // TODO update buffer used for palettes
+    }
+
+    if ( input_lmb_clicked() ) {
+      vec3 ray_d_wor = ray_d_wor_from_mouse( inv_P, inv_V );
+      printf( "ray_d_wor= " );
+      print_vec3( ray_d_wor );
+      if ( raycast_voxel( cam.pos, ray_d_wor ) ) {
+        printf( "HIT\n" );
+      } else {
+        printf( "MISS\n" );
+      }
     }
 
     /* oct-tree raycast function within chunk. ignore air tiles. */
