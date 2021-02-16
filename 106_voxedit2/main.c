@@ -29,10 +29,8 @@ bool load_vox( const char* filename ) {
 vec3 ray_d_wor_from_mouse( mat4 inv_P, mat4 inv_V ) {
   int win_x = 0, win_y = 0;
   gfx_window_dims( &win_x, &win_y );
-  vec4 ray_clip = ( vec4 ){ ( 2.0f * input_mouse_x_win ) / win_x - 1.0f, 1.0f - ( 2.0f * input_mouse_y_win ) / win_y, -1.0, 1.0 };
-  vec4 ray_eye  = mult_mat4_vec4( inv_P, ray_clip );
-  ray_eye       = ( vec4 ){ ray_eye.x, ray_eye.y, -1.0, 0.0 };
-  vec4 tmp_wor  = mult_mat4_vec4( inv_V, ray_eye );
+  vec4 ray_eye  = mult_mat4_vec4( inv_P, ( vec4 ){ ( 2.0f * input_mouse_x_win ) / win_x - 1.0f, 1.0f - ( 2.0f * input_mouse_y_win ) / win_y, -1.0, 1.0 } );
+  vec4 tmp_wor  = mult_mat4_vec4( inv_V, ( vec4 ){ ray_eye.x, ray_eye.y, -1.0, 0.0 } );
   vec3 ray_wor  = normalise_vec3( v3_v4( tmp_wor ) );
   return ray_wor;
 }
