@@ -143,7 +143,7 @@ void gfx_buffer_delete( gfx_buffer_t* buffer );
 
 /** @param buffer can not be NULL.
  * @param  data can be NULL. */
-bool gfx_buffer_update( gfx_buffer_t* buffer, float* data, uint32_t n_components, uint32_t n_elements );
+bool gfx_buffer_update( gfx_buffer_t* buffer, void* data, uint32_t n_components, uint32_t n_elements );
 
 void gfx_delete_mesh( gfx_mesh_t* mesh );
 

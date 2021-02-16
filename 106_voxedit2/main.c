@@ -41,6 +41,8 @@ vec3 ray_d_wor_from_mouse( mat4 inv_P, mat4 inv_V ) {
 }
 
 // if we transform the ray from world to local space we can use the same function for any chunk
+int xx, yy, zz;
+int face_num = 0;
 bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
   vec3 ray_d_loc = normalise_vec3( v3_v4( mult_mat4_vec4( inv_M, v4_v3f( ray_d, 0.0f ) ) ) );
   vec3 ray_o_loc = v3_v4( mult_mat4_vec4( inv_M, v4_v3f( ray_o, 1.0f ) ) );
@@ -57,15 +59,14 @@ bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
   // HACK
   float d_closest = 0.0f;
   int idx_closest = -1;
-  int xx, yy, zz;
   for ( int y = CHUNK_Y - 1; y >= 0; y-- ) {
     for ( int z = 0; z < CHUNK_Z; z++ ) {
       for ( int x = 0; x < CHUNK_X; x++ ) {
         int idx = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
-        if ( 0 == types[idx] ) { continue; }
+        if ( 0 == voxels[idx] ) { continue; }
 
-        hit = ray_aabb( ray_o_loc, ray_d_loc, ( vec3 ){ -0.5 + x, -0.5 + y, -0.5 + z }, ( vec3 ){ x + 0.5, y + 0.5, z + 0.5 }, 0.1, 1000 );
-        if ( hit ) {
+        bool minihit = ray_aabb( ray_o_loc, ray_d_loc, ( vec3 ){ -0.5 + x, -0.5 + y, -0.5 + z }, ( vec3 ){ x + 0.5, y + 0.5, z + 0.5 }, 1, 100 );
+        if ( minihit ) {
           float d = length2_vec3( ( vec3 ){ x - ray_o_loc.x, y - ray_o_loc.y, z - ray_o_loc.z } );
           if ( -1 == idx_closest || d < d_closest ) {
             idx_closest = idx;
@@ -78,14 +79,54 @@ bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
       }
     }
   }
-  if ( d_closest != -1 ) { printf( "hit x %i y %i z %i\n", xx, yy, zz ); }
+  if ( d_closest != -1 ) {
+    printf( "hit x %i y %i z %i\n", xx, yy, zz );
+
+    // TODO(Anton) slow AABB ray to pick face -- store the face because we'll build on that, not just on top
+
+    float t = 0.0;
+    ray_obb(
+      ( obb_t ){
+        .centre        = ( vec3 ){ xx, yy, zz },                                           //
+        .half_lengths  = { 0.5, 0.5, 0.5 },                                                //
+        .norm_side_dir = { ( vec3 ){ 1, 0, 0 }, ( vec3 ){ 0, 1, 0 }, ( vec3 ){ 0, 0, 1 } } //
+      },
+      ray_o_loc, ray_d_loc, &t, &face_num //
+    );
+
+    return true;
+  }
 
   return hit;
 }
 
+gfx_buffer_t voxel_buffers[2];
+void update_buffers() {
+  memset( types, 0, sizeof( int ) * N_VOXELS );
+  memset( positions, 0, sizeof( float ) * N_VOXELS * 3 );
+  n_positions = 0;
+  for ( int y = 0; y < CHUNK_Y; y++ ) {
+    for ( int z = 0; z < CHUNK_Z; z++ ) {
+      for ( int x = 0; x < CHUNK_X; x++ ) {
+        int idx = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
+        if ( 0 == voxels[idx] ) { continue; }
+        positions[n_positions * 3 + 0] = x;
+        positions[n_positions * 3 + 1] = y;
+        positions[n_positions * 3 + 2] = z;
+        types[n_positions]             = voxels[idx];
+        n_positions++;
+      }
+    }
+  }
+  gfx_buffer_update( &voxel_buffers[0], positions, 3, n_positions );
+  gfx_buffer_update( &voxel_buffers[1], types, 1, n_positions );
+}
+
 void reset_chunk() {
   memset( voxels, 0, sizeof( uint8_t ) * N_VOXELS );
+  memset( types, 0, sizeof( int ) * N_VOXELS );
   memset( positions, 0, sizeof( float ) * N_VOXELS * 3 );
+  n_positions = 0;
   // floor has type 1
   for ( int z = 0; z < CHUNK_Z; z++ ) {
     for ( int x = 0; x < CHUNK_X; x++ ) {
@@ -120,7 +161,6 @@ int main() {
   gfx_mesh_t mesh           = gfx_mesh_create_from_ply( "unit_cube.ply" );
   if ( mesh.n_vertices == 0 ) { return 1; }
   reset_chunk();
-  gfx_buffer_t voxel_buffers[2];
   voxel_buffers[0] = gfx_buffer_create( positions, 3, n_positions, true, false );
   voxel_buffers[1] = gfx_buffer_create( types, 1, n_positions, true, true );
 
@@ -182,15 +222,15 @@ int main() {
       // TODO update buffer used for palettes
     }
 
+    bool over_picker = false;
+    int win_x = 0, win_y = 0;
+    gfx_window_dims( &win_x, &win_y );
+    float mmx = input_mouse_x_win / (float)win_x * 2.0f - 1.0f;
+    float mmy = -( input_mouse_y_win / (float)win_y * 2.0f - 1.0f );
+    if ( mmx < -1.0 + picker_scale.x * 2 && mmy > 1.0 - picker_scale.y * 2 ) { over_picker = true; }
+
     /* oct-tree raycast function within chunk. ignore air tiles. */
     if ( input_lmb_clicked() ) {
-      bool over_picker = false;
-      int win_x = 0, win_y = 0;
-      gfx_window_dims( &win_x, &win_y );
-      float mmx = input_mouse_x_win / (float)win_x * 2.0f - 1.0f;
-      float mmy = -( input_mouse_y_win / (float)win_y * 2.0f - 1.0f );
-      if ( mmx < -1.0 + picker_scale.x * 2 && mmy > 1.0 - picker_scale.y * 2 ) { over_picker = true; }
-
       if ( over_picker ) {
         float xp          = ( mmx + 1.0 ) / ( picker_scale.x * 2 );
         float yp          = 3.0 - ( mmy + 1.0 ) / ( picker_scale.y * 2 );
@@ -200,16 +240,47 @@ int main() {
         printf( "selected type = %i\n", selected_type_idx );
       } else {
         vec3 ray_d_wor = ray_d_wor_from_mouse( inv_P, inv_V );
-        printf( "ray_d_wor= " );
-        print_vec3( ray_d_wor );
         if ( raycast_voxel( cam.pos, ray_d_wor, inv_M ) ) {
-          printf( "HIT\n" );
+          printf( "HIT. face %i\n", face_num );
+          switch ( face_num ) {
+          case 1: {
+            if ( xx < CHUNK_X - 1 ) {
+              int idx     = yy * ( CHUNK_X * CHUNK_Z ) + zz * CHUNK_Z + xx + 1;
+              voxels[idx] = (uint8_t)selected_type_idx;
+              update_buffers();
+            }
+          } break;
+          case 2: {
+            if ( yy < CHUNK_Y - 1 ) {
+              int idx     = ( yy + 1 ) * ( CHUNK_X * CHUNK_Z ) + zz * CHUNK_Z + xx;
+              voxels[idx] = (uint8_t)selected_type_idx;
+              update_buffers();
+            }
+          } break;
+          case 3: {
+            if ( zz < CHUNK_Z - 1 ) {
+              int idx     = yy * ( CHUNK_X * CHUNK_Z ) + ( zz + 1 ) * CHUNK_Z + xx;
+              voxels[idx] = (uint8_t)selected_type_idx;
+              update_buffers();
+            }
+          } break;
+          } // endsw
         } else {
           printf( "MISS\n" );
         }
       } // endif over picker
     }   // endif lmb
-  }
+
+    if ( input_rmb_clicked() && !over_picker ) {
+      vec3 ray_d_wor = ray_d_wor_from_mouse( inv_P, inv_V );
+      if ( raycast_voxel( cam.pos, ray_d_wor, inv_M ) ) {
+        int idx     = yy * ( CHUNK_X * CHUNK_Z ) + zz * CHUNK_Z + xx;
+        voxels[idx] = 0;
+        update_buffers();
+      }
+    }
+
+  } // endwhile
 
   gfx_delete_shader_program( &shader );
   gfx_delete_mesh( &mesh );

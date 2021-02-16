@@ -658,7 +658,7 @@ void gfx_buffer_delete( gfx_buffer_t* buffer ) {
   memset( buffer, 0, sizeof( gfx_buffer_t ) );
 }
 
-bool gfx_buffer_update( gfx_buffer_t* buffer, float* data, uint32_t n_components, uint32_t n_elements ) {
+bool gfx_buffer_update( gfx_buffer_t* buffer, void* data, uint32_t n_components, uint32_t n_elements ) {
   if ( !buffer || !buffer->vbo_gl ) { return false; }
   buffer->n_components = n_components;
   buffer->n_elements   = n_elements;
