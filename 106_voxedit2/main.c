@@ -54,6 +54,32 @@ bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
   // check 8 subdivisions
   // hit = ray_obb( box, ray_o, ray_d, &t, &face_num );
 
+  // HACK
+  float d_closest = 0.0f;
+  int idx_closest = -1;
+  int xx, yy, zz;
+  for ( int y = CHUNK_Y - 1; y >= 0; y-- ) {
+    for ( int z = 0; z < CHUNK_Z; z++ ) {
+      for ( int x = 0; x < CHUNK_X; x++ ) {
+        int idx = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
+        if ( 0 == types[idx] ) { continue; }
+
+        hit = ray_aabb( ray_o_loc, ray_d_loc, ( vec3 ){ -0.5 + x, -0.5 + y, -0.5 + z }, ( vec3 ){ x + 0.5, y + 0.5, z + 0.5 }, 0.1, 1000 );
+        if ( hit ) {
+          float d = length2_vec3( ( vec3 ){ x - ray_o_loc.x, y - ray_o_loc.y, z - ray_o_loc.z } );
+          if ( -1 == idx_closest || d < d_closest ) {
+            idx_closest = idx;
+            d_closest   = d;
+            xx          = x;
+            yy          = y;
+            zz          = z;
+          }
+        }
+      }
+    }
+  }
+  if ( d_closest != -1 ) { printf( "hit x %i y %i z %i\n", xx, yy, zz ); }
+
   return hit;
 }
 
@@ -126,8 +152,8 @@ int main() {
       // and show currently selected type by drawing a box over the image
       vec2 sel_scale = ( vec2 ){ picker_scale.x / 16, picker_scale.y / 16 };
       vec2 sel_pos = ( vec2 ){ -1.0 + sel_scale.x * ( selected_type_idx % 16 ) * 2 + sel_scale.x, 1.0 - sel_scale.y * ( selected_type_idx / 16 ) * 2 - sel_scale.y };
-      float v = fabsf( sinf( curr_s * 4 ) );
-      gfx_draw_textured_quad( sel_texture, sel_scale, sel_pos, ( vec2 ){ 1, 1 }, ( vec4 ){ v,v,v, 1 } );
+      float v      = fabsf( sinf( curr_s * 4 ) );
+      gfx_draw_textured_quad( sel_texture, sel_scale, sel_pos, ( vec2 ){ 1, 1 }, ( vec4 ){ v, v, v, 1 } );
       gfx_alpha_testing( false );
 
       gfx_depth_testing( true );
