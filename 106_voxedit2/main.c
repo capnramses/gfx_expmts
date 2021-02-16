@@ -1,6 +1,7 @@
 #include "camera.h"
 #include "gfx.h"
 #include "input.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -13,7 +14,8 @@
 uint8_t voxels[N_VOXELS];
 float positions[N_VOXELS * 3];
 int types[N_VOXELS];
-int n_positions = 0;
+int n_positions       = 0;
+int selected_type_idx = 0;
 
 bool save_vox( const char* filename ) {
   FILE* f_ptr = fopen( filename, "wb" );
@@ -87,8 +89,9 @@ int main() {
 
   gfx_shader_t shader = gfx_create_shader_program_from_files( "instanced.vert", "instanced.frag" );
   if ( shader.program_gl == 0 ) { return 1; }
-  gfx_texture_t texture = gfx_texture_create_from_file( "texture.png", ( gfx_texture_properties_t ){ .bilinear = 0, .is_srgb = true } );
-  gfx_mesh_t mesh       = gfx_mesh_create_from_ply( "unit_cube.ply" );
+  gfx_texture_t texture     = gfx_texture_create_from_file( "texture.png", ( gfx_texture_properties_t ){ .bilinear = 0, .is_srgb = true } );
+  gfx_texture_t sel_texture = gfx_texture_create_from_file( "selected.png", ( gfx_texture_properties_t ){ .bilinear = true, .is_srgb = true } );
+  gfx_mesh_t mesh           = gfx_mesh_create_from_ply( "unit_cube.ply" );
   if ( mesh.n_vertices == 0 ) { return 1; }
   reset_chunk();
   gfx_buffer_t voxel_buffers[2];
@@ -97,6 +100,9 @@ int main() {
 
   mat4 M     = scale_mat4( ( vec3 ){ 1, 1, 1 } );
   mat4 inv_M = inverse_mat4( M );
+
+  vec2 picker_scale = ( vec2 ){ 1024 / (float)fb_w * 0.25f, 1024 / (float)fb_h * 0.25f };
+  vec2 picker_pos   = ( vec2 ){ -1.0 + picker_scale.x, 1.0 - picker_scale.y };
 
   double prev_s = gfx_get_time_s();
   while ( !gfx_should_window_close() ) {
@@ -112,9 +118,20 @@ int main() {
     mat4 inv_P = inverse_mat4( cam.P );
     mat4 inv_V = inverse_mat4( cam.V );
 
-    /* pop up tile chooser */
-    // TODO
-    // gfx_draw_textured_quad( texture, ( vec2 ){ 0.5, 0.5 }, ( vec2 ){ 0, 0 }, ( vec2 ){ 1, 1 }, ( vec4 ){ 1, 1, 1, 1 } );
+    { /* pop up tile chooser */
+      gfx_depth_testing( false );
+      gfx_draw_textured_quad( texture, picker_scale, picker_pos, ( vec2 ){ 1, 1 }, ( vec4 ){ 1, 1, 1, 1 } );
+
+      gfx_alpha_testing( true );
+      // and show currently selected type by drawing a box over the image
+      vec2 sel_scale = ( vec2 ){ picker_scale.x / 16, picker_scale.y / 16 };
+      vec2 sel_pos = ( vec2 ){ -1.0 + sel_scale.x * ( selected_type_idx % 16 ) * 2 + sel_scale.x, 1.0 - sel_scale.y * ( selected_type_idx / 16 ) * 2 - sel_scale.y };
+      float v = fabsf( sinf( curr_s * 4 ) );
+      gfx_draw_textured_quad( sel_texture, sel_scale, sel_pos, ( vec2 ){ 1, 1 }, ( vec4 ){ v,v,v, 1 } );
+      gfx_alpha_testing( false );
+
+      gfx_depth_testing( true );
+    }
 
     gfx_uniform4f( &shader, shader.u_tint, 1, 1, 1, 1 );
 
@@ -139,18 +156,33 @@ int main() {
       // TODO update buffer used for palettes
     }
 
-    
     /* oct-tree raycast function within chunk. ignore air tiles. */
     if ( input_lmb_clicked() ) {
-      vec3 ray_d_wor = ray_d_wor_from_mouse( inv_P, inv_V );
-      printf( "ray_d_wor= " );
-      print_vec3( ray_d_wor );
-      if ( raycast_voxel( cam.pos, ray_d_wor, inv_M ) ) {
-        printf( "HIT\n" );
+      bool over_picker = false;
+      int win_x = 0, win_y = 0;
+      gfx_window_dims( &win_x, &win_y );
+      float mmx = input_mouse_x_win / (float)win_x * 2.0f - 1.0f;
+      float mmy = -( input_mouse_y_win / (float)win_y * 2.0f - 1.0f );
+      if ( mmx < -1.0 + picker_scale.x * 2 && mmy > 1.0 - picker_scale.y * 2 ) { over_picker = true; }
+
+      if ( over_picker ) {
+        float xp          = ( mmx + 1.0 ) / ( picker_scale.x * 2 );
+        float yp          = 3.0 - ( mmy + 1.0 ) / ( picker_scale.y * 2 );
+        int xx            = (int)( xp / ( 1.0 / 16.0 ) );
+        int yy            = (int)( yp / ( 1.0 / 16.0 ) );
+        selected_type_idx = yy * 16 + xx;
+        printf( "selected type = %i\n", selected_type_idx );
       } else {
-        printf( "MISS\n" );
-      }
-    }
+        vec3 ray_d_wor = ray_d_wor_from_mouse( inv_P, inv_V );
+        printf( "ray_d_wor= " );
+        print_vec3( ray_d_wor );
+        if ( raycast_voxel( cam.pos, ray_d_wor, inv_M ) ) {
+          printf( "HIT\n" );
+        } else {
+          printf( "MISS\n" );
+        }
+      } // endif over picker
+    }   // endif lmb
   }
 
   gfx_delete_shader_program( &shader );
