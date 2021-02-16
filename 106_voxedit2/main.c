@@ -4,8 +4,12 @@
 #include <stdint.h>
 
 /* create a 16x256x16 array of blocks */
-#define N_VOXELS ( 16 * 256 * 16 )
+#define CHUNK_X 16
+#define CHUNK_Y 32
+#define CHUNK_Z 16
+#define N_VOXELS ( CHUNK_X * CHUNK_Y * CHUNK_Z )
 uint8_t voxels[N_VOXELS];
+float positions[N_VOXELS * 3];
 
 bool save_vox( const char* filename ) {
   FILE* f_ptr = fopen( filename, "wb" );
@@ -24,7 +28,22 @@ bool load_vox( const char* filename ) {
 int main() {
   gfx_start( "Voxedit2 by Anton Gerdelan\n", NULL, false );
 
+  gfx_shader_t shader   = gfx_create_shader_program_from_files( "instanced.vert", "instanced.frag" );
+  if (shader.program_gl == 0 ) { return 1; }
   gfx_texture_t texture = gfx_texture_create_from_file( "some_file.png", ( gfx_texture_properties_t ){ .bilinear = 0 } );
+  gfx_mesh_t mesh       = gfx_mesh_create_from_ply( "unit_cube.ply" );
+  if ( mesh.n_vertices == 0 ) { return 1; }
+  for ( int y = 0; y < CHUNK_Y; y++ ) {
+    for ( int z = 0; z < CHUNK_Z; z++ ) {
+      for ( int x = 0; x < CHUNK_X; x++ ) {
+        int idx                = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
+        positions[idx * 3 + 0] = x;
+        positions[idx * 3 + 1] = y;
+        positions[idx * 3 + 2] = z;
+      }
+    }
+  }
+  gfx_buffer_t voxel_positions = gfx_buffer_create( positions, 3, N_VOXELS, true );
 
   while ( !gfx_should_window_close() ) {
     int fb_w = 0, fb_h = 0;
@@ -32,12 +51,20 @@ int main() {
     gfx_viewport( 0, 0, fb_w, fb_h );
     gfx_clear_colour_and_depth_buffers( 0.2f, 0.2f, 0.2f, 1.0f );
 
+    mat4 P = perspective( 66.6f, (float)fb_w / (float)fb_h, 0.1f, 100.0f );
+    mat4 V = look_at( ( vec3 ){ CHUNK_X * 0.1, CHUNK_Y * 0.1 * 3, 10 }, ( vec3 ){ CHUNK_X * 0.1, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
+    mat4 M = scale_mat4( ( vec3 ){ 0.1, 0.1, 0.1 } );
+
     /* pop up tile chooser */
     // TODO
-    gfx_draw_textured_quad( texture, ( vec2 ){ 0.5, 0.5 }, ( vec2 ){ 0, 0 }, ( vec2 ){ 1, 1 }, ( vec4 ){ 1, 1, 1, 1 } );
+    // gfx_draw_textured_quad( texture, ( vec2 ){ 0.5, 0.5 }, ( vec2 ){ 0, 0 }, ( vec2 ){ 1, 1 }, ( vec4 ){ 1, 1, 1, 1 } );
+
+    gfx_uniform4f( &shader, shader.u_tint, 1, 1, 1, 1 );
 
     /* render a single cube for each, with instancing */
     // TODO
+    int n_instances = N_VOXELS;
+    gfx_draw_mesh_instanced( &shader, P, V, M, mesh.vao, mesh.n_vertices, &texture, 1, n_instances, &voxel_positions, 1 );
 
     gfx_swap_buffer();
     gfx_poll_events();
@@ -60,6 +87,10 @@ int main() {
     // bool ray_aabb( vec3 ray_origin, vec3 ray_direction, vec3 aabb_min, vec3 aabb_max, float tmin, float tmax );
   }
 
+  gfx_delete_shader_program( &shader );
+  gfx_delete_mesh( &mesh );
+  gfx_delete_texture( &texture );
+  gfx_buffer_delete( &voxel_positions );
   gfx_stop();
 
   printf( "normal exit\n" );
