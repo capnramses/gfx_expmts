@@ -34,6 +34,7 @@ typedef struct gfx_buffer_t {
   uint32_t n_components;
   uint32_t n_elements;
   bool dynamic;
+  bool is_integer;
 } gfx_buffer_t;
 
 typedef struct gfx_mesh_t {
@@ -135,7 +136,7 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh,       //
   int n_vertices, bool dynamic );
 
 /** @param data can be NULL */
-gfx_buffer_t gfx_buffer_create( float* data, uint32_t n_components, uint32_t n_elements, bool dynamic );
+gfx_buffer_t gfx_buffer_create( void* data, uint32_t n_components, uint32_t n_elements, bool dynamic, bool is_integer );
 
 /** @param buffer can not be NULL. */
 void gfx_buffer_delete( gfx_buffer_t* buffer );

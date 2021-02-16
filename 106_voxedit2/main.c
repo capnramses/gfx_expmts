@@ -3,6 +3,7 @@
 #include "input.h"
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 /* create a 16x256x16 array of blocks */
 #define CHUNK_X 16
@@ -11,6 +12,8 @@
 #define N_VOXELS ( CHUNK_X * CHUNK_Y * CHUNK_Z )
 uint8_t voxels[N_VOXELS];
 float positions[N_VOXELS * 3];
+int types[N_VOXELS];
+int n_positions = 0;
 
 bool save_vox( const char* filename ) {
   FILE* f_ptr = fopen( filename, "wb" );
@@ -52,6 +55,24 @@ bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
   return hit;
 }
 
+void reset_chunk() {
+  memset( voxels, 0, sizeof( uint8_t ) * N_VOXELS );
+  memset( positions, 0, sizeof( float ) * N_VOXELS * 3 );
+  // floor has type 1
+  for ( int z = 0; z < CHUNK_Z; z++ ) {
+    for ( int x = 0; x < CHUNK_X; x++ ) {
+      int y                          = 0;
+      int idx                        = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
+      voxels[idx]                    = 1;
+      positions[n_positions * 3 + 0] = x;
+      positions[n_positions * 3 + 1] = y;
+      positions[n_positions * 3 + 2] = z;
+      types[n_positions]             = 1;
+      n_positions++;
+    }
+  }
+}
+
 int main() {
   gfx_start( "Voxedit2 by Anton Gerdelan\n", NULL, false );
   input_init();
@@ -60,26 +81,19 @@ int main() {
   gfx_framebuffer_dims( &fb_w, &fb_h );
   camera_t cam = create_cam( (float)fb_w / (float)fb_h );
   cam.pos      = ( vec3 ){ .x = 25, .y = 8, .z = 25 };
-  cam.x_degs   = 0;//-45;
+  cam.x_degs   = 0; //-45;
   cam.y_degs   = 45;
   recalc_cam_V( &cam );
 
   gfx_shader_t shader = gfx_create_shader_program_from_files( "instanced.vert", "instanced.frag" );
   if ( shader.program_gl == 0 ) { return 1; }
-  gfx_texture_t texture = gfx_texture_create_from_file( "some_file.png", ( gfx_texture_properties_t ){ .bilinear = 0 } );
+  gfx_texture_t texture = gfx_texture_create_from_file( "texture.png", ( gfx_texture_properties_t ){ .bilinear = 0, .is_srgb = true } );
   gfx_mesh_t mesh       = gfx_mesh_create_from_ply( "unit_cube.ply" );
   if ( mesh.n_vertices == 0 ) { return 1; }
-  for ( int y = 0; y < CHUNK_Y; y++ ) {
-    for ( int z = 0; z < CHUNK_Z; z++ ) {
-      for ( int x = 0; x < CHUNK_X; x++ ) {
-        int idx                = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
-        positions[idx * 3 + 0] = x;
-        positions[idx * 3 + 1] = y;
-        positions[idx * 3 + 2] = z;
-      }
-    }
-  }
-  gfx_buffer_t voxel_positions = gfx_buffer_create( positions, 3, N_VOXELS, true );
+  reset_chunk();
+  gfx_buffer_t voxel_buffers[2];
+  voxel_buffers[0] = gfx_buffer_create( positions, 3, n_positions, true, false );
+  voxel_buffers[1] = gfx_buffer_create( types, 1, n_positions, true, true );
 
   mat4 M     = scale_mat4( ( vec3 ){ 1, 1, 1 } );
   mat4 inv_M = inverse_mat4( M );
@@ -105,9 +119,8 @@ int main() {
     gfx_uniform4f( &shader, shader.u_tint, 1, 1, 1, 1 );
 
     /* render a single cube for each, with instancing */
-    // TODO
-    int n_instances = N_VOXELS;
-    gfx_draw_mesh_instanced( &shader, cam.P, cam.V, M, mesh.vao, mesh.n_vertices, &texture, 1, n_instances, &voxel_positions, 1 );
+    int n_instances = n_positions;
+    gfx_draw_mesh_instanced( &shader, cam.P, cam.V, M, mesh.vao, mesh.n_vertices, &texture, 1, n_instances, voxel_buffers, 2 );
 
     gfx_swap_buffer();
     input_reset_last_polled_input_states();
@@ -126,6 +139,8 @@ int main() {
       // TODO update buffer used for palettes
     }
 
+    
+    /* oct-tree raycast function within chunk. ignore air tiles. */
     if ( input_lmb_clicked() ) {
       vec3 ray_d_wor = ray_d_wor_from_mouse( inv_P, inv_V );
       printf( "ray_d_wor= " );
@@ -136,16 +151,13 @@ int main() {
         printf( "MISS\n" );
       }
     }
-
-    /* oct-tree raycast function within chunk. ignore air tiles. */
-
-    // bool ray_aabb( vec3 ray_origin, vec3 ray_direction, vec3 aabb_min, vec3 aabb_max, float tmin, float tmax );
   }
 
   gfx_delete_shader_program( &shader );
   gfx_delete_mesh( &mesh );
   gfx_delete_texture( &texture );
-  gfx_buffer_delete( &voxel_positions );
+  gfx_buffer_delete( &voxel_buffers[0] );
+  gfx_buffer_delete( &voxel_buffers[1] );
   gfx_stop();
 
   printf( "normal exit\n" );

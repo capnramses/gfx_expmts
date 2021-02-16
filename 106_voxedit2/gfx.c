@@ -124,6 +124,7 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   glBindAttribLocation( shader.program_gl, SHADER_BINDING_INSTANCED_A, "a_instanced" );
   glBindAttribLocation( shader.program_gl, SHADER_BINDING_INSTANCED_A, "a_instanced_pos" );
   glBindAttribLocation( shader.program_gl, SHADER_BINDING_INSTANCED_B, "a_instanced_rgb" );
+  glBindAttribLocation( shader.program_gl, SHADER_BINDING_INSTANCED_B, "a_instanced_b" );
   glLinkProgram( shader.program_gl );
   glDeleteShader( vs );
   glDeleteShader( fs );
@@ -636,9 +637,10 @@ void gfx_update_mesh_from_mem( gfx_mesh_t* mesh, const float* points_buffer, int
   glBindVertexArray( 0 );
 }
 
-gfx_buffer_t gfx_buffer_create( float* data, uint32_t n_components, uint32_t n_elements, bool dynamic ) {
+gfx_buffer_t gfx_buffer_create( void* data, uint32_t n_components, uint32_t n_elements, bool dynamic, bool is_integer ) {
   gfx_buffer_t buffer = ( gfx_buffer_t ){ .n_elements = n_elements, .n_components = n_components };
   buffer.dynamic      = dynamic;
+  buffer.is_integer   = is_integer;
   GLenum usage        = dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
 
   glGenBuffers( 1, &buffer.vbo_gl );
@@ -1045,7 +1047,11 @@ void gfx_draw_mesh_instanced( const gfx_shader_t* shader_ptr, mat4 P, mat4 V, ma
     glEnableVertexAttribArray( SHADER_BINDING_INSTANCED_A + i );
     glBindBuffer( GL_ARRAY_BUFFER, instanced_buffer[i].vbo_gl );
     GLsizei stride = instanced_buffer[i].n_components * sizeof( float ); // NOTE(Anton) do we need this for instanced?
-    glVertexAttribPointer( SHADER_BINDING_INSTANCED_A + i, instanced_buffer[i].n_components, GL_FLOAT, GL_FALSE, stride, NULL );
+    if ( instanced_buffer[i].is_integer ) {
+      glVertexAttribIPointer( SHADER_BINDING_INSTANCED_A + i, instanced_buffer[i].n_components, GL_INT, stride, NULL );
+    } else {
+      glVertexAttribPointer( SHADER_BINDING_INSTANCED_A + i, instanced_buffer[i].n_components, GL_FLOAT, GL_FALSE, stride, NULL );
+    }
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
     glVertexAttribDivisor( SHADER_BINDING_INSTANCED_A + i, divisor );
   }
