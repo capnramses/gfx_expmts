@@ -17,7 +17,6 @@ int types[N_VOXELS];
 int n_positions       = 0;
 int selected_type_idx = 0;
 
-
 gfx_buffer_t voxel_buffers[2];
 void update_buffers() {
   memset( types, 0, sizeof( int ) * N_VOXELS );
@@ -159,6 +158,10 @@ int main( int argc, char** argv ) {
   my_argv    = argv;
   int dash_i = _find_arg( "-i" );
   int dash_o = _find_arg( "-o" );
+  if ( _find_arg( "--help" ) > -1 ) {
+    printf( "Usage: %s [-i INPUT_FILE] [-o OUTPUT_FILE]\n", argv[0] );
+    return 0;
+  }
   char input_file[128], output_file[128];
   sprintf( input_file, "my.vox" );
   sprintf( output_file, "my.vox" );
