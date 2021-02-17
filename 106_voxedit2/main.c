@@ -158,17 +158,20 @@ int main( int argc, char** argv ) {
   my_argv    = argv;
   int dash_i = _find_arg( "-i" );
   int dash_o = _find_arg( "-o" );
+  int dash_t = _find_arg( "-t" );
   if ( _find_arg( "--help" ) > -1 ) {
-    printf( "Usage: %s [-i INPUT_FILE] [-o OUTPUT_FILE]\n", argv[0] );
+    printf( "Usage: %s [-i INPUT_FILE] [-o OUTPUT_FILE] [-t TILE_ATLAS_IMAGE]\n", argv[0] );
     return 0;
   }
-  char input_file[128], output_file[128];
+  char input_file[128], output_file[128], texture_file[128];
   sprintf( input_file, "my.vox" );
   sprintf( output_file, "my.vox" );
+  sprintf( texture_file, "texture.png" );
   if ( dash_i >= 0 && dash_i < my_argc - 1 ) { sprintf( input_file, argv[dash_i + 1] ); }
   if ( dash_o >= 0 && dash_o < my_argc - 1 ) { sprintf( output_file, argv[dash_o + 1] ); }
+  if ( dash_t >= 0 && dash_t < my_argc - 1 ) { sprintf( texture_file, argv[dash_t + 1] ); }
   gfx_start( "Voxedit2 by Anton Gerdelan", NULL, false );
-  printf( "Voxedit2 by Anton Gerdelan\ninput file=`%s`\noutput file=`%s`", input_file, output_file );
+  printf( "Voxedit2 by Anton Gerdelan\ninput file=`%s`\noutput file=`%s`\ntexture=`%s`\n", input_file, output_file, texture_file );
 
   input_init();
 
@@ -182,7 +185,7 @@ int main( int argc, char** argv ) {
 
   gfx_shader_t shader = gfx_create_shader_program_from_files( "instanced.vert", "instanced.frag" );
   if ( shader.program_gl == 0 ) { return 1; }
-  gfx_texture_t texture     = gfx_texture_create_from_file( "texture.png", ( gfx_texture_properties_t ){ .bilinear = 0, .is_srgb = false } );
+  gfx_texture_t texture     = gfx_texture_create_from_file( texture_file, ( gfx_texture_properties_t ){ .bilinear = 0, .is_srgb = false } );
   gfx_texture_t sel_texture = gfx_texture_create_from_file( "selected.png", ( gfx_texture_properties_t ){ .bilinear = true, .is_srgb = false } );
   gfx_mesh_t mesh           = gfx_mesh_create_from_ply( "unit_cube.ply" );
   if ( mesh.n_vertices == 0 ) { return 1; }
