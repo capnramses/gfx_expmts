@@ -90,8 +90,9 @@ extern int input_next_hist_command_key;
 extern int input_backspace_key;
 extern int input_enter_console_command_key;
 extern int input_toggle_wireframe_key;
-extern int input_rotate_prop_ccw_key;
-extern int input_rotate_prop_cw_key;
+extern int input_save_key;
+extern int input_load_key;
+
 
 // continuous
 extern int input_left_shift_key;

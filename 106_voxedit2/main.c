@@ -243,12 +243,12 @@ int main( int argc, char** argv ) {
     gfx_poll_events();
 
     /* button to save in either ply or a voxel format (just dims and tile types) */
-    if ( input_was_key_pressed( '1' ) ) {
+    if ( input_was_key_pressed( input_save_key ) ) {
       printf( "saving...\n" );
       save_vox( output_file );
     }
     /* button to load from voxel format */
-    if ( input_was_key_pressed( '2' ) ) {
+    if ( input_was_key_pressed( input_load_key ) ) {
       printf( "loading...\n" );
       load_vox( input_file );
       // TODO validate

@@ -45,8 +45,8 @@ int input_next_hist_command_key                        = GLFW_KEY_DOWN;
 int input_autocomplete_key                             = GLFW_KEY_TAB;
 int input_backspace_key                                = GLFW_KEY_BACKSPACE;
 int input_enter_console_command_key                    = GLFW_KEY_ENTER;
-int input_rotate_prop_ccw_key                          = GLFW_KEY_LEFT_BRACKET;
-int input_rotate_prop_cw_key                           = GLFW_KEY_RIGHT_BRACKET;
+int input_save_key                                     = GLFW_KEY_F2;
+int input_load_key                                     = GLFW_KEY_F3;
 int input_game_speed_increase_key                      = GLFW_KEY_EQUAL;
 int input_game_speed_decrease_key                      = GLFW_KEY_MINUS;
 
