@@ -17,6 +17,29 @@ int types[N_VOXELS];
 int n_positions       = 0;
 int selected_type_idx = 0;
 
+
+gfx_buffer_t voxel_buffers[2];
+void update_buffers() {
+  memset( types, 0, sizeof( int ) * N_VOXELS );
+  memset( positions, 0, sizeof( float ) * N_VOXELS * 3 );
+  n_positions = 0;
+  for ( int y = 0; y < CHUNK_Y; y++ ) {
+    for ( int z = 0; z < CHUNK_Z; z++ ) {
+      for ( int x = 0; x < CHUNK_X; x++ ) {
+        int idx = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
+        if ( 0 == voxels[idx] ) { continue; }
+        positions[n_positions * 3 + 0] = x;
+        positions[n_positions * 3 + 1] = y;
+        positions[n_positions * 3 + 2] = z;
+        types[n_positions]             = voxels[idx];
+        n_positions++;
+      }
+    }
+  }
+  gfx_buffer_update( &voxel_buffers[0], positions, 3, n_positions );
+  gfx_buffer_update( &voxel_buffers[1], types, 1, n_positions );
+}
+
 bool save_vox( const char* filename ) {
   FILE* f_ptr = fopen( filename, "wb" );
   fwrite( voxels, sizeof( uint8_t ), N_VOXELS, f_ptr );
@@ -28,6 +51,7 @@ bool load_vox( const char* filename ) {
   FILE* f_ptr = fopen( filename, "rb" );
   fread( voxels, sizeof( uint8_t ), N_VOXELS, f_ptr );
   fclose( f_ptr );
+  update_buffers();
   return true;
 }
 
@@ -100,28 +124,6 @@ bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
   return hit;
 }
 
-gfx_buffer_t voxel_buffers[2];
-void update_buffers() {
-  memset( types, 0, sizeof( int ) * N_VOXELS );
-  memset( positions, 0, sizeof( float ) * N_VOXELS * 3 );
-  n_positions = 0;
-  for ( int y = 0; y < CHUNK_Y; y++ ) {
-    for ( int z = 0; z < CHUNK_Z; z++ ) {
-      for ( int x = 0; x < CHUNK_X; x++ ) {
-        int idx = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
-        if ( 0 == voxels[idx] ) { continue; }
-        positions[n_positions * 3 + 0] = x;
-        positions[n_positions * 3 + 1] = y;
-        positions[n_positions * 3 + 2] = z;
-        types[n_positions]             = voxels[idx];
-        n_positions++;
-      }
-    }
-  }
-  gfx_buffer_update( &voxel_buffers[0], positions, 3, n_positions );
-  gfx_buffer_update( &voxel_buffers[1], types, 1, n_positions );
-}
-
 void reset_chunk() {
   memset( voxels, 0, sizeof( uint8_t ) * N_VOXELS );
   memset( types, 0, sizeof( int ) * N_VOXELS );
@@ -142,8 +144,29 @@ void reset_chunk() {
   }
 }
 
-int main() {
-  gfx_start( "Voxedit2 by Anton Gerdelan\n", NULL, false );
+int my_argc;
+char** my_argv;
+
+static int _find_arg( char* str ) {
+  for ( int i = 0; i < my_argc; i++ ) {
+    if ( strcmp( str, my_argv[i] ) == 0 ) { return i; }
+  }
+  return -1;
+}
+
+int main( int argc, char** argv ) {
+  my_argc    = argc;
+  my_argv    = argv;
+  int dash_i = _find_arg( "-i" );
+  int dash_o = _find_arg( "-o" );
+  char input_file[128], output_file[128];
+  sprintf( input_file, "my.vox" );
+  sprintf( output_file, "my.vox" );
+  if ( dash_i >= 0 && dash_i < my_argc - 1 ) { sprintf( input_file, argv[dash_i + 1] ); }
+  if ( dash_o >= 0 && dash_o < my_argc - 1 ) { sprintf( output_file, argv[dash_o + 1] ); }
+  gfx_start( "Voxedit2 by Anton Gerdelan", NULL, false );
+  printf( "Voxedit2 by Anton Gerdelan\ninput file=`%s`\noutput file=`%s`", input_file, output_file );
+
   input_init();
 
   int fb_w = 0, fb_h = 0;
@@ -215,12 +238,12 @@ int main() {
     /* button to save in either ply or a voxel format (just dims and tile types) */
     if ( input_was_key_pressed( 'S' ) ) {
       printf( "saving...\n" );
-      save_vox( "my.vox" );
+      save_vox( output_file );
     }
     /* button to load from voxel format */
     if ( input_was_key_pressed( 'L' ) ) {
       printf( "loading...\n" );
-      load_vox( "my.vox" );
+      load_vox( input_file );
       // TODO validate
       // TODO update buffer used for palettes
     }
