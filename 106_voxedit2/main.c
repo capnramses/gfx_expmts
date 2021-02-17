@@ -183,6 +183,14 @@ int main() {
     mat4 inv_P = inverse_mat4( cam.P );
     mat4 inv_V = inverse_mat4( cam.V );
 
+    {
+      gfx_uniform4f( &shader, shader.u_tint, 1, 1, 1, 1 );
+
+      /* render a single cube for each, with instancing */
+      int n_instances = n_positions;
+      gfx_draw_mesh_instanced( &shader, cam.P, cam.V, M, mesh.vao, mesh.n_vertices, &texture, 1, n_instances, voxel_buffers, 2 );
+    }
+
     vec2 picker_scale = ( vec2 ){ 1024 / (float)fb_w * 0.5f, 1024 / (float)fb_h * 0.5f };
     vec2 picker_pos   = ( vec2 ){ -1.0 + picker_scale.x, 1.0 - picker_scale.y };
     { /* pop up tile chooser */
@@ -199,12 +207,6 @@ int main() {
 
       gfx_depth_testing( true );
     }
-
-    gfx_uniform4f( &shader, shader.u_tint, 1, 1, 1, 1 );
-
-    /* render a single cube for each, with instancing */
-    int n_instances = n_positions;
-    gfx_draw_mesh_instanced( &shader, cam.P, cam.V, M, mesh.vao, mesh.n_vertices, &texture, 1, n_instances, voxel_buffers, 2 );
 
     gfx_swap_buffer();
     input_reset_last_polled_input_states();
@@ -231,13 +233,13 @@ int main() {
     /* oct-tree raycast function within chunk. ignore air tiles. */
     if ( input_lmb_clicked() ) {
       if ( over_picker ) {
-        float xp          = ( mmx + 1.0 ) / ( picker_scale.x * 2 );
-        float top         = 1.0;
-        float bottom      = 1.0 - picker_scale.y * 2.0;
-        float yrange      = top - bottom;
-        float ypn = (mmy - bottom) / yrange;
-        float yp = 1.0 - ypn;
-//        float yp          = ( mmy + 1.0 ) / ( picker_scale.y * 2 );
+        float xp     = ( mmx + 1.0 ) / ( picker_scale.x * 2 );
+        float top    = 1.0;
+        float bottom = 1.0 - picker_scale.y * 2.0;
+        float yrange = top - bottom;
+        float ypn    = ( mmy - bottom ) / yrange;
+        float yp     = 1.0 - ypn;
+        //        float yp          = ( mmy + 1.0 ) / ( picker_scale.y * 2 );
         int xx            = (int)( xp / ( 1.0 / 16.0 ) );
         int yy            = (int)( yp / ( 1.0 / 16.0 ) );
         selected_type_idx = yy * 16 + xx;
