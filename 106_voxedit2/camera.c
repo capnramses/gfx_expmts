@@ -1,12 +1,13 @@
 // DWARF 3-D Source Code
 // Copyright Anton Gerdelan <antongdl@protonmail.com>. 2018
 #include "camera.h"
+#include "input.h"
 #include <assert.h>
 #include <math.h>
 #include <string.h>
 
 bool g_freeze_frustum;
-float g_mouse_turn_cam_sensitivity = 500.0f;
+float g_mouse_cam_turn_sensitivity = 500.0f;
 
 void recalc_cam_V( camera_t* cam ) {
   assert( cam );
@@ -40,74 +41,74 @@ void recalc_cam_P( camera_t* cam, float aspect ) {
   cam->PV     = mult_mat4_mat4( cam->P, cam->V );
 }
 
-void move_cam_fwd( camera_t* cam, double seconds ) {
+void cam_move_fwd( camera_t* cam, double seconds ) {
   assert( cam );
 
   vec3 displ = mult_vec3_f( cam->forward_mv_dir, cam->speed * seconds );
   cam->pos   = add_vec3_vec3( cam->pos, displ );
 }
 
-void move_cam_bk( camera_t* cam, double seconds ) {
+void cam_move_bk( camera_t* cam, double seconds ) {
   assert( cam );
 
   vec3 displ = mult_vec3_f( cam->forward_mv_dir, -cam->speed * seconds );
   cam->pos   = add_vec3_vec3( cam->pos, displ );
 }
 
-void move_cam_lft( camera_t* cam, double seconds ) {
+void cam_move_lft( camera_t* cam, double seconds ) {
   assert( cam );
 
   vec3 displ = mult_vec3_f( cam->right_mv_dir, -cam->speed * seconds );
   cam->pos   = add_vec3_vec3( cam->pos, displ );
 }
 
-void move_cam_rgt( camera_t* cam, double seconds ) {
+void cam_move_rgt( camera_t* cam, double seconds ) {
   assert( cam );
 
   vec3 displ = mult_vec3_f( cam->right_mv_dir, cam->speed * seconds );
   cam->pos   = add_vec3_vec3( cam->pos, displ );
 }
 
-void move_cam_up( camera_t* cam, double seconds ) {
+void cam_move_up( camera_t* cam, double seconds ) {
   assert( cam );
 
   vec3 displ = mult_vec3_f( ( vec3 ){ 0, 1, 0 }, cam->speed * seconds );
   cam->pos   = add_vec3_vec3( cam->pos, displ );
 }
 
-void move_cam_dn( camera_t* cam, double seconds ) {
+void cam_move_dn( camera_t* cam, double seconds ) {
   assert( cam );
 
   vec3 displ = mult_vec3_f( ( vec3 ){ 0, 1, 0 }, -cam->speed * seconds );
   cam->pos   = add_vec3_vec3( cam->pos, displ );
 }
 
-void turn_cam_left( camera_t* cam, double seconds ) {
+void cam_turn_left( camera_t* cam, double seconds ) {
   assert( cam );
 
   cam->y_degs += seconds * cam->rot_speed;
 }
 
-void turn_cam_right( camera_t* cam, double seconds ) {
+void cam_turn_right( camera_t* cam, double seconds ) {
   assert( cam );
 
   cam->y_degs -= seconds * cam->rot_speed;
 }
 
-void turn_cam_leftright_mouse( camera_t* cam, float factor_delta_x ) {
+void cam_turn_leftright_mouse( camera_t* cam, float factor_delta_x ) {
   assert( cam );
 
-  cam->y_degs += -factor_delta_x * g_mouse_turn_cam_sensitivity;
+  cam->y_degs += -factor_delta_x * g_mouse_cam_turn_sensitivity;
 }
 
-void turn_cam_up( camera_t* cam, double seconds ) {
+void cam_turn_up( camera_t* cam, double seconds ) {
   assert( cam );
 
   cam->x_degs += seconds * cam->rot_speed;
   cam->x_degs = APG_M_CLAMP( cam->x_degs, -90.0f, 90.0f );
 }
 
-void turn_cam_down( camera_t* cam, double seconds ) {
+void cam_turn_down( camera_t* cam, double seconds ) {
   assert( cam );
 
   cam->x_degs -= seconds * cam->rot_speed;
@@ -190,6 +191,41 @@ vec3 nbl;
 vec3 nbr;
 
 vec3 g_f_cam_pos;
+
+void cam_update_keyboard_controls( camera_t* cam_ptr, double elapsed_s ) {
+  assert( cam_ptr );
+  if ( !cam_ptr ) { return; }
+
+  bool cam_fwd = false, cam_bk = false, cam_left = false, cam_rgt = false, turn_left = false, turn_right = false;
+  double time_f = !input_is_key_held( input_left_shift_key ) ? elapsed_s : elapsed_s * 4.0;
+
+  if ( input_is_key_held( input_forwards_key ) ) { cam_fwd = true; }
+  if ( input_is_key_held( input_backwards_key ) ) { cam_bk = true; }
+  if ( input_is_key_held( input_slide_left_key ) ) { cam_left = true; }
+  if ( input_is_key_held( input_slide_right_key ) ) { cam_rgt = true; }
+  if ( input_is_key_held( input_fly_up_key ) ) { cam_move_up( cam_ptr, time_f ); }
+  if ( input_is_key_held( input_fly_down_key ) ) { cam_move_dn( cam_ptr, time_f ); }
+  if ( input_is_key_held( input_turn_left_key ) ) { turn_left = true; }
+  if ( input_is_key_held( input_turn_right_key ) ) { turn_right = true; }
+  if ( input_is_key_held( input_turn_up_key ) ) { cam_turn_up( cam_ptr, elapsed_s ); }
+  if ( input_is_key_held( input_turn_down_key ) ) { cam_turn_down( cam_ptr, elapsed_s ); }
+
+  if ( cam_fwd ) {
+    cam_move_fwd( cam_ptr, time_f );
+  } else if ( cam_bk ) {
+    cam_move_bk( cam_ptr, time_f );
+  }
+  if ( cam_left ) {
+    cam_move_lft( cam_ptr, time_f );
+  } else if ( cam_rgt ) {
+    cam_move_rgt( cam_ptr, time_f );
+  }
+  if ( turn_left ) {
+    cam_turn_left( cam_ptr, elapsed_s );
+  } else if ( turn_right ) {
+    cam_turn_right( cam_ptr, elapsed_s );
+  }
+}
 
 void re_extract_frustum_planes( float fovy_deg, float aspect, float neard, float fard, vec3 cam_pos, mat4 V ) {
   // TODO(Anton) -- really? - use fast inverse if have to

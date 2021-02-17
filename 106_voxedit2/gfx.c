@@ -1209,6 +1209,7 @@ void gfx_bind_framebuffer( const gfx_framebuffer_t* fb ) {
 }
 
 void gfx_read_pixels( int x, int y, int w, int h, int n_channels, uint8_t* data ) {
+  // TODO(Anton) native BGR/BGRA might be faster
   GLenum format = GL_RGB;
   if ( 4 == n_channels ) { format = GL_RGBA; }
 

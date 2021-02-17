@@ -27,19 +27,20 @@ typedef struct camera_t {
 // =================================================================================================------------------
 camera_t create_cam( float aspect );
 
+void cam_update_keyboard_controls( camera_t* cam_ptr, double elapsed_s );
 void cam_set_pos_and_look_at( camera_t* cam, vec3 target );
 
-void move_cam_fwd( camera_t* cam, double seconds );
-void move_cam_bk( camera_t* cam, double seconds );
-void move_cam_lft( camera_t* cam, double seconds );
-void move_cam_rgt( camera_t* cam, double seconds );
-void move_cam_up( camera_t* cam, double seconds );
-void move_cam_dn( camera_t* cam, double seconds );
-void turn_cam_left( camera_t* cam, double seconds );
-void turn_cam_right( camera_t* cam, double seconds );
-void turn_cam_leftright_mouse( camera_t* cam, float factor_delta_x );
-void turn_cam_up( camera_t* cam, double seconds );
-void turn_cam_down( camera_t* cam, double seconds );
+void cam_move_fwd( camera_t* cam, double seconds );
+void cam_move_bk( camera_t* cam, double seconds );
+void cam_move_lft( camera_t* cam, double seconds );
+void cam_move_rgt( camera_t* cam, double seconds );
+void cam_move_up( camera_t* cam, double seconds );
+void cam_move_dn( camera_t* cam, double seconds );
+void cam_turn_left( camera_t* cam, double seconds );
+void cam_turn_right( camera_t* cam, double seconds );
+void cam_turn_leftright_mouse( camera_t* cam, float factor_delta_x );
+void cam_turn_up( camera_t* cam, double seconds );
+void cam_turn_down( camera_t* cam, double seconds );
 void animate_y_transition( camera_t* cam, double seconds );
 
 // call once after any turns etc during frame
@@ -57,4 +58,4 @@ bool is_aabb_in_frustum( vec3 mins, vec3 maxs );
 // EXTERNAL GLOBALS
 // =================================================================================================------------------
 extern bool g_freeze_frustum;
-extern float g_mouse_turn_cam_sensitivity;
+extern float g_mouse_cam_turn_sensitivity;

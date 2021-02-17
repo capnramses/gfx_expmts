@@ -181,7 +181,7 @@ int main( int argc, char** argv ) {
   cam.pos      = ( vec3 ){ .x = 25, .y = 8, .z = 25 };
   cam.x_degs   = 0; //-45;
   cam.y_degs   = 45;
-  recalc_cam_V( &cam );
+  cam.speed *= 4.0;
 
   gfx_shader_t shader = gfx_create_shader_program_from_files( "instanced.vert", "instanced.frag" );
   if ( shader.program_gl == 0 ) { return 1; }
@@ -208,6 +208,7 @@ int main( int argc, char** argv ) {
     gfx_viewport( 0, 0, fb_w, fb_h );
     gfx_clear_colour_and_depth_buffers( 0.2f, 0.2f, 0.2f, 1.0f );
 
+    recalc_cam_V( &cam );
     recalc_cam_P( &cam, (float)fb_w / (float)fb_h );
     mat4 inv_P = inverse_mat4( cam.P );
     mat4 inv_V = inverse_mat4( cam.V );
@@ -242,17 +243,19 @@ int main( int argc, char** argv ) {
     gfx_poll_events();
 
     /* button to save in either ply or a voxel format (just dims and tile types) */
-    if ( input_was_key_pressed( 'S' ) ) {
+    if ( input_was_key_pressed( '1' ) ) {
       printf( "saving...\n" );
       save_vox( output_file );
     }
     /* button to load from voxel format */
-    if ( input_was_key_pressed( 'L' ) ) {
+    if ( input_was_key_pressed( '2' ) ) {
       printf( "loading...\n" );
       load_vox( input_file );
       // TODO validate
       // TODO update buffer used for palettes
     }
+
+    cam_update_keyboard_controls( &cam, elapsed_s );
 
     bool over_picker = false;
     float mmx        = input_mouse_x_win / (float)win_x * 2.0f - 1.0f;
@@ -295,6 +298,27 @@ int main( int argc, char** argv ) {
           case 3: {
             if ( zz < CHUNK_Z - 1 ) {
               int idx     = yy * ( CHUNK_X * CHUNK_Z ) + ( zz + 1 ) * CHUNK_Z + xx;
+              voxels[idx] = (uint8_t)selected_type_idx;
+              update_buffers();
+            }
+          } break;
+          case -1: {
+            if ( xx > 0 ) {
+              int idx     = yy * ( CHUNK_X * CHUNK_Z ) + zz * CHUNK_Z + xx - 1;
+              voxels[idx] = (uint8_t)selected_type_idx;
+              update_buffers();
+            }
+          } break;
+          case -2: {
+            if ( yy > 0 ) {
+              int idx     = ( yy - 1 ) * ( CHUNK_X * CHUNK_Z ) + zz * CHUNK_Z + xx;
+              voxels[idx] = (uint8_t)selected_type_idx;
+              update_buffers();
+            }
+          } break;
+          case -3: {
+            if ( zz > 0 ) {
+              int idx     = yy * ( CHUNK_X * CHUNK_Z ) + ( zz - 1 ) * CHUNK_Z + xx;
               voxels[idx] = (uint8_t)selected_type_idx;
               update_buffers();
             }

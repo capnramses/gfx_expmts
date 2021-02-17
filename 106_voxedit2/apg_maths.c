@@ -500,29 +500,31 @@ bool ray_aabb( vec3 ray_origin, vec3 ray_direction, vec3 aabb_min, vec3 aabb_max
 
 bool ray_obb( obb_t box, vec3 ray_o, vec3 ray_d, float* t, int* face_num ) {
   assert( t );
-  *t         = 0.0f;
-  float tmin = -INFINITY;
-  float tmax = INFINITY;
-  int imin = 0, imax = 0;
+  *t             = 0.0f;
+  float tmin     = -INFINITY;
+  float tmax     = INFINITY;
+  int slab_min_i = 0, slab_max_i = 0;
   vec3 p = sub_vec3_vec3( box.centre, ray_o );
   for ( int i = 0; i < 3; i++ ) { // 3 "slabs" (pair of front/back planes)
     float e = dot_vec3( box.norm_side_dir[i], p );
     float f = dot_vec3( box.norm_side_dir[i], ray_d );
     if ( fabs( f ) > FLT_EPSILON ) {
-      float t1 = ( e + box.half_lengths[i] ) / f; // intersection on front
-      float t2 = ( e - box.half_lengths[i] ) / f; // and back side of slab
+      float t1    = ( e + box.half_lengths[i] ) / f; // intersection on front
+      float t2    = ( e - box.half_lengths[i] ) / f; // and back side of slab
+      int t1_side = 1;                               // t1 is front
       if ( t1 > t2 ) {
         float tmp = t1;
         t1        = t2;
         t2        = tmp;
+        t1_side   = -1; // t1 is back face of slab (opposing the slab normal)
       }
       if ( t1 > tmin ) {
-        tmin = t1;
-        imin = i;
+        tmin       = t1;
+        slab_min_i = (i+1) * t1_side;
       }
       if ( t2 < tmax ) {
-        tmax = t2;
-        imax = -i;
+        tmax       = t2;
+        slab_max_i = (i+1) * -t1_side;
       }
       if ( tmin > tmax ) { return false; }
       if ( tmax < 0 ) { return false; }
@@ -531,7 +533,7 @@ bool ray_obb( obb_t box, vec3 ray_o, vec3 ray_d, float* t, int* face_num ) {
     }
   }
   *t        = tmin > 0 ? tmin : tmax;
-  *face_num = tmin > 0 ? imin + 1 : imax + 1;
+  *face_num = tmin > 0 ? slab_min_i : slab_max_i; // max is back side of slab (opposing face)
   return true;
 }
 
