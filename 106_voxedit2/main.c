@@ -156,8 +156,8 @@ int main() {
 
   gfx_shader_t shader = gfx_create_shader_program_from_files( "instanced.vert", "instanced.frag" );
   if ( shader.program_gl == 0 ) { return 1; }
-  gfx_texture_t texture     = gfx_texture_create_from_file( "texture.png", ( gfx_texture_properties_t ){ .bilinear = 0, .is_srgb = true } );
-  gfx_texture_t sel_texture = gfx_texture_create_from_file( "selected.png", ( gfx_texture_properties_t ){ .bilinear = true, .is_srgb = true } );
+  gfx_texture_t texture     = gfx_texture_create_from_file( "texture.png", ( gfx_texture_properties_t ){ .bilinear = 0, .is_srgb = false } );
+  gfx_texture_t sel_texture = gfx_texture_create_from_file( "selected.png", ( gfx_texture_properties_t ){ .bilinear = true, .is_srgb = false } );
   gfx_mesh_t mesh           = gfx_mesh_create_from_ply( "unit_cube.ply" );
   if ( mesh.n_vertices == 0 ) { return 1; }
   reset_chunk();
@@ -167,15 +167,14 @@ int main() {
   mat4 M     = scale_mat4( ( vec3 ){ 1, 1, 1 } );
   mat4 inv_M = inverse_mat4( M );
 
-  vec2 picker_scale = ( vec2 ){ 1024 / (float)fb_w * 0.25f, 1024 / (float)fb_h * 0.25f };
-  vec2 picker_pos   = ( vec2 ){ -1.0 + picker_scale.x, 1.0 - picker_scale.y };
-
   double prev_s = gfx_get_time_s();
   while ( !gfx_should_window_close() ) {
     double curr_s    = gfx_get_time_s();
     double elapsed_s = curr_s - prev_s;
     prev_s           = curr_s;
 
+    int win_x = 0, win_y = 0;
+    gfx_window_dims( &win_x, &win_y );
     gfx_framebuffer_dims( &fb_w, &fb_h );
     gfx_viewport( 0, 0, fb_w, fb_h );
     gfx_clear_colour_and_depth_buffers( 0.2f, 0.2f, 0.2f, 1.0f );
@@ -184,6 +183,8 @@ int main() {
     mat4 inv_P = inverse_mat4( cam.P );
     mat4 inv_V = inverse_mat4( cam.V );
 
+    vec2 picker_scale = ( vec2 ){ 1024 / (float)fb_w * 0.5f, 1024 / (float)fb_h * 0.5f };
+    vec2 picker_pos   = ( vec2 ){ -1.0 + picker_scale.x, 1.0 - picker_scale.y };
     { /* pop up tile chooser */
       gfx_depth_testing( false );
       gfx_draw_textured_quad( texture, picker_scale, picker_pos, ( vec2 ){ 1, 1 }, ( vec4 ){ 1, 1, 1, 1 } );
@@ -223,17 +224,20 @@ int main() {
     }
 
     bool over_picker = false;
-    int win_x = 0, win_y = 0;
-    gfx_window_dims( &win_x, &win_y );
-    float mmx = input_mouse_x_win / (float)win_x * 2.0f - 1.0f;
-    float mmy = -( input_mouse_y_win / (float)win_y * 2.0f - 1.0f );
+    float mmx        = input_mouse_x_win / (float)win_x * 2.0f - 1.0f;
+    float mmy        = -( input_mouse_y_win / (float)win_y * 2.0f - 1.0f );
     if ( mmx < -1.0 + picker_scale.x * 2 && mmy > 1.0 - picker_scale.y * 2 ) { over_picker = true; }
 
     /* oct-tree raycast function within chunk. ignore air tiles. */
     if ( input_lmb_clicked() ) {
       if ( over_picker ) {
         float xp          = ( mmx + 1.0 ) / ( picker_scale.x * 2 );
-        float yp          = 3.0 - ( mmy + 1.0 ) / ( picker_scale.y * 2 );
+        float top         = 1.0;
+        float bottom      = 1.0 - picker_scale.y * 2.0;
+        float yrange      = top - bottom;
+        float ypn = (mmy - bottom) / yrange;
+        float yp = 1.0 - ypn;
+//        float yp          = ( mmy + 1.0 ) / ( picker_scale.y * 2 );
         int xx            = (int)( xp / ( 1.0 / 16.0 ) );
         int yy            = (int)( yp / ( 1.0 / 16.0 ) );
         selected_type_idx = yy * 16 + xx;
