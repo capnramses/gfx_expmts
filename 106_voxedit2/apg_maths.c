@@ -1,6 +1,6 @@
 /* ===============================================================================================
 Anton's 3D Maths Library (C99 version)
-Version: 0.10
+Version: 0.11
 URL:     https://github.com/capnramses/apg
 Licence: See apg_maths.h
 Author:  Anton Gerdelan <antonofnote at gmail> @capnramses
@@ -520,11 +520,11 @@ bool ray_obb( obb_t box, vec3 ray_o, vec3 ray_d, float* t, int* face_num ) {
       }
       if ( t1 > tmin ) {
         tmin       = t1;
-        slab_min_i = (i+1) * t1_side;
+        slab_min_i = ( i + 1 ) * t1_side;
       }
       if ( t2 < tmax ) {
         tmax       = t2;
-        slab_max_i = (i+1) * -t1_side;
+        slab_max_i = ( i + 1 ) * -t1_side;
       }
       if ( tmin > tmax ) { return false; }
       if ( tmax < 0 ) { return false; }

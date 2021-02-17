@@ -5,6 +5,7 @@ Licence: See bottom of file.
 Author:  Anton Gerdelan <antonofnote at gmail> @capnramses
 ==================================================================================================
 History:
+v0.11  17 Feb 2021 - Bug fix: ray-obb negative face indices reporting correctly.
 v0.10   7 Feb 2021 - Tidied docs.
 v0.9 -  2 Feb 2021 - Orthographic.
 v0.8 - 21 May 2020 - AABB intersection and frustum bounds and plane-extraction functions.
