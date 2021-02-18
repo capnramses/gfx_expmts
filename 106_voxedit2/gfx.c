@@ -1228,7 +1228,6 @@ void gfx_read_pixels( int x, int y, int w, int h, int n_channels, uint8_t* data 
   uint8_t tmp[4];
   glReadPixels( x, y, w, h, format, GL_UNSIGNED_BYTE, tmp ); // note can be eg float
   // TODO(Anton) test BGRA
-  GLenum format = GL_RGB;
   data[0]       = tmp[0];
   if ( n_channels > 1 ) { data[1] = tmp[1]; }
   if ( n_channels > 2 ) { data[2] = tmp[2]; }
