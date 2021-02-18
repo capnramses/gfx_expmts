@@ -1209,6 +1209,9 @@ void gfx_bind_framebuffer( const gfx_framebuffer_t* fb ) {
 }
 
 void gfx_read_pixels( int x, int y, int w, int h, int n_channels, uint8_t* data ) {
+  assert( n_channels >= 1 && n_channels <= 4 );
+  if ( n_channels < 1 ) { return; }
+  
   // TODO(Anton) native BGR/BGRA might be faster
   GLenum format = GL_RGB;
   if ( 4 == n_channels ) { format = GL_RGBA; }
@@ -1222,7 +1225,14 @@ void gfx_read_pixels( int x, int y, int w, int h, int n_channels, uint8_t* data 
   /* "If a non-zero named buffer object is bound to the GL_PIXEL_PACK_BUFFER target (see glBindBuffer) while a block of pixels is requested,
   data is treated as a byte offset into the buffer object's data store rather than a pointer to client memory.
   */
-  glReadPixels( x, y, w, h, format, GL_UNSIGNED_BYTE, data ); // note can be eg float
+  uint8_t tmp[4];
+  glReadPixels( x, y, w, h, format, GL_UNSIGNED_BYTE, tmp ); // note can be eg float
+  // TODO(Anton) test BGRA
+  GLenum format = GL_RGB;
+  data[0]       = tmp[0];
+  if ( n_channels > 1 ) { data[1] = tmp[1]; }
+  if ( n_channels > 2 ) { data[2] = tmp[2]; }
+  if ( n_channels > 3 ) { data[3] = tmp[3]; }
 
   glPixelStorei( GL_PACK_ALIGNMENT, 4 ); // return to default
 }
