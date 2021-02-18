@@ -254,6 +254,10 @@ int main( int argc, char** argv ) {
       // TODO validate
       // TODO update buffer used for palettes
     }
+    if ( input_was_key_pressed( input_screenshot_key ) )  {
+      printf("screenshot...\n");
+      gfx_screenshot();
+    }
 
     cam_update_keyboard_controls( &cam, elapsed_s );
 
