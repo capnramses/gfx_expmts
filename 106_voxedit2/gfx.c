@@ -1213,11 +1213,18 @@ void gfx_read_pixels( int x, int y, int w, int h, int n_channels, uint8_t* data 
   GLenum format = GL_RGB;
   if ( 4 == n_channels ) { format = GL_RGBA; }
 
-  glPixelStorei( GL_PACK_ALIGNMENT, 1 );   // for irregular display sizes in RGB
-  glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // affects glReadPixels and subsequent texture calls alignment format
+  glPixelStorei( GL_PACK_ALIGNMENT, 1 ); // for irregular display sizes in RGB
+  // unpack should just be for uploading (texturesubimge2d etc). commented out.
+  // glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // affects glReadPixels and subsequent texture calls alignment format
 
   glReadBuffer( GL_COLOR_ATTACHMENT0 );
+  // "Functions that perform a download operation, a pixel pack, will use the buffer object bound to the GL_PIXEL_PACK_BUFFER."
+  /* "If a non-zero named buffer object is bound to the GL_PIXEL_PACK_BUFFER target (see glBindBuffer) while a block of pixels is requested,
+  data is treated as a byte offset into the buffer object's data store rather than a pointer to client memory.
+  */
   glReadPixels( x, y, w, h, format, GL_UNSIGNED_BYTE, data ); // note can be eg float
+
+  glPixelStorei( GL_PACK_ALIGNMENT, 4 ); // return to default
 }
 
 gfx_stats_t gfx_frame_stats() {
@@ -1234,14 +1241,10 @@ void gfx_screenshot() {
 
   // "pixel pack" is an image download. Image download pixel row start alignment at 1 byte. (For irregular display sizes in RGB).
   glPixelStorei( GL_PACK_ALIGNMENT, 1 );
-  // TODO(Anton) unpack should just be for uploading (eg texturesubimage2D() and friends -- check this out.
+  // unpack should just be for uploading (texturesubimge2d etc). commented out.
   // glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); // Image upload alignment 1. "Affects glReadPixels and subsequent texture calls alignment format".
 
   glReadBuffer( GL_COLOR_ATTACHMENT0 );
-  // "Functions that perform a download operation, a pixel pack, will use the buffer object bound to the GL_PIXEL_PACK_BUFFER."
-  /* "If a non-zero named buffer object is bound to the GL_PIXEL_PACK_BUFFER target (see glBindBuffer) while a block of pixels is requested,
-  data is treated as a byte offset into the buffer object's data store rather than a pointer to client memory.
-  */
   glReadPixels( 0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, img_ptr ); // note can be eg float
 
   char filename[1024];
@@ -1253,7 +1256,7 @@ void gfx_screenshot() {
 
   free( img_ptr );
 
-  // TODO(Anton) why no reset of pixelstore to 4 or whatever?
+  glPixelStorei( GL_PACK_ALIGNMENT, 4 ); // return to default
 }
 
 const char* gfx_get_clipboard_string() { return glfwGetClipboardString( gfx_window_ptr ); }
