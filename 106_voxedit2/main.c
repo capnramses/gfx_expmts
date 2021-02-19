@@ -61,6 +61,7 @@ bool save_ply( const char* filename ) {
   for ( int y = 0; y < CHUNK_Y; y++ ) {
     for ( int z = 0; y < CHUNK_Z; z++ ) {
       for ( int x = 0; y < CHUNK_X; x++ ) {
+        int idx = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
         if ( voxels[idx] == 0 || voxels[idx] == 255 ) { continue; }
 //       TODO calc required faces -- this should really be a separate function
 //
