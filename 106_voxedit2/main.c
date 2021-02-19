@@ -54,6 +54,23 @@ bool load_vox( const char* filename ) {
   return true;
 }
 
+bool save_ply( const char* filename ) {
+  // alloc memory
+  // TODO based on n_positions
+  // create a list of triangles
+  for ( int y = 0; y < CHUNK_Y; y++ ) {
+    for ( int z = 0; y < CHUNK_Z; z++ ) {
+      for ( int x = 0; y < CHUNK_X; x++ ) {
+        if ( voxels[idx] == 0 || voxels[idx] == 255 ) { continue; }
+//       TODO calc required faces -- this should really be a separate function
+//
+      }
+    }
+  }
+
+  return true;
+}
+
 vec3 ray_d_wor_from_mouse( mat4 inv_P, mat4 inv_V ) {
   int win_x = 0, win_y = 0;
   gfx_window_dims( &win_x, &win_y );
@@ -254,8 +271,12 @@ int main( int argc, char** argv ) {
       // TODO validate
       // TODO update buffer used for palettes
     }
-    if ( input_was_key_pressed( input_screenshot_key ) )  {
-      printf("screenshot...\n");
+    if ( input_was_key_pressed( input_quicksave_key ) ) {
+      printf( "saving out.ply" );
+      save_ply( "out.ply" );
+    }
+    if ( input_was_key_pressed( input_screenshot_key ) ) {
+      printf( "screenshot...\n" );
       gfx_screenshot();
     }
 

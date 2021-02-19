@@ -47,6 +47,7 @@ int input_backspace_key                                = GLFW_KEY_BACKSPACE;
 int input_enter_console_command_key                    = GLFW_KEY_ENTER;
 int input_save_key                                     = GLFW_KEY_F2;
 int input_load_key                                     = GLFW_KEY_F3;
+int input_quicksave_key                                = GLFW_KEY_F5;
 int input_game_speed_increase_key                      = GLFW_KEY_EQUAL;
 int input_game_speed_decrease_key                      = GLFW_KEY_MINUS;
 

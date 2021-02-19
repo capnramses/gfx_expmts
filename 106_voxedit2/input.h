@@ -92,6 +92,7 @@ extern int input_enter_console_command_key;
 extern int input_toggle_wireframe_key;
 extern int input_save_key;
 extern int input_load_key;
+extern int input_quicksave_key;
 
 
 // continuous
