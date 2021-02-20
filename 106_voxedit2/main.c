@@ -40,7 +40,11 @@ void update_buffers() {
 }
 
 bool save_vox( const char* filename ) {
-  FILE* f_ptr = fopen( filename, "wb" );
+  FILE* f_ptr     = fopen( filename, "wb" );
+  char magic[4]   = { 'V', 'O', 'X', 'S' };
+  uint8_t dims[4] = { CHUNK_X, CHUNK_Y, CHUNK_Z, 0 };
+  fwrite( magic, sizeof( uint8_t ), 4, f_ptr );
+  fwrite( dims, sizeof( uint8_t ), 4, f_ptr );
   fwrite( voxels, sizeof( uint8_t ), N_VOXELS, f_ptr );
   fclose( f_ptr );
   return true;
@@ -48,10 +52,20 @@ bool save_vox( const char* filename ) {
 
 bool load_vox( const char* filename ) {
   FILE* f_ptr = fopen( filename, "rb" );
-  fread( voxels, sizeof( uint8_t ), N_VOXELS, f_ptr );
+  char magic[4];
+  uint8_t dims[4];
+  size_t n = fread( magic, sizeof( uint8_t ), 4, f_ptr );
+  if ( n != 4 || magic[0] != 'V' || magic[1] != 'O' || magic[2] != 'X' || magic[3] != 'S' ) { goto load_vox_fail; }
+  n = fread( dims, sizeof( uint8_t ), 4, f_ptr );
+  if ( n != 4 || dims[0] != CHUNK_X || dims[1] != CHUNK_Y || dims[2] != CHUNK_Z ) { goto load_vox_fail; }
+  n = fread( voxels, sizeof( uint8_t ), N_VOXELS, f_ptr );
+  if ( n != N_VOXELS ) { goto load_vox_fail; }
   fclose( f_ptr );
   update_buffers();
   return true;
+load_vox_fail:
+  fclose( f_ptr );
+  return false;
 }
 
 bool save_ply( const char* filename ) {
@@ -63,8 +77,8 @@ bool save_ply( const char* filename ) {
       for ( int x = 0; y < CHUNK_X; x++ ) {
         int idx = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
         if ( voxels[idx] == 0 || voxels[idx] == 255 ) { continue; }
-//       TODO calc required faces -- this should really be a separate function
-//
+        //       TODO calc required faces -- this should really be a separate function
+        //
       }
     }
   }
@@ -109,7 +123,7 @@ bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
         bool minihit = ray_aabb( ray_o_loc, ray_d_loc, ( vec3 ){ -0.5 + x, -0.5 + y, -0.5 + z }, ( vec3 ){ x + 0.5, y + 0.5, z + 0.5 }, 1, 100 );
         if ( minihit ) {
           float d = length2_vec3( ( vec3 ){ x - ray_o_loc.x, y - ray_o_loc.y, z - ray_o_loc.z } );
-          if ( -1 == idx_closest || d < d_closest ) {
+          if ( d > 0.0f && ( -1 == idx_closest || d < d_closest ) ) {
             idx_closest = idx;
             d_closest   = d;
             xx          = x;
@@ -120,7 +134,7 @@ bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
       }
     }
   }
-  if ( d_closest != -1 ) {
+  if ( idx_closest != -1 ) {
     printf( "hit x %i y %i z %i\n", xx, yy, zz );
 
     // TODO(Anton) slow AABB ray to pick face -- store the face because we'll build on that, not just on top
@@ -138,7 +152,7 @@ bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
     return true;
   }
 
-  return hit;
+  return false;
 }
 
 void reset_chunk() {
@@ -146,19 +160,6 @@ void reset_chunk() {
   memset( types, 0, sizeof( int ) * N_VOXELS );
   memset( positions, 0, sizeof( float ) * N_VOXELS * 3 );
   n_positions = 0;
-  // floor has type 1
-  for ( int z = 0; z < CHUNK_Z; z++ ) {
-    for ( int x = 0; x < CHUNK_X; x++ ) {
-      int y                          = 0;
-      int idx                        = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
-      voxels[idx]                    = 1;
-      positions[n_positions * 3 + 0] = x;
-      positions[n_positions * 3 + 1] = y;
-      positions[n_positions * 3 + 2] = z;
-      types[n_positions]             = 1;
-      n_positions++;
-    }
-  }
 }
 
 int my_argc;
@@ -211,6 +212,12 @@ int main( int argc, char** argv ) {
   voxel_buffers[0] = gfx_buffer_create( positions, 3, n_positions, true, false );
   voxel_buffers[1] = gfx_buffer_create( types, 1, n_positions, true, true );
 
+  gfx_mesh_t plane;
+  {
+    float pts[] = { -1.0, 1.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 0.0, 1.0, -1.0, 0.0 };
+    plane       = gfx_create_mesh_from_mem( pts, 3, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 4, false );
+  }
+
   mat4 M     = scale_mat4( ( vec3 ){ 1, 1, 1 } );
   mat4 inv_M = inverse_mat4( M );
 
@@ -224,12 +231,18 @@ int main( int argc, char** argv ) {
     gfx_window_dims( &win_x, &win_y );
     gfx_framebuffer_dims( &fb_w, &fb_h );
     gfx_viewport( 0, 0, fb_w, fb_h );
-    gfx_clear_colour_and_depth_buffers( 0.2f, 0.2f, 0.2f, 1.0f );
+    gfx_clear_colour_and_depth_buffers( 100 / 255.0f, 149 / 255.0f, 237 / 255.0f, 1.0f );
 
     recalc_cam_V( &cam );
     recalc_cam_P( &cam, (float)fb_w / (float)fb_h );
     mat4 inv_P = inverse_mat4( cam.P );
     mat4 inv_V = inverse_mat4( cam.V );
+
+    {
+      mat4 M_plane = mult_mat4_mat4( translate_mat4( ( vec3 ){ 7.5, -0.5, 7.5 } ), mult_mat4_mat4( rot_x_deg_mat4( -90.0f ), scale_mat4( ( vec3 ){ 8, 8, 1 } ) ) );
+      gfx_uniform4f( &gfx_default_textured_shader, gfx_default_textured_shader.u_tint, 0.8, 0.8, 0.8, 1 );
+      gfx_draw_mesh( GFX_PT_TRIANGLE_STRIP, &gfx_default_textured_shader, cam.P, cam.V, M_plane, plane.vao, plane.n_vertices, &gfx_checkerboard_texture, 1 );
+    }
 
     {
       gfx_uniform4f( &shader, shader.u_tint, 1, 1, 1, 1 );
@@ -351,8 +364,25 @@ int main( int argc, char** argv ) {
           } break;
           } // endsw
         } else {
-          printf( "MISS\n" );
+          float t = ray_plane( cam.pos, ray_d_wor, ( vec3 ){ 0, 1, 0 }, 0.5f );
+          if ( t > 0.0f ) {
+            vec3 isect_pos = add_vec3_vec3( cam.pos, mult_vec3_f( ray_d_wor, t ) );
+            printf( "ray hit %f,%f,%f\n", isect_pos.x, isect_pos.y, isect_pos.z );
+            // x,z go from -0.5 to 15.5
+            // so / 15 should work
+            int xxx = (int)( isect_pos.x + 0.5 ); // so 7.6 -> 8.1 -> 8 and 7.4-> 7.9 -> 7
+            int zzz = (int)( isect_pos.z + 0.5 );
+            printf( "xxx %i, zzz %i\n", xxx, zzz );
+            if ( xxx >= 0 && xxx <= 15 && zzz >= 0 && zzz <= 15 ) {
+              int idx     = zzz * CHUNK_Z + xxx;
+              voxels[idx] = (uint8_t)selected_type_idx;
+              update_buffers();
+            }
+          } else {
+            printf( "MISS\n" );
+          }
         }
+
       } // endif over picker
     }   // endif lmb
 
