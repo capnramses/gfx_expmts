@@ -289,6 +289,9 @@ int main( int argc, char** argv ) {
     float pts[] = { -1.0, 1.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 0.0, 1.0, -1.0, 0.0 };
     plane       = gfx_create_mesh_from_mem( pts, 3, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, 4, false );
   }
+  if ( dash_i >= 0 && dash_i < my_argc - 1 ) {
+    if ( !load_vox( input_file ) ) { return 1; }
+  }
 
   mat4 M     = scale_mat4( ( vec3 ){ 1, 1, 1 } );
   mat4 inv_M = inverse_mat4( M );
