@@ -212,6 +212,7 @@ int main( int argc, char** argv ) {
   voxel_buffers[0] = gfx_buffer_create( positions, 3, n_positions, true, false );
   voxel_buffers[1] = gfx_buffer_create( types, 1, n_positions, true, true );
 
+  gfx_texture_t grid_texture = gfx_texture_create_from_file( "grid.png", ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_srgb = false } );
   gfx_mesh_t plane;
   {
     float pts[] = { -1.0, 1.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 0.0, 1.0, -1.0, 0.0 };
@@ -239,9 +240,13 @@ int main( int argc, char** argv ) {
     mat4 inv_V = inverse_mat4( cam.V );
 
     {
+      gfx_backface_culling( false );
+      gfx_alpha_testing( true );
       mat4 M_plane = mult_mat4_mat4( translate_mat4( ( vec3 ){ 7.5, -0.5, 7.5 } ), mult_mat4_mat4( rot_x_deg_mat4( -90.0f ), scale_mat4( ( vec3 ){ 8, 8, 1 } ) ) );
-      gfx_uniform4f( &gfx_default_textured_shader, gfx_default_textured_shader.u_tint, 0.8, 0.8, 0.8, 1 );
-      gfx_draw_mesh( GFX_PT_TRIANGLE_STRIP, &gfx_default_textured_shader, cam.P, cam.V, M_plane, plane.vao, plane.n_vertices, &gfx_checkerboard_texture, 1 );
+      gfx_uniform4f( &gfx_default_textured_shader, gfx_default_textured_shader.u_tint, 1, 1, 1, 1 );
+      gfx_draw_mesh( GFX_PT_TRIANGLE_STRIP, &gfx_default_textured_shader, cam.P, cam.V, M_plane, plane.vao, plane.n_vertices, &grid_texture, 1 );
+      gfx_alpha_testing( false );
+      gfx_backface_culling( true );
     }
 
     {
@@ -394,6 +399,8 @@ int main( int argc, char** argv ) {
         update_buffers();
       }
     }
+
+    if ( input_was_key_pressed( input_backspace_key ) ) { reset_chunk(); }
 
   } // endwhile
 
