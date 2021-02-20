@@ -440,7 +440,6 @@ bool gfx_start( const char* window_title, const char* window_icon_filename, bool
     const char* vertex_shader =
       "#version 410 core\n"
       "in vec3 a_vp;\n"
-      "in vec3 a_vt;\n"
       "uniform mat4 u_P, u_V, u_M;\n"
       "out vec2 v_st;\n"
       "void main () {\n"
