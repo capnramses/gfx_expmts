@@ -89,6 +89,7 @@ static void _add_face_verts( int x, int y, int z, int face_idx, float* buffer_pt
   vps[5] = ( vec3 ){ 0.5, -0.5, 0.5 };
   mat4 T = translate_mat4( ( vec3 ){ x - 7.5f, y + 0.5f, z - 7.5f } ); // -7.5 to centre on x,z and +0.5 so base is flat on y=0
   mat4 R;
+  mat4 S = scale_mat4( ( vec3 ){ 1.0f / 8.0f, 1.0f / 8.0f, 1.0f / 8.0f } );
   switch ( face_idx ) {
   case 1: R = rot_y_deg_mat4( 90.0f ); break;
   case -1: R = rot_y_deg_mat4( -90.0f ); break;
@@ -100,7 +101,7 @@ static void _add_face_verts( int x, int y, int z, int face_idx, float* buffer_pt
   } // endswitch
   int n = *n_ptr;
   for ( int i = 0; i < 6; i++ ) {
-    mat4 M = mult_mat4_mat4( T, R );
+    mat4 M = mult_mat4_mat4( S, mult_mat4_mat4( T, R ) );
     vps[i] = v3_v4( mult_mat4_vec4( M, v4_v3f( vps[i], 1.0 ) ) );
     memcpy( &buffer_ptr[n * 3], &vps[i].x, sizeof( float ) * 3 );
     n++;
@@ -169,10 +170,10 @@ int face_num = 0;
 bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
   vec3 ray_d_loc = normalise_vec3( v3_v4( mult_mat4_vec4( inv_M, v4_v3f( ray_d, 0.0f ) ) ) );
   vec3 ray_o_loc = v3_v4( mult_mat4_vec4( inv_M, v4_v3f( ray_o, 1.0f ) ) );
-  //print_vec3( ray_d_loc );
- // print_vec3( ray_o );
- // print_vec3( ray_o_loc );
-//
+  // print_vec3( ray_d_loc );
+  // print_vec3( ray_o );
+  // print_vec3( ray_o_loc );
+  //
   // check entire chunk
   bool hit = ray_aabb( ray_o_loc, ray_d_loc, ( vec3 ){ -0.5, -0.5, -0.5 }, ( vec3 ){ CHUNK_X - 1 + 0.5, CHUNK_Y - 1 + 0.5, CHUNK_Z - 1 + 0.5 }, 0.1, 1000 );
   if ( !hit ) { return false; }
@@ -203,7 +204,7 @@ bool raycast_voxel( vec3 ray_o, vec3 ray_d, mat4 inv_M ) {
     }
   }
   if ( idx_closest != -1 ) {
-   // printf( "hit x %i y %i z %i\n", xx, yy, zz );
+    // printf( "hit x %i y %i z %i\n", xx, yy, zz );
 
     // TODO(Anton) slow AABB ray to pick face -- store the face because we'll build on that, not just on top
 
@@ -446,19 +447,19 @@ int main( int argc, char** argv ) {
           float t = ray_plane( cam.pos, ray_d_wor, ( vec3 ){ 0, 1, 0 }, 0.5f );
           if ( t > 0.0f ) {
             vec3 isect_pos = add_vec3_vec3( cam.pos, mult_vec3_f( ray_d_wor, t ) );
-         //   printf( "ray hit %f,%f,%f\n", isect_pos.x, isect_pos.y, isect_pos.z );
+            //   printf( "ray hit %f,%f,%f\n", isect_pos.x, isect_pos.y, isect_pos.z );
             // x,z go from -0.5 to 15.5
             // so / 15 should work
             int xxx = (int)( isect_pos.x + 0.5 ); // so 7.6 -> 8.1 -> 8 and 7.4-> 7.9 -> 7
             int zzz = (int)( isect_pos.z + 0.5 );
-          //  printf( "xxx %i, zzz %i\n", xxx, zzz );
+            //  printf( "xxx %i, zzz %i\n", xxx, zzz );
             if ( xxx >= 0 && xxx <= 15 && zzz >= 0 && zzz <= 15 ) {
               int idx     = zzz * CHUNK_Z + xxx;
               voxels[idx] = (uint8_t)selected_type_idx;
               update_buffers();
             }
           } else {
-        //    printf( "MISS\n" );
+            //    printf( "MISS\n" );
           }
         }
 
