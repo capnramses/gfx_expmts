@@ -1,9 +1,11 @@
 #include "camera.h"
 #include "gfx.h"
 #include "input.h"
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* create a 16x256x16 array of blocks */
@@ -68,21 +70,87 @@ load_vox_fail:
   return false;
 }
 
-bool save_ply( const char* filename ) {
-  // alloc memory
-  // TODO based on n_positions
-  // create a list of triangles
+// face_idx = 1->x (right side), 2->y (top), 3->z (front) -1->-x (left), -2->-y (bottom), -3->-z (back)
+static void _add_face_verts( int x, int y, int z, int face_idx, float* buffer_ptr, uint32_t* n_ptr ) {
+  vec3 vps[6];
+  /*
+  0     2,3
+    +--+
+    | /|
+    |/ |
+    +--+
+  1,4   5
+  */
+  vps[0] = ( vec3 ){ -0.5, 0.5, 0.5 };
+  vps[1] = ( vec3 ){ -0.5, -0.5, 0.5 };
+  vps[2] = ( vec3 ){ 0.5, 0.5, 0.5 };
+  vps[3] = ( vec3 ){ 0.5, 0.5, 0.5 };
+  vps[4] = ( vec3 ){ -0.5, -0.5, 0.5 };
+  vps[5] = ( vec3 ){ 0.5, -0.5, 0.5 };
+  mat4 T = translate_mat4( ( vec3 ){ x, y, z } );
+  mat4 R;
+  switch ( face_idx ) {
+  case 1: R = rot_y_deg_mat4( 90.0f ); break;
+  case -1: R = rot_y_deg_mat4( -90.0f ); break;
+  case 2: R = rot_x_deg_mat4( -90.0f ); break;
+  case -2: R = rot_x_deg_mat4( 90.0f ); break;
+  case 3: R = identity_mat4(); break;
+  case -3: R = rot_y_deg_mat4( 180.0f ); break;
+  default: assert( false ); return;
+  } // endswitch
+  int n = *n_ptr;
+  for ( int i = 0; i < 6; i++ ) {
+    mat4 M = mult_mat4_mat4( T, R );
+    vps[i] = v3_v4( mult_mat4_vec4( M, v4_v3f( vps[i], 1.0 ) ) );
+    memcpy( &buffer_ptr[n * 3], &vps[i].x, sizeof( float ) * 3 );
+    n++;
+  }
+  *n_ptr = n;
+}
+
+float* v_ptr;
+
+bool save_obj( const char* filename ) {
+  // enough space for 6 faces per block with 6 verts per face of 3 floats per vert
+  size_t sz  = n_positions * 6 * 6 * 3 * sizeof( float );
+  float* tmp = realloc( v_ptr, sz );
+  if ( !tmp ) { return false; }
+  v_ptr = tmp;
+
+  uint32_t n_verts = 0;
   for ( int y = 0; y < CHUNK_Y; y++ ) {
-    for ( int z = 0; y < CHUNK_Z; z++ ) {
-      for ( int x = 0; y < CHUNK_X; x++ ) {
+    for ( int z = 0; z < CHUNK_Z; z++ ) {
+      for ( int x = 0; x < CHUNK_X; x++ ) {
         int idx = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
-        if ( voxels[idx] == 0 || voxels[idx] == 255 ) { continue; }
-        //       TODO calc required faces -- this should really be a separate function
-        //
+        if ( 0 == voxels[idx] || 255 == voxels[idx] ) { continue; }
+        int idx_px = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + ( x + 1 );
+        int idx_nx = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + ( x - 1 );
+        int idx_py = ( y + 1 ) * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
+        int idx_ny = ( y - 1 ) * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
+        int idx_pz = y * ( CHUNK_X * CHUNK_Z ) + ( z + 1 ) * CHUNK_Z + x;
+        int idx_nz = y * ( CHUNK_X * CHUNK_Z ) + ( z - 1 ) * CHUNK_Z + x;
+        if ( CHUNK_X - 1 == x || voxels[idx_px] == 0 || voxels[idx_px == 255] ) { _add_face_verts( x, y, z, 1, v_ptr, &n_verts ); }
+        if ( 0 == x || voxels[idx_nx] == 0 || voxels[idx_nx == 255] ) { _add_face_verts( x, y, z, -1, v_ptr, &n_verts ); }
+        if ( CHUNK_Y - 1 == y || voxels[idx_py] == 0 || voxels[idx_py == 255] ) { _add_face_verts( x, y, z, 2, v_ptr, &n_verts ); }
+        if ( 0 == y || voxels[idx_ny] == 0 || voxels[idx_ny == 255] ) { _add_face_verts( x, y, z, -2, v_ptr, &n_verts ); }
+        if ( CHUNK_Z - 1 == z || voxels[idx_pz] == 0 || voxels[idx_pz == 255] ) { _add_face_verts( x, y, z, 3, v_ptr, &n_verts ); }
+        if ( 0 == z || voxels[idx_nz] == 0 || voxels[idx_nz == 255] ) { _add_face_verts( x, y, z, -3, v_ptr, &n_verts ); }
       }
     }
   }
 
+  FILE* f_ptr = fopen( filename, "w" );
+  if ( !f_ptr ) { return false; }
+  fprintf( f_ptr, "#.obj created with Anton's Voxedit2\n" );
+  for ( int i = 0; i < n_verts; i++ ) {
+    fprintf( f_ptr, "v %.3f %.3f %.3f\n", v_ptr[i * 3 + 0], v_ptr[i * 3 + 1], v_ptr[i * 3 + 2] ); // NB can append RGB 0-1 here too
+  }
+  for ( int f = 0; f < n_verts / 3; f++ ) {
+    fprintf( f_ptr, "f %i %i %i\n", f * 3 + 1, f * 3 + 2, f * 3 + 3 );
+  } // NB indices start at 1 so +1,+2,+3 not +0,+1,+2
+  fclose( f_ptr );
+
+  printf( "obj saved\n" );
   return true;
 }
 
@@ -173,24 +241,27 @@ static int _find_arg( char* str ) {
 }
 
 int main( int argc, char** argv ) {
-  my_argc    = argc;
-  my_argv    = argv;
-  int dash_i = _find_arg( "-i" );
-  int dash_o = _find_arg( "-o" );
-  int dash_t = _find_arg( "-t" );
+  my_argc      = argc;
+  my_argv      = argv;
+  int dash_i   = _find_arg( "-i" );
+  int dash_o   = _find_arg( "-o" );
+  int dash_obj = _find_arg( "--obj" );
+  int dash_t   = _find_arg( "-t" );
   if ( _find_arg( "--help" ) > -1 ) {
-    printf( "Usage: %s [-i INPUT_FILE] [-o OUTPUT_FILE] [-t TILE_ATLAS_IMAGE]\n", argv[0] );
+    printf( "Usage: %s [-i INPUT_VOX] [-o OUTPUT_VOX] [--obj OUTPUT_OBJ] [-t TILE_ATLAS_IMAGE]\n", argv[0] );
     return 0;
   }
-  char input_file[128], output_file[128], texture_file[128];
+  char input_file[128], output_file[128], obj_file[128], texture_file[128];
   sprintf( input_file, "my.vox" );
   sprintf( output_file, "my.vox" );
+  sprintf( obj_file, "my.obj" );
   sprintf( texture_file, "texture.png" );
-  if ( dash_i >= 0 && dash_i < my_argc - 1 ) { sprintf( input_file, argv[dash_i + 1] ); }
-  if ( dash_o >= 0 && dash_o < my_argc - 1 ) { sprintf( output_file, argv[dash_o + 1] ); }
-  if ( dash_t >= 0 && dash_t < my_argc - 1 ) { sprintf( texture_file, argv[dash_t + 1] ); }
+  if ( dash_i >= 0 && dash_i < my_argc - 1 ) { strncpy( input_file, argv[dash_i + 1], 128 ); }
+  if ( dash_o >= 0 && dash_o < my_argc - 1 ) { strncpy( output_file, argv[dash_o + 1], 128 ); }
+  if ( dash_obj >= 0 && dash_obj < my_argc - 1 ) { strncpy( obj_file, argv[dash_obj + 1], 128 ); }
+  if ( dash_t >= 0 && dash_t < my_argc - 1 ) { strncpy( texture_file, argv[dash_t + 1], 128 ); }
   gfx_start( "Voxedit2 by Anton Gerdelan", NULL, false );
-  printf( "Voxedit2 by Anton Gerdelan\ninput file=`%s`\noutput file=`%s`\ntexture=`%s`\n", input_file, output_file, texture_file );
+  printf( "Voxedit2 by Anton Gerdelan\ninput file=`%s`\noutput file=`%s`\nobj file=`%s`\ntexture=`%s`\n", input_file, output_file, obj_file, texture_file );
 
   input_init();
 
@@ -278,7 +349,7 @@ int main( int argc, char** argv ) {
     input_reset_last_polled_input_states();
     gfx_poll_events();
 
-    /* button to save in either ply or a voxel format (just dims and tile types) */
+    /* button to save in a voxel format (just dims and tile types) */
     if ( input_was_key_pressed( input_save_key ) ) {
       printf( "saving...\n" );
       save_vox( output_file );
@@ -291,8 +362,8 @@ int main( int argc, char** argv ) {
       // TODO update buffer used for palettes
     }
     if ( input_was_key_pressed( input_quicksave_key ) ) {
-      printf( "saving out.ply" );
-      save_ply( "out.ply" );
+      printf( "saving out.obj\n" );
+      save_obj( obj_file );
     }
     if ( input_was_key_pressed( input_screenshot_key ) ) {
       printf( "screenshot...\n" );
