@@ -1,6 +1,8 @@
 /* TODO(Anton)
  * add other solids
  * array of normals for each solid
+   NOTE that because faces all point away from origin both the face normal and the per-vertex normal are intrinsic to the solid
+   and .: can probably just be derived in the shaders w/o a buffer
  * array of texture coordinates for each solid
  * dice textures!
  * simplify representation somehow
