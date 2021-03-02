@@ -7,7 +7,7 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 ## Contents
 
 | numerus | titulus                     | descriptio                                                                 | status              |
-|---------|-----------------------------|----------------------------------------------------------------------------|---------------------|
+| ------- | --------------------------- | -------------------------------------------------------------------------- | ------------------- |
 | 000     | `video_modus`               | find and list all video modes on troublesome hardware                      | working             |
 | 001     | `cube_map_depth`            | depth writing to cube maps for omni-direc. shadows                         | abandoned           |
 | 002     | `bezier_curve`              | demo from splines and curves lecture last year                             | working             |
@@ -113,7 +113,9 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 102     | `threejs_xr`                | Testing VR/AR with Three.js.                                               | started             |
 | 103     | `opencv_starter`            | Basic OpenCV example.                                                      | working             |
 | 104     | `opencv_mp4`                | Playing a video with OpenCV.                                               | working             |
-| 105     | `bresenham3d`               | 3D line drawing with Bresenham.                                            | proposed            |
+| 105     | `bresenham3d`               | 3D line drawing with Bresenham.                                            | working             |
+| 106     | `voxedit2`                  | A different take on voxel editing with save/load.                          | working             |
+| 107     | `platonic_solids`           | Drop-in arrays for rendering platonic solids as mesh primitives.           | started             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
