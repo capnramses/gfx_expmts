@@ -77,12 +77,12 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 066     | `voxedit`                   | A quick-to-use voxel mesh creator and exporter                             | working             |
 | 067     | `multichunk`                | Voxel world made from several chunks                                       | working             |
 | 068     | `winmain`                   | Win32 program with a WinMain (prelude to D3D code)                         | working             |
-| 069     | `d3d_device`                | Start a Direct3D 11 Device and Context                                     | removed / teaching  |
-| 070     | `d3d_device_ii`             | Fresh start based on MS docs. Also clear the viewport.                     | removed / teaching  |
-| 071     | `d3d_hello_triangle`        | Basic demo to display a triangle with D3D11.                               | removed / teaching  |
-| 072     | `raytracer_sw`              | Basic demo of coding a raytracer in software.                              | removed / teaching  |
+| 069     | `d3d_device`                | Start a Direct3D 11 Device and Context                                     | working  |
+| 070     | `d3d_device_ii`             | Fresh start based on MS docs. Also clear the viewport.                     | working  |
+| 071     | `d3d_hello_triangle`        | Basic demo to display a triangle with D3D11.                               | working  |
+| 072     | `raytracer_sw`              | Basic demo of coding a raytracer in software.                              | working  |
 | 073     | `ppm_write`                 | Making sure I can write a P6 PPM off the top of my head.                   | working             |
-| 074     | `slabs`                     | ray-OOBB and ray-barycentric intersection tests.                           | removed / teaching  |
+| 074     | `slabs`                     | ray-OOBB and ray-barycentric intersection tests.                           | working  |
 | 075     | `triangle_fill`             | Edge Function triangle fill algorithm impl.                                | working             |
 | 076     | `sw_rasteriser`             | Software rasteriser for drawing a 3D mesh.                                 | working             |
 | 077     | `apg_ply`                   | Rewrite of my PLY mesh reader/writer.                                      | working             |
