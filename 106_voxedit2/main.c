@@ -1,6 +1,8 @@
 #include "camera.h"
 #include "gfx.h"
 #include "input.h"
+#include "apg_ply.h"
+#include "stb/stb_image.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -16,6 +18,7 @@
 uint8_t voxels[N_VOXELS];
 float positions[N_VOXELS * 3];
 int types[N_VOXELS];
+uint8_t type_colours[256][3];
 int n_positions       = 0;
 int selected_type_idx = 0;
 
@@ -70,9 +73,15 @@ load_vox_fail:
   return false;
 }
 
+float* v_ptr;
+uint8_t* vc_ptr;
+
 // face_idx = 1->x (right side), 2->y (top), 3->z (front) -1->-x (left), -2->-y (bottom), -3->-z (back)
-static void _add_face_verts( int x, int y, int z, int face_idx, float* buffer_ptr, uint32_t* n_ptr ) {
+static void _add_face_verts( int x, int y, int z, uint8_t r, uint8_t g, uint8_t b, int face_idx, uint32_t* n_ptr ) {
+  int comps_count = 3; // xyzrgb
+
   vec3 vps[6];
+  uint8_t rgb[3] = { r, g, b };
   /*
   0     2,3
     +--+
@@ -103,20 +112,29 @@ static void _add_face_verts( int x, int y, int z, int face_idx, float* buffer_pt
   for ( int i = 0; i < 6; i++ ) {
     mat4 M = mult_mat4_mat4( S, mult_mat4_mat4( T, R ) );
     vps[i] = v3_v4( mult_mat4_vec4( M, v4_v3f( vps[i], 1.0 ) ) );
-    memcpy( &buffer_ptr[n * 3], &vps[i].x, sizeof( float ) * 3 );
+    memcpy( &v_ptr[n * comps_count], &vps[i].x, sizeof( float ) * 3 );
+    memcpy( &vc_ptr[n * comps_count], rgb, sizeof( uint8_t ) * 3 );
     n++;
   }
   *n_ptr = n;
 }
 
-float* v_ptr;
-
-bool save_obj( const char* filename ) {
-  // enough space for 6 faces per block with 6 verts per face of 3 floats per vert
-  size_t sz  = n_positions * 6 * 6 * 3 * sizeof( float );
-  float* tmp = realloc( v_ptr, sz );
-  if ( !tmp ) { return false; }
-  v_ptr = tmp;
+static bool _save_ply( const char* filename ) {
+  size_t n_sides          = 6;
+  size_t n_verts_per_side = 6;
+  size_t n_comps          = 3; // xyzrgb
+  {                            // enough space for 6 faces per block with 6 verts per face of 3 floats per vert
+    size_t sz  = n_positions * n_sides * n_verts_per_side * n_comps * sizeof( float );
+    float* tmp = realloc( v_ptr, sz );
+    if ( !tmp ) { return false; }
+    v_ptr = tmp;
+  }
+  {
+    size_t sz    = n_positions * n_sides * n_verts_per_side * n_comps * sizeof( uint8_t );
+    uint8_t* tmp = realloc( vc_ptr, sz );
+    if ( !tmp ) { return false; }
+    vc_ptr = tmp;
+  }
 
   uint32_t n_verts = 0;
   for ( int y = 0; y < CHUNK_Y; y++ ) {
@@ -124,34 +142,31 @@ bool save_obj( const char* filename ) {
       for ( int x = 0; x < CHUNK_X; x++ ) {
         int idx = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
         if ( 0 == voxels[idx] || 255 == voxels[idx] ) { continue; }
+        // this section writes 6 cube faces but only if there is air next door
         int idx_px = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + ( x + 1 );
         int idx_nx = y * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + ( x - 1 );
         int idx_py = ( y + 1 ) * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
         int idx_ny = ( y - 1 ) * ( CHUNK_X * CHUNK_Z ) + z * CHUNK_Z + x;
         int idx_pz = y * ( CHUNK_X * CHUNK_Z ) + ( z + 1 ) * CHUNK_Z + x;
         int idx_nz = y * ( CHUNK_X * CHUNK_Z ) + ( z - 1 ) * CHUNK_Z + x;
-        if ( CHUNK_X - 1 == x || voxels[idx_px] == 0 || voxels[idx_px == 255] ) { _add_face_verts( x, y, z, 1, v_ptr, &n_verts ); }
-        if ( 0 == x || voxels[idx_nx] == 0 || voxels[idx_nx == 255] ) { _add_face_verts( x, y, z, -1, v_ptr, &n_verts ); }
-        if ( CHUNK_Y - 1 == y || voxels[idx_py] == 0 || voxels[idx_py == 255] ) { _add_face_verts( x, y, z, 2, v_ptr, &n_verts ); }
-        if ( 0 == y || voxels[idx_ny] == 0 || voxels[idx_ny == 255] ) { _add_face_verts( x, y, z, -2, v_ptr, &n_verts ); }
-        if ( CHUNK_Z - 1 == z || voxels[idx_pz] == 0 || voxels[idx_pz == 255] ) { _add_face_verts( x, y, z, 3, v_ptr, &n_verts ); }
-        if ( 0 == z || voxels[idx_nz] == 0 || voxels[idx_nz == 255] ) { _add_face_verts( x, y, z, -3, v_ptr, &n_verts ); }
-      }
-    }
+        int type   = voxels[idx];
+        uint8_t r  = type_colours[type][0];
+        uint8_t g  = type_colours[type][1];
+        uint8_t b  = type_colours[type][2];
+        //	printf("type = %i. rgb = %X %X %X\n", type, r, g, b);
+        if ( CHUNK_X - 1 == x || voxels[idx_px] == 0 || voxels[idx_px] == 255 ) { _add_face_verts( x, y, z, r, g, b, 1, &n_verts ); }
+        if ( 0 == x || voxels[idx_nx] == 0 || voxels[idx_nx] == 255 ) { _add_face_verts( x, y, z, r, g, b, -1, &n_verts ); }
+        if ( CHUNK_Y - 1 == y || voxels[idx_py] == 0 || voxels[idx_py] == 255 ) { _add_face_verts( x, y, z, r, g, b, 2, &n_verts ); }
+        if ( 0 == y || voxels[idx_ny] == 0 || voxels[idx_ny] == 255 ) { _add_face_verts( x, y, z, r, g, b, -2, &n_verts ); }
+        if ( CHUNK_Z - 1 == z || voxels[idx_pz] == 0 || voxels[idx_pz] == 255 ) { _add_face_verts( x, y, z, r, g, b, 3, &n_verts ); }
+        if ( 0 == z || voxels[idx_nz] == 0 || voxels[idx_nz] == 255 ) { _add_face_verts( x, y, z, r, g, b, -3, &n_verts ); }
+      } // x
+    }   // z
+  }     // y
+  if ( !apg_ply_write( filename, ( apg_ply_t ){ .n_vertices = n_verts, .positions_ptr = v_ptr, .colours_ptr = vc_ptr, .n_positions_comps = 3, .n_colours_comps = 3 } ) ) {
+    return false;
   }
 
-  FILE* f_ptr = fopen( filename, "w" );
-  if ( !f_ptr ) { return false; }
-  fprintf( f_ptr, "#.obj created with Anton's Voxedit2\n" );
-  for ( int i = 0; i < n_verts; i++ ) {
-    fprintf( f_ptr, "v %.3f %.3f %.3f\n", v_ptr[i * 3 + 0], v_ptr[i * 3 + 1], v_ptr[i * 3 + 2] ); // NB can append RGB 0-1 here too
-  }
-  for ( int f = 0; f < n_verts / 3; f++ ) {
-    fprintf( f_ptr, "f %i %i %i\n", f * 3 + 1, f * 3 + 2, f * 3 + 3 );
-  } // NB indices start at 1 so +1,+2,+3 not +0,+1,+2
-  fclose( f_ptr );
-
-  printf( "obj saved\n" );
   return true;
 }
 
@@ -231,6 +246,38 @@ void reset_chunk() {
   n_positions = 0;
 }
 
+static bool _get_type_colours( const char* img_filename ) {
+  if ( !img_filename ) { return false; }
+
+  int x = 0, y = 0, n = 0;
+  unsigned char* data = stbi_load( img_filename, &x, &y, &n, 0 );
+  if ( !data ) { return false; }
+
+  int cell_w = x / 16;
+  int cell_h = y / 16;
+
+  int i = 0;
+  for ( int yy = 0; yy < 16; yy++ ) {
+    for ( int xx = 0; xx < 16; xx++ ) {
+      int centre_x = cell_w * xx + cell_w / 2;
+      int centre_y = cell_h * yy + cell_h / 2;
+      int idx      = ( centre_y * x + centre_x ) * n;
+      uint8_t r    = data[idx + 0];
+      uint8_t g    = data[idx + 1];
+      uint8_t b    = data[idx + 2];
+      // printf( "colour %i) at (%i,%i) is %i,%i,%i\n", i, centre_x, centre_y, r, g, b );
+      type_colours[i][0] = r;
+      type_colours[i][1] = g;
+      type_colours[i][2] = b;
+      i++;
+    }
+  }
+
+  free( data );
+
+  return true;
+}
+
 int my_argc;
 char** my_argv;
 
@@ -246,23 +293,25 @@ int main( int argc, char** argv ) {
   my_argv      = argv;
   int dash_i   = _find_arg( "-i" );
   int dash_o   = _find_arg( "-o" );
-  int dash_obj = _find_arg( "--obj" );
+  int dash_ply = _find_arg( "--ply" );
   int dash_t   = _find_arg( "-t" );
   if ( _find_arg( "--help" ) > -1 ) {
-    printf( "Usage: %s [-i INPUT_VOX] [-o OUTPUT_VOX] [--obj OUTPUT_OBJ] [-t TILE_ATLAS_IMAGE]\n", argv[0] );
+    printf( "Usage: %s [-i INPUT_VOX] [-o OUTPUT_VOX] [--ply OUTPUT_PLY] [-t TILE_ATLAS_IMAGE]\n", argv[0] );
     return 0;
   }
-  char input_file[128], output_file[128], obj_file[128], texture_file[128];
+  char input_file[128], output_file[128], ply_file[128], texture_file[128];
   sprintf( input_file, "my.vox" );
   sprintf( output_file, "my.vox" );
-  sprintf( obj_file, "my.obj" );
+  sprintf( ply_file, "my.ply" );
   sprintf( texture_file, "texture.png" );
   if ( dash_i >= 0 && dash_i < my_argc - 1 ) { strncpy( input_file, argv[dash_i + 1], 128 ); }
   if ( dash_o >= 0 && dash_o < my_argc - 1 ) { strncpy( output_file, argv[dash_o + 1], 128 ); }
-  if ( dash_obj >= 0 && dash_obj < my_argc - 1 ) { strncpy( obj_file, argv[dash_obj + 1], 128 ); }
+  if ( dash_ply >= 0 && dash_ply < my_argc - 1 ) { strncpy( ply_file, argv[dash_ply + 1], 128 ); }
   if ( dash_t >= 0 && dash_t < my_argc - 1 ) { strncpy( texture_file, argv[dash_t + 1], 128 ); }
   gfx_start( "Voxedit2 by Anton Gerdelan", NULL, false );
-  printf( "Voxedit2 by Anton Gerdelan\ninput file=`%s`\noutput file=`%s`\nobj file=`%s`\ntexture=`%s`\n", input_file, output_file, obj_file, texture_file );
+  printf( "Voxedit2 by Anton Gerdelan\ninput file=`%s`\noutput file=`%s`\nply file=`%s`\ntexture=`%s`\n", input_file, output_file, ply_file, texture_file );
+
+  if ( !_get_type_colours( texture_file ) ) { return 1; }
 
   input_init();
 
@@ -362,8 +411,8 @@ int main( int argc, char** argv ) {
       // TODO update buffer used for palettes
     }
     if ( input_was_key_pressed( input_quicksave_key ) ) {
-      printf( "saving OBJ `%s`...\n", obj_file );
-      save_obj( obj_file );
+      printf( "saving PLY `%s`...\n", ply_file );
+      _save_ply( ply_file );
     }
     if ( input_was_key_pressed( input_screenshot_key ) ) {
       printf( "screenshot...\n" );
