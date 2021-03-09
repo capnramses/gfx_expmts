@@ -49,3 +49,17 @@ uint32_t platonic_octahedron_indices_ccw_triangles[8 * 3] = {
   1, 3, 4, //
   3, 1, 5  //
 };
+
+//
+// D4 - Tetrahedron
+//
+
+//
+// D12 - Dodecahedron
+//
+
+//
+// D20 - Isocahedron
+//
+
+// D10 - not a platonic solid because the edges of each face are not the same size.

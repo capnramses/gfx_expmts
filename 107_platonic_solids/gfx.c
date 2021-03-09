@@ -430,17 +430,22 @@ bool gfx_start( const char* window_title, const char* window_icon_filename, bool
       "#version 410 core\n"
       "in vec3 a_vp;\n"
       "uniform mat4 u_P, u_V, u_M;\n"
+			"out vec3 v_n;\n"
       "out vec3 vc;\n"
       "void main () {\n"
       "  vc = a_vp;\n"
+			"  v_n = ( u_M * vec4( a_vp, 0.0 ) ).xyz;\n"
       "  gl_Position = u_P * u_V * u_M * vec4( a_vp, 1.0 );\n"
       "}\n";
     const char* fragment_shader =
       "#version 410 core\n"
       "in vec3 vc;\n"
+			"in vec3 v_n;\n"
       "out vec4 o_frag_colour;\n"
       "void main () {\n"
-      "  o_frag_colour = vec4( vc, 1.0 );\n"
+			"  vec3 n   = normalize( v_n );\n"
+			"  float dp = dot( n, vec3( 0.0, 0.0, 1.0 ) );\n"
+      "  o_frag_colour = vec4( n, 1.0 );\n"
       "  o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );\n"
       "}\n";
     gfx_dice_shader = gfx_create_shader_program_from_strings( vertex_shader, fragment_shader );

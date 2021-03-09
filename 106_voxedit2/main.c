@@ -276,7 +276,7 @@ int main( int argc, char** argv ) {
 
   gfx_shader_t shader = gfx_create_shader_program_from_files( "instanced.vert", "instanced.frag" );
   if ( shader.program_gl == 0 ) { return 1; }
-  gfx_texture_t texture     = gfx_texture_create_from_file( texture_file, ( gfx_texture_properties_t ){ .bilinear = 0, .is_srgb = false } );
+  gfx_texture_t texture     = gfx_texture_create_from_file( texture_file, ( gfx_texture_properties_t ){ .bilinear = false, .is_srgb = false } );
   gfx_texture_t sel_texture = gfx_texture_create_from_file( "selected.png", ( gfx_texture_properties_t ){ .bilinear = true, .is_srgb = false } );
   gfx_mesh_t mesh           = gfx_mesh_create_from_ply( "unit_cube.ply" );
   if ( mesh.n_vertices == 0 ) { return 1; }
@@ -349,10 +349,6 @@ int main( int argc, char** argv ) {
       gfx_depth_testing( true );
     }
 
-    gfx_swap_buffer();
-    input_reset_last_polled_input_states();
-    gfx_poll_events();
-
     /* button to save in a voxel format (just dims and tile types) */
     if ( input_was_key_pressed( input_save_key ) ) {
       printf( "saving VOX `%s`...\n", output_file );
@@ -395,6 +391,13 @@ int main( int argc, char** argv ) {
         int yy            = (int)( yp / ( 1.0 / 16.0 ) );
         selected_type_idx = yy * 16 + xx;
         printf( "selected type = %i\n", selected_type_idx );
+
+        uint8_t data[4] = { 0, 0, 0, 0 };
+        printf( "input_mouse_x_win type = %i, input_mouse_y_win = %i\n", (int)input_mouse_x_win, (int)input_mouse_y_win );
+        int y = fb_h - (int)input_mouse_y_win;
+        gfx_read_pixels( input_mouse_x_win, y, 1, 1, 3, data );
+        printf( "pixel selected colour #%02X%02X%02X\n", data[0], data[1], data[2] );
+
       } else {
         vec3 ray_d_wor = ray_d_wor_from_mouse( inv_P, inv_V );
         if ( raycast_voxel( cam.pos, ray_d_wor, inv_M ) ) {
@@ -476,6 +479,10 @@ int main( int argc, char** argv ) {
     }
 
     if ( input_was_key_pressed( input_backspace_key ) ) { reset_chunk(); }
+
+    gfx_swap_buffer();
+    input_reset_last_polled_input_states();
+    gfx_poll_events();
 
   } // endwhile
 
