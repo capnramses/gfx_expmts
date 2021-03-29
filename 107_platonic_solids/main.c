@@ -51,9 +51,43 @@ int main( void ) {
     glBufferData( GL_ELEMENT_ARRAY_BUFFER, 8 * 3 * sizeof( uint32_t ), platonic_octahedron_indices_ccw_triangles, GL_STATIC_DRAW );
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
   }
+  GLuint d4_vbo, d4_vao, d4_index_buffer;
+  { // make a d4
+    glGenBuffers( 1, &d4_vbo );
+    glGenVertexArrays( 1, &d4_vao );
+    glBindVertexArray( d4_vao );
+    glEnableVertexAttribArray( 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, d4_vbo );
+    glBufferData( GL_ARRAY_BUFFER, 4 * 3 * sizeof( float ), platonic_tetrahedron_vertices_xyz, GL_STATIC_DRAW );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, NULL );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glBindVertexArray( 0 );
+
+    glGenBuffers( 1, &d4_index_buffer );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d4_index_buffer );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, 4 * 3 * sizeof( uint32_t ), platonic_tetrahedron_indices_ccw_triangles, GL_STATIC_DRAW );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+  }
+  GLuint d20_vbo, d20_vao, d20_index_buffer;
+  { // make a d20
+    glGenBuffers( 1, &d20_vbo );
+    glGenVertexArrays( 1, &d20_vao );
+    glBindVertexArray( d20_vao );
+    glEnableVertexAttribArray( 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, d20_vbo );
+    glBufferData( GL_ARRAY_BUFFER, 12 * 3 * sizeof( float ), platonic_isocahedron_vertices_xyz, GL_STATIC_DRAW );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, NULL );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glBindVertexArray( 0 );
+
+    glGenBuffers( 1, &d20_index_buffer );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d20_index_buffer );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, 20 * 3 * sizeof( uint32_t ), platonic_isocahedron_indices_ccw_triangles, GL_STATIC_DRAW );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+  }
 
   while ( !gfx_should_window_close() ) {
-		double curr_s = gfx_get_time_s();
+    double curr_s = gfx_get_time_s();
     int fb_w = 0, fb_h = 0;
     gfx_framebuffer_dims( &fb_w, &fb_h );
     gfx_viewport( 0, 0, fb_w, fb_h );
@@ -61,17 +95,18 @@ int main( void ) {
 
     mat4 P = perspective( 67.0f, fb_w / (float)fb_h, 0.1f, 100.0f );
     mat4 V = look_at( ( vec3 ){ 0, 0, 10 }, ( vec3 ){ 0, 0, 0 }, ( vec3 ){ 0, 1, 0 } );
-		mat4 R = rot_y_deg_mat4( curr_s * 10 );
+    mat4 R = rot_y_deg_mat4( curr_s * 10 );
 
     gfx_backface_culling( false );
+    gfx_wireframe_mode();
 
     glUseProgram( gfx_dice_shader.program_gl );
     glUniformMatrix4fv( gfx_dice_shader.u_P, 1, GL_FALSE, P.m );
     glUniformMatrix4fv( gfx_dice_shader.u_V, 1, GL_FALSE, V.m );
 
     // D6
-    mat4 T = translate_mat4( ( vec3 ){ 5, 0.0, 0.0 } );
-		mat4 M = mult_mat4_mat4( T, R );
+    mat4 T = translate_mat4( ( vec3 ){ 5, 5.0, 0.0 } );
+    mat4 M = mult_mat4_mat4( T, R );
     glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
     glBindVertexArray( cube_vao );
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, cube_index_buffer );
@@ -81,13 +116,35 @@ int main( void ) {
     glBindVertexArray( 0 );
 
     // D8
-    T = translate_mat4( ( vec3 ){ -5, 0.0, 0.0 } );
-		M = mult_mat4_mat4( T, R );
+    T = translate_mat4( ( vec3 ){ -5, 5.0, 0.0 } );
+    M = mult_mat4_mat4( T, R );
     glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
     glBindVertexArray( d8_vao );
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d8_index_buffer );
     // NB can also just give the array here instead of binding index buffer
     glDrawElements( GL_TRIANGLES, 8 * 3, GL_UNSIGNED_INT, NULL );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+    glBindVertexArray( 0 );
+
+    // D4
+    T = translate_mat4( ( vec3 ){ -5, 0.0, 0.0 } );
+    M = mult_mat4_mat4( T, R );
+    glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
+    glBindVertexArray( d4_vao );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d4_index_buffer );
+    // NB can also just give the array here instead of binding index buffer
+    glDrawElements( GL_TRIANGLES, 4 * 3, GL_UNSIGNED_INT, NULL );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+    glBindVertexArray( 0 );
+
+    // D20
+    T = translate_mat4( ( vec3 ){ 5, 0.0, 0.0 } );
+    M = mult_mat4_mat4( T, R );
+    glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
+    glBindVertexArray( d20_vao );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d20_index_buffer );
+    // NB can also just give the array here instead of binding index buffer
+    glDrawElements( GL_TRIANGLES, 20 * 3, GL_UNSIGNED_INT, NULL );
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
     glBindVertexArray( 0 );
 

@@ -445,7 +445,7 @@ bool gfx_start( const char* window_title, const char* window_icon_filename, bool
       "void main () {\n"
 			"  vec3 n   = normalize( v_n );\n"
 			"  float dp = dot( n, vec3( 0.0, 0.0, 1.0 ) );\n"
-      "  o_frag_colour = vec4( n, 1.0 );\n"
+      "  o_frag_colour = vec4( vc, 1.0 );\n"
       "  o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );\n"
       "}\n";
     gfx_dice_shader = gfx_create_shader_program_from_strings( vertex_shader, fragment_shader );
