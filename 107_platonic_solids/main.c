@@ -15,7 +15,7 @@
 #include "platonic.h"
 
 int main( void ) {
-  if ( !gfx_start( "platonic solids test", NULL, false ) ) { return 1; }
+  if ( !gfx_start( "The Platonic Solids", NULL, false ) ) { return 1; }
 
   GLuint cube_vbo, cube_vao, cube_index_buffer;
   { // make a cube
