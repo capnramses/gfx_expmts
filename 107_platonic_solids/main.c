@@ -104,30 +104,10 @@ int main( void ) {
     glUniformMatrix4fv( gfx_dice_shader.u_P, 1, GL_FALSE, P.m );
     glUniformMatrix4fv( gfx_dice_shader.u_V, 1, GL_FALSE, V.m );
 
-    // D6
-    mat4 T = translate_mat4( ( vec3 ){ 5, 5.0, 0.0 } );
-    mat4 M = mult_mat4_mat4( T, R );
-    glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
-    glBindVertexArray( cube_vao );
-    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, cube_index_buffer );
-    // NB can also just give the array here instead of binding index buffer
-    glDrawElements( GL_TRIANGLES, 36, GL_UNSIGNED_INT, NULL );
-    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
-    glBindVertexArray( 0 );
-
-    // D8
-    T = translate_mat4( ( vec3 ){ -5, 5.0, 0.0 } );
-    M = mult_mat4_mat4( T, R );
-    glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
-    glBindVertexArray( d8_vao );
-    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d8_index_buffer );
-    // NB can also just give the array here instead of binding index buffer
-    glDrawElements( GL_TRIANGLES, 8 * 3, GL_UNSIGNED_INT, NULL );
-    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
-    glBindVertexArray( 0 );
+    mat4 T, M, S;
 
     // D4
-    T = translate_mat4( ( vec3 ){ -5, 0.0, 0.0 } );
+    T = translate_mat4( ( vec3 ){ -4, 4.0, 0.0 } );
     M = mult_mat4_mat4( T, R );
     glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
     glBindVertexArray( d4_vao );
@@ -137,9 +117,32 @@ int main( void ) {
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
     glBindVertexArray( 0 );
 
-    // D20
-    T = translate_mat4( ( vec3 ){ 5, 0.0, 0.0 } );
+    // D6
+    T = translate_mat4( ( vec3 ){ 4, 4.0, 0.0 } );
     M = mult_mat4_mat4( T, R );
+    glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
+    glBindVertexArray( cube_vao );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, cube_index_buffer );
+    // NB can also just give the array here instead of binding index buffer
+    glDrawElements( GL_TRIANGLES, 36, GL_UNSIGNED_INT, NULL );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+    glBindVertexArray( 0 );
+
+    // D8
+    T = translate_mat4( ( vec3 ){ -4, 0.0, 0.0 } );
+    M = mult_mat4_mat4( T, R );
+    glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
+    glBindVertexArray( d8_vao );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d8_index_buffer );
+    // NB can also just give the array here instead of binding index buffer
+    glDrawElements( GL_TRIANGLES, 8 * 3, GL_UNSIGNED_INT, NULL );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+    glBindVertexArray( 0 );
+
+    // D20
+    S = scale_mat4( ( vec3 ){ 1.0f / 1.618034f, 1.0f / 1.618034f, 1.0f / 1.618034f } );
+    T = translate_mat4( ( vec3 ){ 4, 0.0, 0.0 } );
+    M = mult_mat4_mat4( T, mult_mat4_mat4( R, S ) );
     glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
     glBindVertexArray( d20_vao );
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d20_index_buffer );

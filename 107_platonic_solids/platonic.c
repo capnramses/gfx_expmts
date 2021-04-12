@@ -10,10 +10,27 @@
 
 #include "platonic.h"
 
+
+//
+// D4 - Tetrahedron
+//
+float platonic_tetrahedron_vertices_xyz[4 * 3] = {
+  1.0f, 1.0f, 1.0f,   // 0
+  1.0f, -1.0f, -1.0f, // 1
+  -1.0f, 1.0f, -1.0f, // 2
+  -1.0f, -1.0f, 1.0f  // 3
+};
+
+uint32_t platonic_tetrahedron_indices_ccw_triangles[4 * 3] = {
+  3, 2, 1, //
+  2, 3, 0, //
+  1, 0, 3, //
+  0, 1, 2  //
+};
+
 //
 // The D6
 //
-
 float platonic_cube_vertices_xyz[8 * 3] = {
   1.0f, 1.0f, 1.0f,   // 0
   1.0f, 1.0f, -1.0f,  // 1
@@ -38,7 +55,6 @@ uint32_t platonic_cube_indices_ccw_triangles[6 * 2 * 3] = {
 //
 // The D8
 // NB the octohedron is the 'dual' shape of the cube -> each vertex lies on a cube face.
-
 float platonic_octahedron_vertices_xyz[6 * 3] = {
   1.0f, 0.0f, 0.0f,  // 0
   -1.0f, 0.0f, 0.0f, // 1
@@ -61,26 +77,17 @@ uint32_t platonic_octahedron_indices_ccw_triangles[8 * 3] = {
 };
 
 //
-// D4 - Tetrahedron
-//
-float platonic_tetrahedron_vertices_xyz[4 * 3] = {
-  1.0f, 1.0f, 1.0f,   // 0
-  1.0f, -1.0f, -1.0f, // 1
-  -1.0f, 1.0f, -1.0f, // 2
-  -1.0f, -1.0f, 1.0f  // 3
-};
-
-uint32_t platonic_tetrahedron_indices_ccw_triangles[4 * 3] = {
-  3, 2, 1, //
-  2, 3, 0, //
-  1, 0, 3, //
-  0, 1, 2  //
-};
-
-//
 // D12 - Dodecahedron
 //
+/*
+float platonic_dodecahedron_vertices_xyz[TODO] = {
+TODO
+};
 
+uint32_t platonic_dodecahedron_indices_ccw_triangles[TODO] = {
+TODO
+};
+*/
 //
 // D20 - Isocahedron
 //
