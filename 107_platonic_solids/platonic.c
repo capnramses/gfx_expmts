@@ -10,7 +10,6 @@
 
 #include "platonic.h"
 
-
 //
 // D4 - Tetrahedron
 //
@@ -78,35 +77,67 @@ uint32_t platonic_octahedron_indices_ccw_triangles[8 * 3] = {
 
 //
 // D12 - Dodecahedron
-//
-/*
-float platonic_dodecahedron_vertices_xyz[TODO] = {
-TODO
+// Note: the dodecahedron has the property of having a cube embedded within it.
+
+#define PLA_PHI 1.618034f
+#define PLA_INV_PHI 0.618034f
+float platonic_dodecahedron_vertices_xyz[20 * 3] = {
+  1, 1, 1,                      // 0 "1"
+  1, 1, -1,                     // 1 "2"
+  1, -1, 1,                     // 2 "3"
+  1, -1, -1,                    // 3 "4"
+  -1, 1, 1,                     // 4 "5"
+  -1, 1, -1,                    // 5 "6"
+  -1, -1, 1,                    // 6 "7"
+  -1, -1, -1,                   // 7 "8"
+  PLA_INV_PHI, PLA_PHI, 0.0f,   // 8 "11"
+  -PLA_INV_PHI, PLA_PHI, 0.0f,  // 9 "12"
+  PLA_INV_PHI, -PLA_PHI, 0.0f,  // 10 "13"
+  -PLA_INV_PHI, -PLA_PHI, 0.0f, // 11 "14"
+  PLA_PHI, 0.0f, PLA_INV_PHI,   // 12 "21"
+  PLA_PHI, 0.0f, -PLA_INV_PHI,  // 13 "22"
+  -PLA_PHI, 0.0f, PLA_INV_PHI,  // 14 "23"
+  -PLA_PHI, 0.0f, -PLA_INV_PHI, // 15 "24"
+  0.0f, PLA_INV_PHI, PLA_PHI,   // 16 "31"
+  0.0f, -PLA_INV_PHI, PLA_PHI,  // 17 "32"
+  0.0f, PLA_INV_PHI, -PLA_PHI,  // 18 "33"
+  0.0f, -PLA_INV_PHI, -PLA_PHI, // 19 "34"
 };
 
-uint32_t platonic_dodecahedron_indices_ccw_triangles[TODO] = {
-TODO
+uint32_t platonic_dodecahedron_indices_ccw_triangles[36 * 3] = {
+  1, 8, 0, 0, 12, 13, 13, 1, 0,  // "11"
+  4, 9, 5, 5, 15, 14, 14, 4, 5,  // "12"
+  2, 10, 3, 3, 13, 12, 12, 2, 3, // "13"
+  7, 11, 6, 6, 14, 15, 15, 7, 6, // "14"
+  2, 12, 0, 0, 16, 17, 17, 2, 0, // "21"
+  1, 13, 3, 3, 19, 18, 18, 1, 3, // "22"
+  4, 14, 6, 6, 17, 16, 16, 4, 6, // "23"
+  7, 15, 5, 5, 18, 19, 19, 7, 5, // "24"
+  4, 16, 0, 0, 8, 9, 9, 4, 0,    // "31"
+  2, 17, 6, 6, 11, 10, 10, 2, 6, // "32"
+  1, 18, 5, 5, 9, 8, 8, 1, 5,    // "33"
+  7, 19, 3, 3, 10, 11, 11, 7, 3  // "34"
 };
-*/
+
 //
 // D20 - Isocahedron
 //
 float platonic_isocahedron_vertices_xyz[12 * 3] = {
   // first 'golden rectangle'
-  1.618034f, 1.0f, 0.0f,   // 0 "11"
-  -1.618034f, 1.0f, 0.0f,  // 1 "12"
-  1.618034f, -1.0f, 0.0f,  // 2 "13"
-  -1.618034f, -1.0f, 0.0f, // 3 "14"
+  PLA_PHI, 1.0f, 0.0f,   // 0 "11"
+  -PLA_PHI, 1.0f, 0.0f,  // 1 "12"
+  PLA_PHI, -1.0f, 0.0f,  // 2 "13"
+  -PLA_PHI, -1.0f, 0.0f, // 3 "14"
   // second
-  1.0f, 0.0f, 1.618034f,   // 4 "21"
-  1.0f, 0.0f, -1.618034f,  // 5 "22"
-  -1.0f, 0.0f, 1.618034f,  // 6 "23"
-  -1.0f, 0.0f, -1.618034f, // 7 "24"
+  1.0f, 0.0f, PLA_PHI,   // 4 "21"
+  1.0f, 0.0f, -PLA_PHI,  // 5 "22"
+  -1.0f, 0.0f, PLA_PHI,  // 6 "23"
+  -1.0f, 0.0f, -PLA_PHI, // 7 "24"
   // third
-  0.0f, 1.618034f, 1.0f,  // 8 "31"
-  0.0f, -1.618034f, 1.0f, // 9 "32"
-  0.0f, 1.618034f, -1.0f, // 10 "33"
-  0.0f, -1.618034f, -1.0f // 11 "34"
+  0.0f, PLA_PHI, 1.0f,  // 8 "31"
+  0.0f, -PLA_PHI, 1.0f, // 9 "32"
+  0.0f, PLA_PHI, -1.0f, // 10 "33"
+  0.0f, -PLA_PHI, -1.0f // 11 "34"
 };
 
 uint32_t platonic_isocahedron_indices_ccw_triangles[20 * 3] = {

@@ -34,6 +34,23 @@ int main( void ) {
     glBufferData( GL_ELEMENT_ARRAY_BUFFER, 36 * sizeof( uint32_t ), platonic_cube_indices_ccw_triangles, GL_STATIC_DRAW );
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
   }
+  GLuint d4_vbo, d4_vao, d4_index_buffer;
+  { // make a d4
+    glGenBuffers( 1, &d4_vbo );
+    glGenVertexArrays( 1, &d4_vao );
+    glBindVertexArray( d4_vao );
+    glEnableVertexAttribArray( 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, d4_vbo );
+    glBufferData( GL_ARRAY_BUFFER, 4 * 3 * sizeof( float ), platonic_tetrahedron_vertices_xyz, GL_STATIC_DRAW );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, NULL );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glBindVertexArray( 0 );
+
+    glGenBuffers( 1, &d4_index_buffer );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d4_index_buffer );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, 4 * 3 * sizeof( uint32_t ), platonic_tetrahedron_indices_ccw_triangles, GL_STATIC_DRAW );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+  }
   GLuint d8_vbo, d8_vao, d8_index_buffer;
   { // make a d8
     glGenBuffers( 1, &d8_vbo );
@@ -51,21 +68,21 @@ int main( void ) {
     glBufferData( GL_ELEMENT_ARRAY_BUFFER, 8 * 3 * sizeof( uint32_t ), platonic_octahedron_indices_ccw_triangles, GL_STATIC_DRAW );
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
   }
-  GLuint d4_vbo, d4_vao, d4_index_buffer;
-  { // make a d4
-    glGenBuffers( 1, &d4_vbo );
-    glGenVertexArrays( 1, &d4_vao );
-    glBindVertexArray( d4_vao );
+  GLuint d12_vbo, d12_vao, d12_index_buffer;
+  { // make a d12
+    glGenBuffers( 1, &d12_vbo );
+    glGenVertexArrays( 1, &d12_vao );
+    glBindVertexArray( d12_vao );
     glEnableVertexAttribArray( 0 );
-    glBindBuffer( GL_ARRAY_BUFFER, d4_vbo );
-    glBufferData( GL_ARRAY_BUFFER, 4 * 3 * sizeof( float ), platonic_tetrahedron_vertices_xyz, GL_STATIC_DRAW );
+    glBindBuffer( GL_ARRAY_BUFFER, d12_vbo );
+    glBufferData( GL_ARRAY_BUFFER, 20 * 3 * sizeof( float ), platonic_dodecahedron_vertices_xyz, GL_STATIC_DRAW );
     glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, NULL );
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
     glBindVertexArray( 0 );
 
-    glGenBuffers( 1, &d4_index_buffer );
-    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d4_index_buffer );
-    glBufferData( GL_ELEMENT_ARRAY_BUFFER, 4 * 3 * sizeof( uint32_t ), platonic_tetrahedron_indices_ccw_triangles, GL_STATIC_DRAW );
+    glGenBuffers( 1, &d12_index_buffer );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d12_index_buffer );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, 36 * 3 * sizeof( uint32_t ), platonic_dodecahedron_indices_ccw_triangles, GL_STATIC_DRAW );
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
   }
   GLuint d20_vbo, d20_vao, d20_index_buffer;
@@ -136,6 +153,17 @@ int main( void ) {
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d8_index_buffer );
     // NB can also just give the array here instead of binding index buffer
     glDrawElements( GL_TRIANGLES, 8 * 3, GL_UNSIGNED_INT, NULL );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+    glBindVertexArray( 0 );
+
+    // D12
+    T = translate_mat4( ( vec3 ){ 4, 0.0, 0.0 } );
+    M = mult_mat4_mat4( T, R );
+    glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
+    glBindVertexArray( d12_vao );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, d12_index_buffer );
+    // NB can also just give the array here instead of binding index buffer
+    glDrawElements( GL_TRIANGLES, 36 * 3, GL_UNSIGNED_INT, NULL );
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
     glBindVertexArray( 0 );
 
