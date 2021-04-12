@@ -141,7 +141,7 @@ int main( void ) {
 
     // D20
     S = scale_mat4( ( vec3 ){ 1.0f / 1.618034f, 1.0f / 1.618034f, 1.0f / 1.618034f } );
-    T = translate_mat4( ( vec3 ){ 4, 0.0, 0.0 } );
+    T = translate_mat4( ( vec3 ){ -4, -4.0, 0.0 } );
     M = mult_mat4_mat4( T, mult_mat4_mat4( R, S ) );
     glUniformMatrix4fv( gfx_dice_shader.u_M, 1, GL_FALSE, M.m );
     glBindVertexArray( d20_vao );
