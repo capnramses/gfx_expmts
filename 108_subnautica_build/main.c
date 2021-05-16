@@ -10,10 +10,10 @@ int main( int argc, char** argv ) {
     return 0;
   }
   strncat( mesh_filename, argv[1], 255 );
-  printf( "Loading mesh: %s\n", mesh_filename );
-  gfx_mesh_t mesh = gfx_mesh_create_from_ply( mesh_filename );
 
   gfx_start( "shader effect", NULL, false );
+  printf( "Loading mesh: %s\n", mesh_filename );
+  gfx_mesh_t mesh = gfx_mesh_create_from_ply( mesh_filename );
 
   while ( !gfx_should_window_close() ) {
     gfx_poll_events();
@@ -24,6 +24,8 @@ int main( int argc, char** argv ) {
 
   gfx_delete_mesh( &mesh );
   gfx_stop();
+
+  printf("normal exit\n");
 
   return 0;
 }
