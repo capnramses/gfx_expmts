@@ -116,6 +116,7 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 105     | `bresenham3d`               | 3D line drawing with Bresenham.                                            | working             |
 | 106     | `voxedit2`                  | A different take on voxel editing with save/load.                          | working             |
 | 107     | `platonic_solids`           | Drop-in arrays for rendering platonic solids as mesh primitives.           | started             |
+| 108     | `subnautica_build`          | Attempt at replicating a shader from Subnautica when vehicles are built. |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
