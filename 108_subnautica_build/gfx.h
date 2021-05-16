@@ -39,6 +39,7 @@ typedef struct gfx_mesh_t {
   uint32_t vao;
   uint32_t points_vbo, palidx_vbo, picking_vbo, texcoords_vbo, normals_vbo, vcolours_vbo, vedges_vbo, vlight_vbo;
   size_t n_vertices;
+  float bounding_radius;
   bool dynamic;
 } gfx_mesh_t;
 
@@ -322,7 +323,7 @@ gfx_stats_t gfx_frame_stats();
  * Externally-declared global variables
  ****************************************************************************/
 
-extern gfx_shader_t gfx_dice_shader;        /** A default shader with vertex points and colours, but no texture. Points are scaled by 0.1. */
+extern gfx_shader_t gfx_dice_shader;             /** A default shader with vertex points and colours, but no texture. Points are scaled by 0.1. */
 extern gfx_shader_t gfx_quad_texture_shader;     /** A default shader for gfx_ss_quad_mesh. Uses u_scale, u_pos, u_texcoord_scale, 1 texture. */
 extern gfx_shader_t gfx_default_textured_shader; /** A default shader, as gfx_quad_texture_shader but using u_P, u_V, u_M instead of scale, pos etc. */
 extern gfx_texture_t gfx_checkerboard_texture;   /** A fall-back checkerboard texture */

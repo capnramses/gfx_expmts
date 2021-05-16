@@ -430,21 +430,21 @@ bool gfx_start( const char* window_title, const char* window_icon_filename, bool
       "#version 410 core\n"
       "in vec3 a_vp;\n"
       "uniform mat4 u_P, u_V, u_M;\n"
-			"out vec3 v_n;\n"
+      "out vec3 v_n;\n"
       "out vec3 vc;\n"
       "void main () {\n"
       "  vc = a_vp;\n"
-			"  v_n = ( u_M * vec4( a_vp, 0.0 ) ).xyz;\n"
+      "  v_n = ( u_M * vec4( a_vp, 0.0 ) ).xyz;\n"
       "  gl_Position = u_P * u_V * u_M * vec4( a_vp, 1.0 );\n"
       "}\n";
     const char* fragment_shader =
       "#version 410 core\n"
       "in vec3 vc;\n"
-			"in vec3 v_n;\n"
+      "in vec3 v_n;\n"
       "out vec4 o_frag_colour;\n"
       "void main () {\n"
-			"  vec3 n   = normalize( v_n );\n"
-			"  float dp = dot( n, vec3( 0.0, 0.0, 1.0 ) );\n"
+      "  vec3 n   = normalize( v_n );\n"
+      "  float dp = dot( n, vec3( 0.0, 0.0, 1.0 ) );\n"
       "  o_frag_colour = vec4( vc, 1.0 );\n"
       "  o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );\n"
       "}\n";
@@ -766,6 +766,14 @@ gfx_mesh_t gfx_mesh_create_from_ply( const char* ply_filename ) {
     .n_vertices       = ply.n_vertices
   };
   mesh = gfx_create_mesh_from_mem( &params );
+  if ( ply.n_vertices > 0 && ply.positions_ptr ) {
+    float biggest_value = fabs( ply.positions_ptr[0] );
+    for ( uint32_t i = 1; i < ply.n_vertices * 3; i++ ) {
+      float tmp = fabs( ply.positions_ptr[i] );
+      if ( tmp > biggest_value ) { biggest_value = tmp; }
+    }
+    mesh.bounding_radius = biggest_value;
+  }
   apg_ply_free( &ply );
   free( rgb_f );
 
