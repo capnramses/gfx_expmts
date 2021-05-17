@@ -7,7 +7,7 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 ## Contents
 
 | numerus | titulus                     | descriptio                                                                 | status              |
-| ------- | --------------------------- | -------------------------------------------------------------------------- | ------------------- |
+|---------|-----------------------------|----------------------------------------------------------------------------|---------------------|
 | 000     | `video_modus`               | find and list all video modes on troublesome hardware                      | working             |
 | 001     | `cube_map_depth`            | depth writing to cube maps for omni-direc. shadows                         | abandoned           |
 | 002     | `bezier_curve`              | demo from splines and curves lecture last year                             | working             |
@@ -77,12 +77,12 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 066     | `voxedit`                   | A quick-to-use voxel mesh creator and exporter                             | working             |
 | 067     | `multichunk`                | Voxel world made from several chunks                                       | working             |
 | 068     | `winmain`                   | Win32 program with a WinMain (prelude to D3D code)                         | working             |
-| 069     | `d3d_device`                | Start a Direct3D 11 Device and Context                                     | working  |
-| 070     | `d3d_device_ii`             | Fresh start based on MS docs. Also clear the viewport.                     | working  |
-| 071     | `d3d_hello_triangle`        | Basic demo to display a triangle with D3D11.                               | working  |
-| 072     | `raytracer_sw`              | Basic demo of coding a raytracer in software.                              | working  |
+| 069     | `d3d_device`                | Start a Direct3D 11 Device and Context                                     | working             |
+| 070     | `d3d_device_ii`             | Fresh start based on MS docs. Also clear the viewport.                     | working             |
+| 071     | `d3d_hello_triangle`        | Basic demo to display a triangle with D3D11.                               | working             |
+| 072     | `raytracer_sw`              | Basic demo of coding a raytracer in software.                              | working             |
 | 073     | `ppm_write`                 | Making sure I can write a P6 PPM off the top of my head.                   | working             |
-| 074     | `slabs`                     | ray-OOBB and ray-barycentric intersection tests.                           | working  |
+| 074     | `slabs`                     | ray-OOBB and ray-barycentric intersection tests.                           | working             |
 | 075     | `triangle_fill`             | Edge Function triangle fill algorithm impl.                                | working             |
 | 076     | `sw_rasteriser`             | Software rasteriser for drawing a 3D mesh.                                 | working             |
 | 077     | `apg_ply`                   | Rewrite of my PLY mesh reader/writer.                                      | working             |
@@ -116,7 +116,7 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 105     | `bresenham3d`               | 3D line drawing with Bresenham.                                            | working             |
 | 106     | `voxedit2`                  | A different take on voxel editing with save/load.                          | working             |
 | 107     | `platonic_solids`           | Drop-in arrays for rendering platonic solids as mesh primitives.           | started             |
-| 108     | `subnautica_build`          | Attempt at replicating a shader from Subnautica when vehicles are built. |
+| 108     | `subnautica_build`          | Attempt at replicating a shader from Subnautica when vehicles are built.   | started             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
