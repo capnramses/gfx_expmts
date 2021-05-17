@@ -37,7 +37,7 @@ int main( int argc, char** argv ) {
     mat4 V = look_at( ( vec3 ){ .y = 0.5f, .z = 1.5f }, ( vec3 ){ .y = 0.5f,  }, ( vec3 ){ .y = 1.0f } );
     mat4 M = scale_mat4( ( vec3 ){ scale, scale, scale } );
 
-    gfx_draw_mesh( GFX_PT_TRIANGLES, &gfx_default_textured_shader, P, V, M, mesh.vao, mesh.n_vertices, NULL, 0 ); // TODO add shader texture
+    gfx_draw_mesh( GFX_PT_TRIANGLES, &shader, P, V, M, mesh.vao, mesh.n_vertices, NULL, 0 ); // TODO add shader texture
 
     gfx_swap_buffer();
   }
