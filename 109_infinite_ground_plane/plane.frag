@@ -13,5 +13,5 @@ void main() {
   // line anti-aliasing is handled by a texture with mimapping that also contains 2 grid resolutions
   o_frag_colour = texture( u_texture_a, st );
   // gamma correction
-	o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );
+  o_frag_colour.rgb = pow( o_frag_colour.rgb, vec3( 1.0 / 2.2 ) );
 }
