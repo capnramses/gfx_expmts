@@ -34,6 +34,11 @@ shads
 vox
 bye
 
+*.dll
+*.exe
+
+common/meshes/
+
 # sample inpits
 vox.ply
 *.ttf
@@ -126,3 +131,4 @@ unfiltered_heightmap_out.png
 106_voxedit2/screens/*.png
 104_opencv_mp4/frame0000.png
 106_voxedit2/*.obj
+106_voxedit2/Hocus_Pocus_palette.png
