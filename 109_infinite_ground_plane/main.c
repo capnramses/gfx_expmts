@@ -1,4 +1,4 @@
-// gcc -g .\main.c .\apg_maths.c .\gfx.c -I ..\common\glad\include\ -I ..\common\include\ ..\common\glad\src\glad.c -I
+// gcc -g .\main.c .\apg_maths.c .\gfx.c .\input.c -I ..\common\glad\include\ -I ..\common\include\ ..\common\glad\src\glad.c -I
 // ..\common\include\stb\ ..\common\win64_gcc\libglfw3dll.a
 
 #include "gfx.h"
