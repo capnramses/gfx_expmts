@@ -43,17 +43,20 @@ int main() {
 
     gfx_clear_colour_and_depth_buffers( 0.2f, 0.2f, 0.2f, 1.0f );
 
-    float aspect      = (float)fb_w / (float)fb_h;
-    float near_plane  = 0.1f;
-    float far_plane   = 1000.0f;
-    mat4 proj_matrix  = perspective( 66.6f, aspect, near_plane, far_plane );
-    vec3 targ_pos     = ( vec3 ){ .x = cam_pos.x, .y = cam_pos.y, .z = cam_pos.z - 1.0f };
-    mat4 view_matrix  = look_at( cam_pos, targ_pos, up );
-    mat4 R            = rot_x_deg_mat4( -90.0f );
-    mat4 T            = translate_mat4( ( vec3 ){ cam_pos.x, 0.0f, cam_pos.z } );
+    float aspect     = (float)fb_w / (float)fb_h;
+    float near_plane = 0.1f;
+    float far_plane  = 1000.0f;
+    mat4 proj_matrix = perspective( 66.6f, aspect, near_plane, far_plane );
+    vec3 targ_pos    = ( vec3 ){ .x = cam_pos.x, .y = cam_pos.y, .z = cam_pos.z - 1.0f };
+    mat4 view_matrix = look_at( cam_pos, targ_pos, up );
+    // the mesh is just a big quadrangle that follows the camera's horizontal movement (but not vertical).
+    mat4 R = rot_x_deg_mat4( -90.0f );
+    mat4 T = translate_mat4( ( vec3 ){ cam_pos.x, 0.0f, cam_pos.z } );
+    // mesh needs to be scaled bigger than far plane distance so it always goes as far as the frustum extends into the horizon
     mat4 S            = scale_mat4( ( vec3 ){ 1500.0f, 1500.0f, 1500.0f } );
     mat4 model_matrix = mult_mat4_mat4( T, mult_mat4_mat4( R, S ) );
 
+    // if we had other stuff in the scene we could draw the plane as a semi-transparent surface
     gfx_alpha_testing( true );
     gfx_draw_mesh( GFX_PT_TRIANGLE_STRIP, &shader, proj_matrix, view_matrix, model_matrix, gfx_ss_quad_mesh.vao, gfx_ss_quad_mesh.n_vertices, &texture, 1 );
     gfx_alpha_testing( false );
