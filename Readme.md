@@ -118,9 +118,9 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 107     | `platonic_solids`           | Drop-in arrays for rendering platonic solids as mesh primitives.           | started             |
 | 108     | `subnautica_build`          | Attempt at replicating a shader from Subnautica when vehicles are built.   | started             |
 | 109     | `infinite_ground_plane`     | My much simplified spin on an 'infinite ground plane/grid' surface.        | working             |
+| 110     | `dither`                    | Dithering shader effect.                                                   | proposed            |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
-| xxx     | `dither`                    | Dithering shader effect.                                                   | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed            |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                            | proposed            |
 | xxx     | `geo_mipmap`                | heightmap terrain sampled in vertex shader, scrolling camera mesh          | proposed            |
