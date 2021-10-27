@@ -24,6 +24,11 @@ EXT_texture_filter_anisotropic   4.6    98%        Implemented since the GeForce
 #include <stdbool.h>
 #include <stdint.h>
 
+// sRGB cornflower blue
+#define GFX_CORNFLOWER_R 100 / 255.0f
+#define GFX_CORNFLOWER_G 149 / 255.0f
+#define GFX_CORNFLOWER_B 237 / 255.0f
+
 typedef enum gfx_cursor_mode_t { GFX_CURSOR_MODE_SYSTEM = 0, GFX_CURSOR_MODE_HIDDEN = 1, GFX_CURSOR_MODE_TRAP_AND_HIDE = 2 } gfx_cursor_mode_t;
 typedef enum gfx_primitive_type_t { GFX_PT_TRIANGLES = 0, GFX_PT_TRIANGLE_STRIP, GFX_PT_POINTS } gfx_primitive_type_t;
 
