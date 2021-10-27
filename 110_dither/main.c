@@ -14,19 +14,12 @@
 #include <stdint.h>
 #include <stdio.h>
 
-// Bayer Matrix for dither pattern
-// I created this with GIMP and 4 subdivisions to get more greys in the pattern
-#define BAYER_IMAGE_FILENAME "bayer_matrix_8x8.png"
-
 #define DITHER_VS "dither.vert"
 #define DITHER_FS "dither.frag"
 
 int main( int argc, char** argv ) {
   // enter
   if ( !gfx_start( "Dither Demo", NULL, false ) ) { return 1; }
-  gfx_texture_t dither_texture = gfx_texture_create_from_file( BAYER_IMAGE_FILENAME,
-    ( gfx_texture_properties_t ){ .bilinear = false, .has_mips = false, .is_array = false, .is_bgr = false, .is_depth = false, .is_srgb = false, .repeats = true } );
-  if ( 0 == dither_texture.handle_gl ) { return 1; }
   gfx_shader_t dither_shader = gfx_create_shader_program_from_files( DITHER_VS, DITHER_FS );
   if ( !dither_shader.loaded ) { return 1; }
 
@@ -50,10 +43,9 @@ int main( int argc, char** argv ) {
     mat4 S  = scale_mat4( ( vec3 ){ s, s, s } );
 		mat4 M = S; // identity_mat4();
 
+    gfx_alpha_testing( true );
     gfx_uniform2f( &dither_shader, dither_shader.u_screen_dims, fb_w, fb_h );
 		gfx_uniform1f( &dither_shader, dither_shader.u_time, s );
-
-    gfx_alpha_testing( true );
     gfx_draw_mesh( GFX_PT_TRIANGLE_STRIP, &dither_shader, identity_mat4(), identity_mat4(), M, gfx_ss_quad_mesh.vao, gfx_ss_quad_mesh.n_vertices, NULL, 0 );
     gfx_alpha_testing( false );
 
@@ -61,6 +53,7 @@ int main( int argc, char** argv ) {
   }
 
   // exit
+	gfx_delete_shader_program( &dither_shader );
   gfx_stop();
   printf( "Normal exit\n" );
 

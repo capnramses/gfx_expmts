@@ -5,7 +5,7 @@
 
 #version 410 core
 
-// Note - you can do interesting offsets with gl_FragCoord
+// Note - you can do interesting offsets with gl_FragCoord (but it says you shouldn't unless absolutely necessary)
 // and it has origin in bottom-left and that the pixel centre is not 0 but 0.5,0.5 to eg 1024.5,1024.5
 // https://www.khronos.org/opengl/wiki/Built-in_Variable_(GLSL)#Fragment_shader_inputs
 
@@ -17,39 +17,26 @@ uniform vec2 u_screen_dims;
 // dither_pixel_scale - make smaller than 1.0 for blockier dither pattern
 // to get a dither colour pattern do rgba = rgba - dither
 float dither( vec4 pos_screen, float dither_pixel_scale ) {
-	vec2 uv = pos_screen.xy;
-	// values from Unity's dither node https://docs.unity3d.com/Packages/com.unity.shadergraph@6.9/manual/Dither-Node.html
-/*	float DITHER_THRESHOLDS[16] = float[16](
-		1.0 / 17.0,  9.0 / 17.0,  3.0 / 17.0, 11.0 / 17.0,
-		13.0 / 17.0,  5.0 / 17.0, 15.0 / 17.0,  7.0 / 17.0,
-		4.0 / 17.0, 12.0 / 17.0,  2.0 / 17.0, 10.0 / 17.0,
-		16.0 / 17.0,  8.0 / 17.0, 14.0 / 17.0,  6.0 / 17.0
-	);
-	*/
-	// values from my own 4x4 dither image (made in GIMP)
+	// for values from Unity's dither node: https://docs.unity3d.com/Packages/com.unity.shadergraph@6.9/manual/Dither-Node.html
+	// values here are from my own 4x4 dither image (made in GIMP) -- see bayer_matrix_4x4.ppm for the actual image
 	float antons_dither[16] = float[16](
-		0.0, 128.0, 32.0, 160.0,
-		192.0, 64.0, 224.0, 96.0,
-		48.0, 176.0, 16.0, 144.0,
-		240.0, 112.0, 208.0, 80.0
+		  0.0, 128.0,  32.0, 160.0,
+		192.0,  64.0, 224.0,  96.0,
+		 48.0, 176.0,  16.0, 144.0,
+		240.0, 112.0, 208.0,  80.0
 	);
 	// note cast to int here truncates the 0.5 etc
-	uint index = ( uint( uv.x * dither_pixel_scale ) % 4 ) * 4 + uint( uv.y * dither_pixel_scale ) % 4;
-	//return DITHER_THRESHOLDS[index];
+	uint index = ( uint( pos_screen.x * dither_pixel_scale ) % 4 ) * 4 + uint( pos_screen.y * dither_pixel_scale ) % 4;
 	return antons_dither[index] / 255.0;
 }
 
 void main() {
 
 	vec4 rgba = vec4( 1.0, 1.0, 1.0, 1.0 );
-	float vertical_factor = ( gl_FragCoord.y - 0.5 ) / u_screen_dims.y;
+	float vertical_factor = ( gl_FragCoord.y - 0.5 ) / u_screen_dims.y; // the offset of 0.5 here is because origin pixel centre is 0.5,0.5
 	// dither any mesh on the LHS of the screen
 	if ( ( gl_FragCoord.x - 0.5 ) / u_screen_dims.x < 0.5 ) {
 		float d = dither( gl_FragCoord, 0.5 ); // change from 1.0 to 0.5 for fine/chunky
-
-		
-		//rgba.a = mix( rgba.a, rgba.a - d, vertical_factor );
-		//rgba.a *= 1.0 - vertical_factor;
 		rgba -= d * ( 1.0 - vertical_factor );
 	}
 
