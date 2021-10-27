@@ -179,6 +179,7 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   shader.u_daytime               = glGetUniformLocation( shader.program_gl, "u_daytime" );
   shader.u_tint                  = glGetUniformLocation( shader.program_gl, "u_tint" );
   shader.u_texcoord_scale        = glGetUniformLocation( shader.program_gl, "u_texcoord_scale" );
+  shader.u_screen_dims           = glGetUniformLocation( shader.program_gl, "u_screen_dims" );
   shader.u_walk_time             = glGetUniformLocation( shader.program_gl, "u_walk_time" );
   shader.u_cam_y_rot             = glGetUniformLocation( shader.program_gl, "u_cam_y_rot" );
   shader.u_chunk_id              = glGetUniformLocation( shader.program_gl, "u_chunk_id" );

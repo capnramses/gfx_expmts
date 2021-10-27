@@ -74,7 +74,7 @@ typedef struct gfx_shader_t {
   int u_output_tint_rgb;
   int u_underwater_wobble_fac;
   // vec2
-  int u_scale, u_pos, u_offset, u_texcoord_scale;
+  int u_scale, u_pos, u_offset, u_texcoord_scale, u_screen_dims;
   // float
   int u_alpha;
   int u_chunk_id;

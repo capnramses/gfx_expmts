@@ -3,6 +3,11 @@
 // C99, OpenGl
 // 26 Oct 2021
 
+/* The basic idea is
+- have a dither pattern you can apply to any rendered 3d mesh
+- the dither pattern is applied in _screen space_ - so dither isn't a texture on the mesh but flat on the screen with a 1:1 pattern-pixel:screen-pixel.
+*/
+
 #include "gfx.h"
 #include "apg_maths.h"
 #include <math.h>
@@ -13,24 +18,8 @@
 // I created this with GIMP and 4 subdivisions to get more greys in the pattern
 #define BAYER_IMAGE_FILENAME "bayer_matrix_8x8.png"
 
-/* Unity's dither node works like this
-https://docs.unity3d.com/Packages/com.unity.shadergraph@6.9/manual/Dither-Node.html
-so the pixel values could just go directly in a shader without using a texture
-
-void Unity_Dither_float4(float4 In, float4 ScreenPosition, out float4 Out)
-{
-    float2 uv = ScreenPosition.xy * _ScreenParams.xy;
-    float DITHER_THRESHOLDS[16] =
-    {
-        1.0 / 17.0,  9.0 / 17.0,  3.0 / 17.0, 11.0 / 17.0,
-        13.0 / 17.0,  5.0 / 17.0, 15.0 / 17.0,  7.0 / 17.0,
-        4.0 / 17.0, 12.0 / 17.0,  2.0 / 17.0, 10.0 / 17.0,
-        16.0 / 17.0,  8.0 / 17.0, 14.0 / 17.0,  6.0 / 17.0
-    };
-    uint index = (uint(uv.x) % 4) * 4 + uint(uv.y) % 4;
-    Out = In - DITHER_THRESHOLDS[index];
-}
-*/
+#define DITHER_VS "dither.vert"
+#define DITHER_FS "dither.frag"
 
 int main( int argc, char** argv ) {
   // enter
@@ -38,6 +27,8 @@ int main( int argc, char** argv ) {
   gfx_texture_t dither_texture = gfx_texture_create_from_file( BAYER_IMAGE_FILENAME,
     ( gfx_texture_properties_t ){ .bilinear = false, .has_mips = false, .is_array = false, .is_bgr = false, .is_depth = false, .is_srgb = false, .repeats = true } );
   if ( 0 == dither_texture.handle_gl ) { return 1; }
+  gfx_shader_t dither_shader = gfx_create_shader_program_from_files( DITHER_VS, DITHER_FS );
+  if ( !dither_shader.loaded ) { return 1; }
 
   // main loop
   double prev_time_s = gfx_get_time_s();
@@ -47,13 +38,24 @@ int main( int argc, char** argv ) {
     prev_time_s           = curr_time_s;
 
     gfx_poll_events();
+
+    int win_w = 0, win_h = 0, fb_w = 0, fb_h = 0;
+    gfx_window_dims( &win_w, &win_h );
+    gfx_framebuffer_dims( &fb_w, &fb_h );
+    gfx_viewport( 0, 0, win_w, win_h );
     gfx_clear_colour_and_depth_buffers( GFX_CORNFLOWER_R, GFX_CORNFLOWER_G, GFX_CORNFLOWER_B, 1.0f );
 
-    vec2 scale          = ( vec2 ){ 1.0f, 1.0f };
-    vec2 pos            = ( vec2 ){ 0.0f, 0.0f };
-    vec2 texcoord_scale = ( vec2 ){ 1.0f, 1.0f };
-    vec4 tint_rgba      = ( vec4 ){ 1.0f, 1.0f, 1.0f, 1.0f };
-    gfx_draw_textured_quad( dither_texture, scale, pos, texcoord_scale, tint_rgba );
+		// just some scale animation to show that the dither doesn't also scale like a texture - it's a screen-space thing here
+    float s = 0.8f + 0.2f * fabs( cosf( curr_time_s ) );
+    mat4 S  = scale_mat4( ( vec3 ){ s, s, s } );
+		mat4 M = S; // identity_mat4();
+
+    gfx_uniform2f( &dither_shader, dither_shader.u_screen_dims, fb_w, fb_h );
+		gfx_uniform1f( &dither_shader, dither_shader.u_time, s );
+
+    gfx_alpha_testing( true );
+    gfx_draw_mesh( GFX_PT_TRIANGLE_STRIP, &dither_shader, identity_mat4(), identity_mat4(), M, gfx_ss_quad_mesh.vao, gfx_ss_quad_mesh.n_vertices, NULL, 0 );
+    gfx_alpha_testing( false );
 
     gfx_swap_buffer();
   }

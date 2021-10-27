@@ -7,15 +7,8 @@
 
 in vec2 a_vp;
 
-uniform vec2 u_scale, u_pos, u_texcoord_scale;
-
-out vec2 v_st;
-out vec4 v_pos_clip;
+uniform mat4 u_P, u_V, u_M;
 
 void main() {
-	v_st = a_vp.xy * 0.5 + 0.5;
-	v_st.t = 1.0 - v_st.t;
-	v_st *= u_texcoord_scale;
-	v_pos_clip  = vec4( a_vp * u_scale + u_pos, 0.0, 1.0 );
-	gl_Position = v_pos_clip;
+	gl_Position = u_P * u_V * u_M * vec4( a_vp, 0.0, 1.0 );
 }
