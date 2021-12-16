@@ -36,9 +36,9 @@ float rand_delay() {
   float f = gl_FragCoord.x / 1280.0;
   float n_snakes = 160.0; // i think it was 2 pixel wide on a 320px
   float column = floor( n_snakes * f );
-  float max_delay = 0.2;
+  float max_delay = 0.45;
   // this is terrible but it might work
-  float r = clamp( sin( column * cos( column * column * 0.0818) * 0.2124) * 0.5 + 0.5, 0.0, 1.0 ) * max_delay;
+  float r = clamp( sin( column * 5.5 * cos( column * 0.16) * 0.32124 ) * 0.5 + 0.5, 0.0, 1.0 ) * max_delay;
   return r;
 } 
 
@@ -52,8 +52,12 @@ void main() {
   o_frag_colour = vec4( rand_delay(), 0.0 , 0.0, 1.0 );
 
 
+  float r = rand_delay();
   float t       = mod( u_time, effect_time );
-  vec2 st       = vec2( v_st.s, v_st.t - t );
+  vec2 st       = vec2( v_st.s, v_st.t );
+  if ( t > r * 1.0 ) {
+    st.t -= (t - r ) ;
+  }
   vec4 texel    = texture( u_texture, st );
 
   o_frag_colour = o_frag_colour * 0.25 + texel * 0.75;
