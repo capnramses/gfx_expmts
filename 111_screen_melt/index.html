@@ -40,17 +40,27 @@ float rand_delay() {
   // this is terrible but it might work
   float r = clamp( sin( column * cos( column * column * 0.0818) * 0.2124) * 0.5 + 0.5, 0.0, 1.0 ) * max_delay;
   return r;
-}
+} 
 
 void main() {
   float effect_time = 2.0;
-  float t       = mod( u_time, effect_time  );
-  vec2 st       = vec2( v_st.s, v_st.t - t );
-  vec4 texel    = texture( u_texture, v_st );
+
   // visualise the effect time:
   //o_frag_colour = vec4( 0.0, t / effect_time , 0.0, 1.0 );
+
   // visualise the column delays:
   o_frag_colour = vec4( rand_delay(), 0.0 , 0.0, 1.0 );
+
+
+  float t       = mod( u_time, effect_time );
+  vec2 st       = vec2( v_st.s, v_st.t - t );
+  vec4 texel    = texture( u_texture, st );
+
+  o_frag_colour = o_frag_colour * 0.25 + texel * 0.75;
+
+  if ( st.t < 0.0 || st.t > 1.0 ) {
+    o_frag_colour = vec4( 0.0, 0.0, 0.0, 1.0 );
+  }
 }</textarea>
 
   <script>
@@ -81,7 +91,7 @@ void main() {
       }
       gl.deleteShader(vs);
       gl.deleteShader(fs);
-      program.u_time_loc = gl.getUniformLocation( program, "u_time" );
+      program.u_time_loc = gl.getUniformLocation(program, "u_time");
       return program;
     }
     function create_quad(gl) {
@@ -103,12 +113,14 @@ void main() {
         vbo: buffer
       };
     }
-    function draw_mesh(gl, program, mesh, now, delta_time) {
+    function draw_mesh(gl, program, mesh, texture, now, delta_time) {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       gl.useProgram(program);
-      gl.uniform1f( program.u_time_loc, now );
+      gl.uniform1f(program.u_time_loc, now);
       gl.bindVertexArray(mesh.vao);
+      gl.activeTexture( gl.TEXTURE0 );
+      gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
@@ -122,11 +134,63 @@ void main() {
       }
     }
 
+    // from MDN https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Using_textures_in_WebGL
+    function loadTexture(gl, url) {
+      const texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+
+      // Because images have to be downloaded over the internet
+      // they might take a moment until they are ready.
+      // Until then put a single pixel in the texture so we can
+      // use it immediately. When the image has finished downloading
+      // we'll update the texture with the contents of the image.
+      const level = 0;
+      const internalFormat = gl.RGBA;
+      const width = 1;
+      const height = 1;
+      const border = 0;
+      const srcFormat = gl.RGBA;
+      const srcType = gl.UNSIGNED_BYTE;
+      const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
+      gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+        width, height, border, srcFormat, srcType,
+        pixel);
+
+      const image = new Image();
+      image.onload = function () {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+          srcFormat, srcType, image);
+
+        // WebGL1 has different requirements for power of 2 images
+        // vs non power of 2 images so check if the image is a
+        // power of 2 in both dimensions.
+        if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+          // Yes, it's a power of 2. Generate mips.
+          gl.generateMipmap(gl.TEXTURE_2D);
+        } else {
+          // No, it's not a power of 2. Turn off mips and set
+          // wrapping to clamp to edge
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        }
+      };
+      image.src = url;
+
+      return texture;
+    }
+
+    function isPowerOf2(value) {
+      return (value & (value - 1)) == 0;
+    }
+
     function main() {
       canvas = document.querySelector("#my_canvas");
       gl = canvas.getContext("webgl2");
       melt_program = create_shader(gl, document.querySelector("#vs_input").value, document.querySelector("#fs_input").value);
       const quad_mesh = create_quad(gl);
+      const title_texture = loadTexture(gl, "title.png");
 
       gl.clearColor(0.2, 0.2, 0.2, 1.0);
       gl.clearDepth(1.0);
@@ -138,7 +202,7 @@ void main() {
         now *= 0.001;  // convert to seconds
         const delta_time = now - then;
         then = now;
-        draw_mesh(gl, melt_program, quad_mesh, now, delta_time);
+        draw_mesh(gl, melt_program, quad_mesh, title_texture, now, delta_time);
         requestAnimationFrame(render);
       }
       requestAnimationFrame(render);
