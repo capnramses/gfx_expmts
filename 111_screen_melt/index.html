@@ -1,0 +1,152 @@
+<html>
+
+<head>
+  <title>Screen Melt</title>
+</head>
+
+<body>
+  <h2>Screen Melt Shader - Anton Gerdelan</h2>
+  <canvas id="my_canvas" width="1280" height="800"></canvas>
+  <br />
+  <textarea id="vs_input" rows="20" cols="80" onchange=reload_shaders()>#version 300 es
+// "Screen Melt" vertex shader. GLSL.
+// by Anton Gerdelan Dec. 2021
+
+in vec4 a_pos;
+out vec2 v_st;
+
+void main() {
+  v_st        = a_pos.xy * 0.5 + 0.5;
+  v_st.t      = 1.0 - v_st.t;
+  gl_Position = vec4( a_pos.xy, 0.0, 1.0 );
+}</textarea>
+
+  <textarea id="fs_input" rows="20" cols="80" onchange=reload_shaders()>#version 300 es
+// "Screen Melt" fragment shader. GLSL.
+// by Anton Gerdelan Dec. 2021
+precision highp float;
+
+in vec2 v_st;
+uniform float u_time;
+uniform sampler2D u_texture;
+out vec4 o_frag_colour;
+
+float rand_delay() {
+  float w = 1280.0;
+  float f = gl_FragCoord.x / 1280.0;
+  float n_snakes = 160.0; // i think it was 2 pixel wide on a 320px
+  float column = floor( n_snakes * f );
+  float max_delay = 0.2;
+  // this is terrible but it might work
+  float r = clamp( sin( column * cos( column * column * 0.0818) * 0.2124) * 0.5 + 0.5, 0.0, 1.0 ) * max_delay;
+  return r;
+}
+
+void main() {
+  float effect_time = 2.0;
+  float t       = mod( u_time, effect_time  );
+  vec2 st       = vec2( v_st.s, v_st.t - t );
+  vec4 texel    = texture( u_texture, v_st );
+  // visualise the effect time:
+  //o_frag_colour = vec4( 0.0, t / effect_time , 0.0, 1.0 );
+  // visualise the column delays:
+  o_frag_colour = vec4( rand_delay(), 0.0 , 0.0, 1.0 );
+}</textarea>
+
+  <script>
+    var gl;
+    var melt_program;
+
+    function load_shader(gl, type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        alert('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader)); // TODO log
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+    function create_shader(gl, vs_src, fs_src) {
+      const vs = load_shader(gl, gl.VERTEX_SHADER, vs_src);
+      const fs = load_shader(gl, gl.FRAGMENT_SHADER, fs_src);
+      const program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        alert('Shader error: ' + gl.getProgramInfoLog(program)); // TODO text area box
+        return null;
+      }
+      gl.deleteShader(vs);
+      gl.deleteShader(fs);
+      program.u_time_loc = gl.getUniformLocation( program, "u_time" );
+      return program;
+    }
+    function create_quad(gl) {
+      const positions = [
+        -1.0, 1.0,
+        1.0, 1.0,
+        -1.0, -1.0,
+        1.0, -1.0,
+      ];
+      const vao = gl.createVertexArray();
+      const buffer = gl.createBuffer();
+      gl.bindVertexArray(vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(0);
+      return {
+        vao: vao,
+        vbo: buffer
+      };
+    }
+    function draw_mesh(gl, program, mesh, now, delta_time) {
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      gl.useProgram(program);
+      gl.uniform1f( program.u_time_loc, now );
+      gl.bindVertexArray(mesh.vao);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    function reload_shaders() {
+      console.log("reloading shaders...");
+      var program = create_shader(gl, document.querySelector("#vs_input").value, document.querySelector("#fs_input").value);
+      if (program != null) {
+        gl.deleteProgram(melt_program);
+        melt_program = program;
+        console.log("success");
+      }
+    }
+
+    function main() {
+      canvas = document.querySelector("#my_canvas");
+      gl = canvas.getContext("webgl2");
+      melt_program = create_shader(gl, document.querySelector("#vs_input").value, document.querySelector("#fs_input").value);
+      const quad_mesh = create_quad(gl);
+
+      gl.clearColor(0.2, 0.2, 0.2, 1.0);
+      gl.clearDepth(1.0);
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+
+      var then = 0;
+      function render(now) {
+        now *= 0.001;  // convert to seconds
+        const delta_time = now - then;
+        then = now;
+        draw_mesh(gl, melt_program, quad_mesh, now, delta_time);
+        requestAnimationFrame(render);
+      }
+      requestAnimationFrame(render);
+    }
+
+    window.onload = main;
+  </script>
+
+</body>
+
+</html>
