@@ -21,7 +21,7 @@ void main() {
   gl_Position = vec4( a_pos.xy, 0.0, 1.0 );
 }</textarea>
 
-  <textarea id="fs_input" rows="20" cols="80" onchange=reload_shaders()>#version 300 es
+<textarea id="fs_input" rows="20" cols="80" onchange=reload_shaders()>#version 300 es
 // "Screen Melt" fragment shader. GLSL.
 // by Anton Gerdelan Dec. 2021
 precision highp float;
@@ -60,7 +60,7 @@ void main() {
   }
   vec4 texel    = texture( u_texture, st );
 
-  o_frag_colour = o_frag_colour * 0.25 + texel * 0.75;
+  o_frag_colour = texel; //o_frag_colour * 0.25 + texel * 0.75;
 
   if ( st.t < 0.0 || st.t > 1.0 ) {
     o_frag_colour = vec4( 0.0, 0.0, 0.0, 1.0 );
