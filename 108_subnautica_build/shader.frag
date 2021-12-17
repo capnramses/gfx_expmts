@@ -29,5 +29,5 @@ void main() {
     a = 0.5;
   }
 
-  o_frag_colour = vec4( rgb,1.0 );
+  o_frag_colour = vec4( t,t,t,1.0 );
 }

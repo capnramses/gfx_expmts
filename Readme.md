@@ -4,6 +4,15 @@ A repository to put play-around ideas (good, bad, and crazy), semi-finished
 projects, and volatile software. Mostly OpenGL but some other graphics-related stuff too.
 If a project turns into a reusable library it most likely ends up in the [apg](https://github.com/capnramses/apg) repository of mini libraries.
 
+## Building and Running
+
+This repository uses [Git LFS](https://git-lfs.github.com/) for binary files. Set LFS up after cloning the repository or you'll have lots of mysterious 1kB
+files that don't work properly.
+
+There is no guaranty a demo here builds or runs.
+Usually each folder has a `main.c`. Sometimes a `Makefile` or a `build.sh` for some platforms.
+Some demos are WebGL so need to run in Browser and may require a local server. A simple http-server installed with npm or Python is usually the easiest option.
+
 ## Contents
 
 | numerus | titulus                     | descriptio                                                                 | status              |
@@ -118,7 +127,8 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 | 107     | `platonic_solids`           | Drop-in arrays for rendering platonic solids as mesh primitives.           | started             |
 | 108     | `subnautica_build`          | Attempt at replicating a shader from Subnautica when vehicles are built.   | started             |
 | 109     | `infinite_ground_plane`     | My much simplified spin on an 'infinite ground plane/grid' surface.        | working             |
-| 110     | `dither`                    | Dithering shader effect.                                                   | working            |
+| 110     | `dither`                    | Dithering shader effect.                                                   | working             |
+| 111     | `screen_melt`               | A shader recreation of Doom's "melt" screen transition effect.             | working             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed            |

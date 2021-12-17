@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 
+//#define NOISE_IMG "simplex.png"
+#define NOISE_IMG "unfiltered_heightmap_out.png"
+
 int main( int argc, char** argv ) {
   char mesh_filename[256];
   mesh_filename[0] = '\0';
@@ -21,7 +24,7 @@ int main( int argc, char** argv ) {
   if ( mesh.bounding_radius > 0.0f ) { scale = 1.0f / mesh.bounding_radius; }
   gfx_shader_t shader = gfx_create_shader_program_from_files( "shader.vert", "shader.frag" ); // TODO create shader
   gfx_texture_t simplex =
-    gfx_texture_create_from_file( "simplex.png", ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_srgb = true, .repeats = true } );
+    gfx_texture_create_from_file( NOISE_IMG, ( gfx_texture_properties_t ){ .bilinear = true, .has_mips = true, .is_srgb = true, .repeats = true } );
 
   while ( !gfx_should_window_close() ) {
     double curr_s = gfx_get_time_s();
