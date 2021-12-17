@@ -21,7 +21,7 @@ void main() {
   gl_Position = vec4( a_pos.xy, 0.0, 1.0 );
 }</textarea>
 
-<textarea id="fs_input" rows="20" cols="80" onchange=reload_shaders()>#version 300 es
+  <textarea id="fs_input" rows="20" cols="80" onchange=reload_shaders()>#version 300 es
 // "Screen Melt" fragment shader. GLSL.
 // by Anton Gerdelan Dec. 2021
 precision highp float;
@@ -44,27 +44,24 @@ float rand_delay() {
 
 void main() {
   float effect_time = 2.0;
-
-  // visualise the effect time:
-  //o_frag_colour = vec4( 0.0, t / effect_time , 0.0, 1.0 );
-
-  // visualise the column delays:
-  o_frag_colour = vec4( rand_delay(), 0.0 , 0.0, 1.0 );
-
-
   float r = rand_delay();
-  float t       = mod( u_time, effect_time );
-  vec2 st       = vec2( v_st.s, v_st.t );
+  float t = mod( u_time, effect_time );
+  vec2 st = vec2( v_st.s, v_st.t );
   if ( t > r * 1.0 ) {
     st.t -= (t - r ) ;
   }
   vec4 texel    = texture( u_texture, st );
-
   o_frag_colour = texel; //o_frag_colour * 0.25 + texel * 0.75;
 
   if ( st.t < 0.0 || st.t > 1.0 ) {
     o_frag_colour = vec4( 0.0, 0.0, 0.0, 1.0 );
   }
+  
+  // visualise the effect time:
+  //o_frag_colour = vec4( 0.0, t / effect_time , 0.0, 1.0 );
+
+  // visualise the column delays:
+  //o_frag_colour = vec4( rand_delay(), 0.0 , 0.0, 1.0 );
 }</textarea>
 
   <script>
@@ -123,7 +120,7 @@ void main() {
       gl.useProgram(program);
       gl.uniform1f(program.u_time_loc, now);
       gl.bindVertexArray(mesh.vao);
-      gl.activeTexture( gl.TEXTURE0 );
+      gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
