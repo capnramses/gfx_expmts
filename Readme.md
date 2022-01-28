@@ -129,6 +129,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 109     | `infinite_ground_plane`     | My much simplified spin on an 'infinite ground plane/grid' surface.        | working             |
 | 110     | `dither`                    | Dithering shader effect.                                                   | working             |
 | 111     | `screen_melt`               | A shader recreation of Doom's "melt" screen transition effect.             | working             |
+| 112     | `decals`                    | Mesh-creation of decals as per FoGED Ch. 10.1.                             | started             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed            |
