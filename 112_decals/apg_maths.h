@@ -5,6 +5,7 @@ Licence: See bottom of file.
 Author:  Anton Gerdelan <antonofnote at gmail> @capnramses
 ==================================================================================================
 History:
+v0.13   8 Jul 2021 - Updated some comments. Renamed v4_v3f and v3_v4 for consistency.
 v0.12  18 Feb 2021 - Small fixes to reduce warnings with MSVC.
 v0.11  17 Feb 2021 - Bug fix: ray-obb negative face indices reporting correctly. Switched from single-header to 2 files.
 v0.10   7 Feb 2021 - Tidied docs.
@@ -72,7 +73,7 @@ typedef struct mat4 {
   float m[16];
 } mat4;
 
-/** 'Versor' is the proper name for a unit quaternion (the kind used for geometric rotations). */
+/** A 'versor' is the proper name for a unit quaternion (the kind used for geometric rotations). */
 typedef struct versor {
   float w, x, y, z;
 } versor;
@@ -95,8 +96,11 @@ void print_vec4( vec4 v );
 void print_mat4( mat4 m );
 void print_quat( versor q );
 
-vec3 v3_v4( vec4 v );
-vec4 v4_v3f( vec3 v, float f );
+/** Truncate a vec4 to a vec3. */
+vec3 vec3_from_vec4( vec4 v );
+
+/** Expand a vec3 to a vec4 by specifying a w component. */
+vec4 vec4_from_vec3f( vec3 v, float w );
 
 vec3 add_vec3_f( vec3 a, float b );
 vec3 add_vec3_vec3( vec3 a, vec3 b );
@@ -148,7 +152,14 @@ vec4 mult_mat4_vec4( mat4 m, vec4 v );
 
 float det_mat4( mat4 mm );
 
-// TODO(Anton) look up fast inverse video tutorial
+/** Determine the inverse of a 4x4 matrix.
+ * @todo     Look up fast inverse video tutorial
+ * @param mm The input matrix.
+ * @return   The inverted matrix.
+ *           If the determinant of the input matrix was 0, then the inverse cannot be determined using this method,and the original matrix is returned instead.
+ * @note     If the input matrix is orthogonal i.e. any rotation matrix without translations, then the inverse is the transpose,
+ *           and a faster transposition function can be used instead.
+ */
 mat4 inverse_mat4( mat4 mm );
 
 mat4 transpose_mat4( mat4 mm );
@@ -163,13 +174,25 @@ mat4 rot_z_deg_mat4( float deg );
 
 mat4 scale_mat4( vec3 v );
 
-/** Creates a view matrix, using typical "look at" parameters. Most graphics mathematics libraries have a similar function. */
+/** Creates a camera view matrix, using typical "look at" parameters. Most graphics mathematics libraries have a similar function. */
 mat4 look_at( vec3 cam_pos, vec3 targ_pos, vec3 up );
 
-/** Creates an orthographic projection matrix. */
+/** Creates an orthographic projection matrix. From axis-aligned bounding box constraints.
+ * @param l,b,n  The minimum corner of the bounding box.
+ * @param r,t,f  The maximum corner of the bounding box.
+ * @warning      This function asserts if n < f. We must have n > f because we are looking down the negative z-axis at this volume of space.
+ * @note         See "Real Time Rendering", 4th ed pp. 94, eq. (4.63).
+ * @note         This matrix uses depth mapping [-1,1]. For a version suitable for DirectX mapping of z [0,1] see eq. (4.66).
+ */
 mat4 orthographic( float l, float r, float b, float t, float n, float f );
 
-/** Creates a perspective projection matrix. */
+/** Creates a perspective projection matrix.
+ * @param fovy       The vertical (y) field of view, in degrees. 66 is a typical value.
+ * @param aspect     The aspect ratio of the display area (width / height). Be sure not to use integer division to determine the aspect ratio.
+ * @param near_plane Distance from camera origin to the near cut-off plane of the frustum.
+ * @param far_plane  Distance from camera origin to the far cut-off plane of the frustum.
+ * @note             This matrix uses depth mapping [-1,1]. For a version suitable for DirectX mapping of z [0,1] see RTR eq. (4.76).
+ */
 mat4 perspective( float fovy, float aspect, float near_plane, float far_plane );
 
 /** Create a standard *asymmetric* perspective projection matrix for special case of a subwindow viewport
@@ -253,18 +276,21 @@ float wrap_degrees_360( float degrees );
  */
 float abs_diff_btw_degrees( float first, float second );
 
-/** RETURNS t, The distance along the infinite line of the ray from ray origin to intersection.
- * If t is negative then intersection is a 'miss' (intersection behind ray origin).
- * Intersection 3D co-ordinates xyz are then `ray_origin + ray_direction * t`.
+/** Test if and where a ray intersects with a plane.
+ * @return t, The distance along the infinite line of the ray from ray origin to intersection.
+ *         If t is negative then intersection is a 'miss' (intersection behind ray origin).
+ *         Intersection 3D co-ordinates xyz are then `ray_origin + ray_direction * t`.
  */
 float ray_plane( vec3 ray_origin, vec3 ray_direction, vec3 plane_normal, float plane_d );
 
-/** Ray - axis-aligned bounding box (AABB) geometric intersection test.
- * Adapted from https://psgraphics.blogspot.com/2016/02/new-simple-ray-box-test-from-andrew.html
+/** Test if a ray intersects with an axis-aligned bounding box (AABB).
+ * @note   Adapted from https://psgraphics.blogspot.com/2016/02/new-simple-ray-box-test-from-andrew.html
+ * @return True if the ray intersects with the box.
+ * @todo   Use aabb_t here, and explain the tmin, tmax params.
  */
 bool ray_aabb( vec3 ray_origin, vec3 ray_direction, vec3 aabb_min, vec3 aabb_max, float tmin, float tmax );
 
-/** Ray - oriented bounding box (OBB) geometric intersection test.
+/** Test if a ray intersects with an oriented bounding box (OBB).
  * @param  box      Definition of a cuboid volume's bounds and orientation.
  * @param ray_o     XYZ co-ordinates of the ray's origin.
  * @param  ray_d    Unit vector representing the ray's direction.
@@ -292,9 +318,9 @@ bool aabb_aabb( aabb_t a, aabb_t b );
  * @param planes_xyzd A plane with coefficients in the form: ax + by + cz + d = 0 (normal xyz,d).
  *                    Where -d (note the negative) is the distance from the origin to the plane surface in the direction of the normal (xyz).
  * @param point       The 3D point.
- * @return A positive value if the point is in front of the plane, or a negative value if the point is behind the plane
- * @note The function does not normalise the input plane, and will operate with non-unit vector normals.
- * See also https://mathworld.wolfram.com/Point-PlaneDistance.html.
+ * @return            A positive value if the point is in front of the plane, or a negative value if the point is behind the plane
+ * @note              The function does not normalise the input plane, and will operate with non-unit vector normals.
+ *                    See also https://mathworld.wolfram.com/Point-PlaneDistance.html.
  */
 float distance_plane_point( vec4 plane_xyzd, vec3 point );
 
@@ -302,10 +328,11 @@ float distance_plane_point( vec4 plane_xyzd, vec3 point );
  * Using the 'check if each point is on the visible side of each frustum plane' test as described at:
  * https://iquilezles.org/www/articles/frustumcorrect/frustumcorrect.htm
  * Modified with the " 3.4.2 Distance Between a Point and a Plane" method from FoGED Vol. 1 by Eric Lengyel.
- * @param frustum_planes A buffer of 6x vec4 to set world space planes. Must not be NULL. The plane coefficients are in the form: ax + by + cz + d = 0 (normal
- * xyz,d). Where -d (note the negative) is the distance from the origin to the plane surface in the direction of the normal (xyz).
+ * @param frustum_planes A buffer of 6x vec4 to set world space planes. Must not be NULL.
+ *                       The plane coefficients are in the form: ax + by + cz + d = 0 (normal * xyz,d).
+ *                       Where -d (note the negative) is the distance from the origin to the plane surface in the direction of the normal (xyz).
  * @param aabb           Diagonally-opposed corner points of the box.
- * @return True if the AABB is in the frustum.
+ * @return               True if the AABB is in the frustum.
  */
 bool frustum_vs_aabb( const vec4* frustum_planes, aabb_t box );
 

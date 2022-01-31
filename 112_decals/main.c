@@ -31,14 +31,34 @@ B) build the mesh for the decal.
 */
 
 #include "gfx.h"
+#include "apg_maths.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 
 #define FOOTPRINT_IMG "footprint.png"
 
-static void _create_decal( vec3 ray_origin, vec3 ray_direction ) {
+typedef struct plane_t {
+  vec3 n;
+  float d;
+} plane_t;
+
+// "right" here is used to orient the decals
+// could randomise decal rotation something like this:
+//   versor decal_q = quat_from_axis_deg( ( rand() % 360 ) / 360.0f, ray_direction );
+//   vec3 t         = mult_quat_vec3( decal_q, ray_up );
+static void _create_decal( vec3 ray_direction, vec3 right, vec3 decal_centre ) {
   // TODO intersection test and mesh creation here
+
+  float r_x = 1.0f, r_y = 1.0f; // "radius" of decal
+
+  vec3 ray_up = cross_vec3( right, ray_direction );
+  vec3 t      = ray_up; // fixed decal orientation (footprints etc).
+  vec3 n      = ray_direction;
+  vec3 b      = cross_vec3( n, t );
+  vec3 p      = decal_centre;
+  plane_t f_left, f_right, f_bottom, f_top, f_back, f_front;
+  f_left = ( plane_t ){ .n = t, .d = r_x - dot_vec3( t, p ) };
 }
 
 int main() {
