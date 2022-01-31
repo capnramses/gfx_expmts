@@ -2,10 +2,17 @@
 Decals as per FoGED Ch 10.1
 Anton Gerdelan - 31 Jan 2022
 
-Decals here are different to older projected textures or 'splat' decals:
+Decals here are different to projected texture decals or 'splat' decals:
 - Decals have a bounding box.
-- Decals are meshes created based on geometry they intersect with.
+- Decals are meshes, created based on geometry they intersect with.
 - This is determined based on clipping of geometry with the decal's BB.
+
+My take-away is this is:
+  PRO - Slightly more flexible than just using an instanced list of quads because it can
+	      appear to project a (larger) decal over more complex surfaces and on different angles.
+  CON - Creating a lot of small, unique meshes may not be ideal in some run-time scenarios,
+	      but they could be baked into a larger batched mesh if created as part of scene editing.
+		  - I'm not sure I'd use this for generic small decals.
 
 Algorithm:
 A) create 6 planes of decal's BB
@@ -28,6 +35,9 @@ B) build the mesh for the decal.
    - remaining triangles form decal
    - using CONSISTENT vertex ordering so maintain exact edge coordinates for new vertices and avoid seams/gaps.
    -
+
+A similar technique is described here http://blog.wolfire.com/2009/06/how-to-project-decals/
+Doom Eternal appears to use a different technique https://simoncoenen.com/blog/programming/graphics/DoomEternalStudy.html
 */
 
 #include "gfx.h"
@@ -50,15 +60,22 @@ typedef struct plane_t {
 static void _create_decal( vec3 ray_direction, vec3 right, vec3 decal_centre ) {
   // TODO intersection test and mesh creation here
 
-  float r_x = 1.0f, r_y = 1.0f; // "radius" of decal
-
+  // bounding box dimensions
+  float r_x = 1.0f, r_y = 1.0f; // "radius" of decal == horiz/vert dims of bounding box in b and t directions.
+  float d = 0.1f;               // half-height 'd' of bounding box
+  // work out orthogonal alignment axes for oriented bounding box
   vec3 ray_up = cross_vec3( right, ray_direction );
   vec3 t      = ray_up; // fixed decal orientation (footprints etc).
   vec3 n      = ray_direction;
   vec3 b      = cross_vec3( n, t );
   vec3 p      = decal_centre;
-  plane_t f_left, f_right, f_bottom, f_top, f_back, f_front;
-  f_left = ( plane_t ){ .n = t, .d = r_x - dot_vec3( t, p ) };
+  // work out oriented bounding box planes
+  plane_t f_left   = ( plane_t ){ .n = t, .d = r_x - dot_vec3( t, p ) };
+  plane_t f_right  = ( plane_t ){ .n = ( vec3 ){ .x = -t.x, .y = -t.y, .z = -t.z }, .d = r_x + dot_vec3( t, p ) };
+  plane_t f_bottom = ( plane_t ){ .n = b, .d = r_y - dot_vec3( b, p ) };
+  plane_t f_top    = ( plane_t ){ .n = ( vec3 ){ .x = -b.x, .y = -b.y, .z = -b.z }, .d = r_y + dot_vec3( b, p ) };
+  plane_t f_back   = ( plane_t ){ .n = n, .d = d - dot_vec3( n, p ) };
+  plane_t f_front  = ( plane_t ){ .n = ( vec3 ){ .x = -n.x, .y = -n.y, .z = -n.z }, .d = d + dot_vec3( n, p ) };
 }
 
 int main() {
