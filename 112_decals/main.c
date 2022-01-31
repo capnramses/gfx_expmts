@@ -1,7 +1,8 @@
 /*
 Decals as per FoGED Ch 10.1
+Anton Gerdelan - 31 Jan 2022
 
-Different to projected textures:
+Decals here are different to older projected textures or 'splat' decals:
 - Decals have a bounding box.
 - Decals are meshes created based on geometry they intersect with.
 - This is determined based on clipping of geometry with the decal's BB.
@@ -26,5 +27,15 @@ B) build the mesh for the decal.
    - discard clipped triangles
    - remaining triangles form decal
    - using CONSISTENT vertex ordering so maintain exact edge coordinates for new vertices and avoid seams/gaps.
-   - 
+   -
 */
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#define FOOTPRINT_IMG "footprint.png"
+
+int main() {
+	
+	
+	return 0;
+}
