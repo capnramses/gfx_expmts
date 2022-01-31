@@ -30,12 +30,46 @@ B) build the mesh for the decal.
    -
 */
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "gfx.h"
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+
 #define FOOTPRINT_IMG "footprint.png"
 
+static void _create_decal( vec3 ray_origin, vec3 ray_direction ) {
+  // TODO intersection test and mesh creation here
+}
+
 int main() {
-	
-	
-	return 0;
+  gfx_start( "Decals Demo", NULL, false );
+  gfx_texture_t footprint_tex = gfx_texture_create_from_file( FOOTPRINT_IMG, ( gfx_texture_properties_t ){ .is_srgb = true, .has_mips = true, .bilinear = true } );
+
+  // TODO create scene mesh here
+
+  // TODO load decal shader and scene shader
+
+  while ( !gfx_should_window_close() ) {
+    int fb_w = 0, fb_h = 0;
+    gfx_poll_events();
+
+    // TODO -- camera freelook/move here
+
+    gfx_framebuffer_dims( &fb_w, &fb_h );
+    if ( 0 == fb_w || 0 == fb_h ) { continue; }
+    gfx_viewport( 0, 0, fb_w, fb_h );
+    gfx_clear_colour_and_depth_buffers( 0.2, 0.2, 0.2, 1.0 );
+
+    // TODO -- render scene here
+
+    // TODO -- render list of decals here
+
+    gfx_swap_buffer();
+  }
+
+  gfx_delete_texture( &footprint_tex );
+  gfx_stop();
+
+  printf( "normal exit\n" );
+  return 0;
 }
