@@ -6,11 +6,9 @@ If a project turns into a reusable library it most likely ends up in the [apg](h
 
 ## Building and Running
 
-This repository uses [Git LFS](https://git-lfs.github.com/) for binary files. Set LFS up after cloning the repository or you'll have lots of mysterious 1kB
-files that don't work properly.
-
 There is no guaranty a demo here builds or runs.
 Usually each folder has a `main.c`. Sometimes a `Makefile` or a `build.sh` for some platforms.
+
 Some demos are WebGL so need to run in Browser and may require a local server. A simple http-server installed with npm or Python is usually the easiest option.
 
 ## Contents
