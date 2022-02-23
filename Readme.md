@@ -14,7 +14,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 ## Contents
 
 | numerus | titulus                     | descriptio                                                                 | status              |
-|---------|-----------------------------|----------------------------------------------------------------------------|---------------------|
+| ------- | --------------------------- | -------------------------------------------------------------------------- | ------------------- |
 | 000     | `video_modus`               | find and list all video modes on troublesome hardware                      | working             |
 | 001     | `cube_map_depth`            | depth writing to cube maps for omni-direc. shadows                         | abandoned           |
 | 002     | `bezier_curve`              | demo from splines and curves lecture last year                             | working             |
@@ -128,6 +128,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 110     | `dither`                    | Dithering shader effect.                                                   | working             |
 | 111     | `screen_melt`               | A shader recreation of Doom's "melt" screen transition effect.             | working             |
 | 112     | `decals`                    | Mesh-creation of decals as per FoGED Ch. 10.1.                             | started             |
+| 113     | `gles3`                     | OpenGL ES 3.2 minimal demo on desktop.                                     | working             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed            |
