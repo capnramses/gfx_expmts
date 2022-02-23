@@ -2,6 +2,12 @@
 * Goal:   Desktop (Windows AND Linux AND MacOS) trivial demo using OpenGL ES 3 back-end.
 * Reason: Better multi-platform parity/porting and an idea about using a desktop R&D environment for mobile applications.
 * Older forum discussion: https://discourse.glfw.org/t/opengl-es3-0-with-glfw-on-pc/186/9
+*
+* TODO
+* ----
+* * Check ANGLE support on Windows
+* * See what happens on MacOS
+* * Check linking details on Ubuntu.
 */
 
 #include <stdio.h>
