@@ -5,7 +5,15 @@
 
 /* The basic idea is
 - have a dither pattern you can apply to any rendered 3d mesh
-- the dither pattern is applied in _screen space_ - so dither isn't a texture on the mesh but flat on the screen with a 1:1 pattern-pixel:screen-pixel.
+- the dither pattern is applied in _screen space_ -
+  so dither isn't a texture on the mesh but flat on the screen with a 1:1 pattern-pixel:screen-pixel.
+
+	The advantages of a dither for fade-out are:
+
+	1. no need to use alpha blending - this can be handy for 3d meshes in the scene without worrying about depth ordering.
+	2. interesting looking.
+
+	A dither or jitter/noise can also be used to break up banding patterns in linear gradients.
 */
 
 #include "gfx.h"

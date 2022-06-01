@@ -1,7 +1,7 @@
 // Dither experiment
 // Anton Gerdelan
 // GLSL
-// 26 Oct 2021
+// 01 June 2022
 
 #version 410 core
 
@@ -40,14 +40,14 @@ void main() {
 		// normally we just want time or distance to get a non-alpha-blending fade out, but here
 		// i use both time AND vertical position to demo the full effect range
 
-		float d = dither( gl_FragCoord, 0.5 ); // change from 1.0 to 0.5 for fine/chunky
-		if (  vertical_factor <= d ) { discard; }
+		float d = dither( gl_FragCoord, 1.0 ); // change from 1.0 to 0.5 for fine/chunky
+	//	if (  vertical_factor <= d ) { discard; }
 		if (  u_time <= d ) { discard; }
 		//rgba.rgb = vec3( d );
 	} else {
 
 		// the right-hand side of the screen uses a typical alpha blend fade, for comparison
-		rgba.a = min( u_time, vertical_factor );
+		rgba.a = u_time;// min( u_time, vertical_factor );
 	}
 
 	o_frag_colour = rgba;
