@@ -39,13 +39,14 @@ int main( int argc, char** argv ) {
     gfx_clear_colour_and_depth_buffers( GFX_CORNFLOWER_R, GFX_CORNFLOWER_G, GFX_CORNFLOWER_B, 1.0f );
 
     // just some scale animation to show that the dither doesn't also scale like a texture - it's a screen-space thing here
-    float s = 0.8f + 0.2f * fabs( cosf( curr_time_s ) );
+    float t = fmodf( curr_time_s * 0.5f, 1.0f );
+		float s = 0.5f + t * 0.5f;
     mat4 S  = scale_mat4( ( vec3 ){ s, s, s } );
     mat4 M  = S; // identity_mat4();
 
     gfx_alpha_testing( true );
     gfx_uniform2f( &dither_shader, dither_shader.u_screen_dims, fb_w, fb_h );
-    gfx_uniform1f( &dither_shader, dither_shader.u_time, s );
+    gfx_uniform1f( &dither_shader, dither_shader.u_time, t );
     gfx_draw_mesh( GFX_PT_TRIANGLE_STRIP, &dither_shader, identity_mat4(), identity_mat4(), M, gfx_ss_quad_mesh.vao, gfx_ss_quad_mesh.n_vertices, NULL, 0 );
     gfx_alpha_testing( false );
 
