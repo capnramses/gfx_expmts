@@ -20,6 +20,10 @@ EXT_texture_filter_anisotropic   4.6    98%        Implemented since the GeForce
 */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "apg_maths.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -356,3 +360,7 @@ extern gfx_texture_t gfx_white_texture;          /** A plain white texture */
 extern gfx_mesh_t gfx_ss_quad_mesh;              /** A 2D triangle strip "screen space" quad that will cover the clip space coords x,y -1:1. */
 extern gfx_mesh_t gfx_skybox_cube_mesh;
 extern gfx_mesh_t gfx_sphere_mesh;
+
+#ifdef __cplusplus
+}
+#endif
