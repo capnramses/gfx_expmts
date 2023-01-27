@@ -51,12 +51,14 @@ int main( int argc, char** argv ) {
   // "start_transcoding() must be called before calling transcode_slice() or transcode_image_level().
   // For ETC1S files, this call decompresses the selector/endpoint codebooks, so ideally you would only call this once per .basis file (not each image/mipmap
   // level)."
-	basist::basisu_transcoder trans;
+  basist::basisu_transcoder trans;
   bool r = trans.start_transcoding( record.data_ptr, record.sz );
   if ( !r ) {
     fprintf( stderr, "ERROR transcoding failed\n" );
     return 1;
   }
+  
+  // basisu_transcoder::get_image_info();
 
   // TODO:
   // basisu_transcoder::start_transcoding();
@@ -64,6 +66,17 @@ int main( int argc, char** argv ) {
   // basisu_transcoder::get_image_info();
   // basisu_transcoder::get_image_level_info();
   // basisu_transcoder::transcode_image_level();
+
+  // Create OpenGL Texture to copy into and start the rendering.
+  gfx_texture_t texture = gfx_create_texture_from_mem( NULL, 512, 512, 3, ( gfx_texture_properties_t ){ .is_srgb = true, .has_mips = true, .bilinear = true } );
+  while ( !gfx_should_window_close() ) {
+    gfx_poll_events();
+    gfx_clear_colour_and_depth_buffers( 130 / 255.0f, 163 / 255.0f, 255 / 255.0f, 1.0f );
+
+    gfx_draw_textured_quad( texture, ( vec2 ){ 0.75, 0.75 }, ( vec2 ){ 0 }, ( vec2 ){ 1, 1 }, ( vec4 ){ 1, 1, 1, 1 } );
+
+    gfx_swap_buffer();
+  }
 
   gfx_stop();
 

@@ -479,6 +479,7 @@ bool gfx_start( const char* window_title, const char* window_icon_filename, bool
       return false;
     }
 
+#ifdef GFX_USE_ES
     { // CRITICAL PIECE HERE FOR GL 3.0 //////////////////////////////////////////
       // Possible values are GLFW_OPENGL_API, GLFW_OPENGL_ES_API and GLFW_NO_API. This is a hard constraint.
       glfwWindowHint( GLFW_CLIENT_API, GLFW_OPENGL_ES_API );
@@ -492,6 +493,7 @@ bool gfx_start( const char* window_title, const char* window_icon_filename, bool
       glfwWindowHint( GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE );
       glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
     } //////////////////////////////////////////////////////////////////////////
+#endif
 
     { // MSAA hint
       // NOTE(Anton) fetching max samples didn't work on my linux nvidia driver before window creation, which kind of defeats the purpose of asking

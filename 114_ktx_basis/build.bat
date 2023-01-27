@@ -25,4 +25,5 @@ glad.o ^
 basisu_transcoder.o ^
 ../common/win64_gcc/libglfw3dll.a ^
 -L ../common/win64_gcc/ ^
--lm -lglfw3 -lOpenGL32
+-lm -lglfw3 -lOpenGL32 ^
+-o demothing.exe
