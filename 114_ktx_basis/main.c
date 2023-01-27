@@ -57,7 +57,7 @@ int main( int argc, char** argv ) {
     fprintf( stderr, "ERROR transcoding failed\n" );
     return 1;
   }
-  
+
   // basisu_transcoder::get_image_info();
 
   // TODO:
@@ -72,6 +72,9 @@ int main( int argc, char** argv ) {
   while ( !gfx_should_window_close() ) {
     gfx_poll_events();
     gfx_clear_colour_and_depth_buffers( 130 / 255.0f, 163 / 255.0f, 255 / 255.0f, 1.0f );
+    int wh, ww;
+    gfx_window_dims( &ww, &wh );
+    gfx_viewport( 0, 0, ww, wh );
 
     gfx_draw_textured_quad( texture, ( vec2 ){ 0.75, 0.75 }, ( vec2 ){ 0 }, ( vec2 ){ 1, 1 }, ( vec4 ){ 1, 1, 1, 1 } );
 
