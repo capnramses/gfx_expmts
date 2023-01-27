@@ -58,14 +58,28 @@ int main( int argc, char** argv ) {
     return 1;
   }
 
-  // basisu_transcoder::get_image_info();
+  uint32_t n_images = trans.get_total_images( record.data_ptr, record.sz );
+  printf( "get_total_images() = %u\n", n_images );
 
-  // TODO:
-  // basisu_transcoder::start_transcoding();
-  // basisu_transcoder::get_total_images();
-  // basisu_transcoder::get_image_info();
-  // basisu_transcoder::get_image_level_info();
-  // basisu_transcoder::transcode_image_level();
+  basist::basisu_image_info image_info;
+  uint32_t image_index = 0;
+  trans.get_image_info( record.data_ptr, record.sz, image_info, image_index );
+
+  basist::basisu_image_level_info level_info;
+  uint32_t level_index = 0;
+  trans.get_image_level_info( record.data_ptr, record.sz, level_info, image_index, level_index );
+
+  void* pOutput_blocks                                = NULL;
+  uint32_t output_blocks_buf_size_in_blocks_or_pixels = 0;
+  // TODO alloc and sz
+  basist::transcoder_texture_format fmt = cTFBC1_RGB; // TODO try plain RGB
+
+  trans.transcode_image_level( record.data_ptr, record.sz, image_index, level_index, //
+    pOutput_blocks, output_blocks_buf_size_in_blocks_or_pixels, fmt );               // NOTE skipped optional args
+
+
+  up to here
+
 
   // Create OpenGL Texture to copy into and start the rendering.
   gfx_texture_t texture = gfx_create_texture_from_mem( NULL, 512, 512, 3, ( gfx_texture_properties_t ){ .is_srgb = true, .has_mips = true, .bilinear = true } );
