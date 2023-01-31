@@ -15,6 +15,7 @@ g++ -fno-strict-aliasing -DBASISD_SUPPORT_KTX2=0 \
 # Compile program.
 g++ -g \
 -I ../common/include/ \
+-I ../common/glad/include \
 -I ./third_party/ \
 -I ./third_party/basis_universal/transcoder/ \
 main.cpp \

@@ -6,7 +6,6 @@
 // 2. Being able to transcode to a device/API's native compressed equivalent
 //    quickly makes it much more portable than dragging around a set of image
 //    files to suit a variety of devices.
-// 3.
 //
 // The .basis image, `out.basis`, was created with the basisu command-line tool
 // from `out.png`. Default basisu settings were used.
@@ -14,8 +13,56 @@
 // Basis Licence: Apache 2.0.
 //
 // Author   : Anton Gerdelan
-// Date     : 2023 Jan 18
+// Date     : 2023 Jan 31
 // Language : C++
+
+/**
+ *
+ * Compiling
+ * -------------
+ * ./build.sh or build.bat
+ *
+ * Running
+ * --------------
+ * ./a.out out.basis (or some other .basis file).
+ * (the windows .exe has a different name because my laptop forces "a.exe" to run on the software driver.)
+ *
+ * Thoughts after getting it working:
+ * ------------------------------------
+ *
+ *               | .basis | .ktx  | .dds  | .jpeg |   .png |
+ * --------------------------------------------------------
+ *  file compr   |  great | great | great | great | ok     |
+ *  file size    |  34553 |  ?    |   ?   | 37746 | 203307 |
+ *  GPU compr    |   yes  | yes   | yes   | no    | no     |
+ *  load time    |  4ms   |   ?   |    ?  |  8ms  | 10ms   |
+ *  multi-device |   yes  |    no |    no |   yes |    yes |
+ *
+ * The S3TC compression isn't great for hand-crafted art, and compression is pointless for small images.
+ * For PBR high-res or photo-realistic images pre-compressed textures are really useful, particularly for over-the-web and mobile devices.
+ * Basis transcoder runs pretty fast compared to decompressing a jpeg, has similar file size, is easy to integrate (drop-in code vs library),
+ * and can transcode to suit the device without needing to prepare device-specific compressed files first.
+ * It's basically a 'the same as loading a jpeg and making a compressed texture, but faster'. More portable than .dds textures and .ktx2 alone.
+ *
+ * 1. This is pretty similar to using DDS textures with OpenGL.
+ *    glCompressedTexImage2D() -> input is pre-compressed texture data, like we are using here, or from a DDS file.
+ *    glTexImage2D()           -> input is raw RGB image data, but it can be used to create compressed textures. (see /010_compressed_textures/).
+ *
+ * 2. I just had a trivial 1-level mip here. For most files there will be >1 mipmap level. These can be iterated over fairly simply to set up textures.
+ * 3. The key API function is transcode_image_level(). This is pretty fiddly to use, and would benefit from a set of examples.
+ *    - For different devices (mobile, web) we would change the compressed texture format here.
+ *    - Use the table to match basis compressed formats with OpenGL compressed formats.
+ *      Catch: compressed format numbers don't match DXT numbers.
+ *    - I never figured out the correct block size allocation required there.
+ *      Catch: It crashes if it's too small. I just gave it full pixels x*y. This may not be optimal.
+ * 4. Basis prefers power-of-two image sizes for some formats, but seems to do a decent job of resizing.
+ *    My original 400x400 out.png renders a nicer image than my 512x512 out_po2.png image. Not sure why!
+ * 5. Depsite some compressed textures not supporting alpha channels, the transcoder handles it well (run with out.basis for an example).
+ * 6. I think you could probably use a faster jpg/png loader to rival the transcoding time of .basis, but if you also want to compress the textures - add some
+ *    more time. The real advantage here is the device portability of the compressed approach by using the on-the-fly transcoding.
+ * 7. If transcoding speed is an issue you can also use the CLI basis tool to create device-specific images in a variety of formats, ready-to-go, which is also
+ *    a win.
+ */
 
 #include "apg.h" // Author's personal "anton.h" helper file.
 #include "gfx.h" // Author's personal OpenGL helper stuff.
@@ -98,8 +145,10 @@ int main( int argc, char** argv ) {
   }
 
   // output blocks is 'level data' and level size in blocks.
-  uint32_t output_blocks_buf_size_in_blocks_or_pixels = 512 * 512 * 4;
+  uint32_t output_blocks_buf_size_in_blocks_or_pixels = tex_w * tex_h; // using total blocks here, as indicated in the api doc, segfaults. *shrug*
   uint8_t* pOutput_blocks                             = (uint8_t*)malloc( output_blocks_buf_size_in_blocks_or_pixels );
+
+  double trans_i = gfx_get_time_s();
 
   r = trans.transcode_image_level( record.data_ptr, record.sz, image_index, level_index, pOutput_blocks, output_blocks_buf_size_in_blocks_or_pixels, fmt );
   if ( !r ) {
@@ -107,8 +156,11 @@ int main( int argc, char** argv ) {
     return 1;
   }
 
-  printf( "transcoded...\n" );
+  double trans_f = gfx_get_time_s();
 
+  printf( "transcoded in %lf ms...\n", ( trans_f - trans_i ) * 1000.0 );
+
+  double tex_i = gfx_get_time_s();
   gfx_texture_t compressed_texture;
   {
     GLuint tex_cmpr1 = 0;
@@ -119,16 +171,22 @@ int main( int argc, char** argv ) {
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
 
+    // Instead of glTexuImage2D - which takes raw RGB data and _converts_ into compressed formats.
+    /*
     glTexImage2D(           //
       GL_TEXTURE_2D,        // As fetched from get_texture_type()
-      0,                    // Mipmap level
+      level_index,                    // Mipmap level
       internal_format,      //
       tex_w, tex_h,         // width, height
       0,                    // border
       base_internal_format, // format
       GL_UNSIGNED_BYTE,     // type
       pOutput_blocks        // data
-    );
+    );*/
+    // Use https://docs.gl/gl4/glCompressedTexImage2D which takes compressed data.
+
+    printf( "tex_w = %i tex_h = %i\n", tex_w, tex_h );
+    glCompressedTexImage2D( GL_TEXTURE_2D, level_index, internal_format, tex_w, tex_h, 0, output_blocks_buf_size_in_blocks_or_pixels, pOutput_blocks );
 
     glBindTexture( GL_TEXTURE_2D, 0 );
 
@@ -146,6 +204,19 @@ int main( int argc, char** argv ) {
     props.repeats                 = false;
     compressed_texture.properties = props;
   }
+  glFinish();
+  glFlush();
+  double tex_f = gfx_get_time_s();
+  printf( "texture uploaded in %lf ms\n", ( tex_f - tex_i ) * 1000.0 );
+
+  { /* For comparison load a .jpg or .png */
+    double comp_i      = gfx_get_time_s();
+    gfx_texture_t comp = gfx_texture_create_from_file( "out.jpg", ( gfx_texture_properties_t ){ .bilinear = false } );
+    glFinish();
+    glFlush();
+    double comp_f = gfx_get_time_s();
+    printf( "comparison PNG texture decompressed and uploaded in %lf ms\n", ( comp_f - comp_i ) * 1000.0 );
+  }
 
   // Create OpenGL Texture to copy into and start the rendering.
   while ( !gfx_should_window_close() ) {
@@ -155,7 +226,9 @@ int main( int argc, char** argv ) {
     gfx_window_dims( &ww, &wh );
     gfx_viewport( 0, 0, ww, wh );
 
+    gfx_alpha_testing( true );
     gfx_draw_textured_quad( compressed_texture, ( vec2 ){ 0.75, 0.75 }, ( vec2 ){ 0 }, ( vec2 ){ 1, 1 }, ( vec4 ){ 1, 1, 1, 1 } );
+    gfx_alpha_testing( false );
 
     gfx_swap_buffer();
   }
