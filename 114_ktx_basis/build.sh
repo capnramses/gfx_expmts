@@ -17,7 +17,7 @@ g++ -g \
 -I ../common/include/ \
 -I ./third_party/ \
 -I ./third_party/basis_universal/transcoder/ \
-main.c \
+main.cpp \
 gfx.o \
 apg.o \
 apg_maths.o \
