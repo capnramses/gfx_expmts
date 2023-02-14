@@ -108,7 +108,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 090     | `flourish_scroll`           | Study of a cool menu title animation I saw on Empire of Sin.               | working             |
 | 091     | `particle_meshes`           | Particle system demo using instanced meshes for particles.                 | working             |
 | 092     | `aframe_hotspots`           | A-Frame WebXR/WebVR demo with information points. Using Sponza.            | started             |
-| 093     | `x_converter`               | Converted for old MS .x format mesh files.                                 | proposed            |
+| 093     | `x_converter`               | Converter for old MS .x format mesh files.                                 | proposed            |
 | 094     | `video_play`                | MPEG-1 video playback demo using plmpeg.h                                  | working             |
 | 095     | `gltf_minimal`              | Example of loading a mesh from glTF files and displaying it.               | working             |
 | 096     | `gltf_materials`            | Example of loading a mesh with materials from glTF files.                  | ~working            |
