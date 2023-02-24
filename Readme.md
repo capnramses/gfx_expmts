@@ -130,6 +130,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 112     | `decals`                    | Mesh-creation of decals as per FoGED Ch. 10.1.                             | started             |
 | 113     | `gles3`                     | OpenGL ES 3.2 minimal demo on desktop.                                     | working             |
 | 114     | `ktx_basis`                 | On-the-fly compressed image transcoding with Basis Universal.              | working             |
+| 115     | `pixelart_subpixel`         | Shader to display pixel art without shimmering artifacts.                  | working             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                            | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                    | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                             | proposed            |
