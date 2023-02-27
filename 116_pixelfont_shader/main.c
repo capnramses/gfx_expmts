@@ -12,42 +12,8 @@
 
 const char* image_filename = "atlas.png";
 
-void _draw_mesh_instanced( const gfx_shader_t* shader_ptr, mat4 M, uint32_t vao, size_t n_vertices, const gfx_texture_t* textures_ptr, int n_textures,
-  int n_instances, const gfx_buffer_t* instanced_buffer, int n_buffers ) {
-  for ( int i = 0; i < n_textures; i++ ) {
-    glActiveTexture( GL_TEXTURE0 + i );
-    glBindTexture( GL_TEXTURE_2D, textures_ptr[i].handle_gl );
-  }
-  glUseProgram( shader_ptr->program_gl );
-  glProgramUniformMatrix4fv( shader_ptr->program_gl, shader_ptr->u_M, 1, GL_FALSE, M.m );
-  glBindVertexArray( vao );
-
-  // bind instanced buffer(s)
-  const int divisor = 1; // don't need this yet but could be a buffer param for interesting buffer use in instancing
-  for ( int i = 0; i < n_buffers; i++ ) {
-    glEnableVertexAttribArray( 7 + i );
-    glBindBuffer( GL_ARRAY_BUFFER, instanced_buffer[i].vbo_gl );
-    GLsizei stride = instanced_buffer[i].n_components * sizeof( float ); // NOTE(Anton) do we need this for instanced?
-    glVertexAttribIPointer( 7 + i, instanced_buffer[i].n_components, GL_INT, stride, NULL );
-    glBindBuffer( GL_ARRAY_BUFFER, 0 );
-    glVertexAttribDivisor( 7 + i, divisor ); // NOTE(Anton) is this affected by bound buffer?
-  }
-
-  glDrawArraysInstanced( GL_TRIANGLE_STRIP, 0, (GLsizei)n_vertices, n_instances );
-
-  // disable so we can still call regular non-instanced draws after this with the same VAO
-  for ( int i = 0; i < n_buffers; i++ ) { glDisableVertexAttribArray( 7 + i ); }
-
-  glBindVertexArray( 0 );
-  glUseProgram( 0 );
-  for ( int i = 0; i < n_textures; i++ ) {
-    glActiveTexture( GL_TEXTURE0 + i );
-    glBindTexture( GL_TEXTURE_2D, 0 );
-  }
-}
-
 // In pixels.
-static int _get_spacing_for_codepoint( uint32_t codepoint ) {
+static int _get_spacing_for_codepoint_px( uint32_t codepoint ) {
   if ( 'l' == codepoint || '!' == codepoint || '\'' == codepoint || '|' == codepoint || ':' == codepoint ) { return 2; }
   if ( ',' == codepoint || '.' == codepoint || '`' == codepoint || ';' == codepoint ) { return 3; }
   if ( '(' == codepoint || ')' == codepoint || ' ' == codepoint ) { return 4; }
@@ -56,23 +22,22 @@ static int _get_spacing_for_codepoint( uint32_t codepoint ) {
   return 6;
 }
 
-// TODO get rid of scale_x,scale_y and replace with aspect ratio and a single scale factor.
-// TODO avoid boxes overlapping - make them smaller to avoid artifacts, and adjust scales to suit.
-
 /**
  * @param str_ptr         Address of a null-terminated UTF-8 or ASCII string.
  * @param points_vbo      An existing (previously generated) vertex buffer object for vertex points.
  * @param texcoords_vbo   An existing (previously generated) vertex buffer object for texture coordinates.
  * @param n_verts_ptr     Address of a variable to store the number of vertex points created. Must not be NULL.
+ * @param total_w,total_h Total width and height of the whole text area in i.e. clip space. Can be used to centre the text when given to a position uniform.
  */
 void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, size_t* n_verts_ptr, float* total_w, float* total_h ) {
   const int atlas_cols = 16, atlas_rows = 16;
   const size_t max_len = 2048;
   // Size of a full glyph box in clip space, before aspect ratio calculation. 2.0 would cover the whole range from -1,1 on x and y on a square viewport.
-  const float quad_scale        = 2.0f;
-  const float magic_num         = 0.0625f; // TODO !!!! I have no idea if this is correct.
-  const float magic_linespacing = 0.0025f; // TODO !!!! relate to scale - try different scales/aspects/etc.
-  float at_x = 0.0f, at_y = 0.0f;          // This is starting centre of the top-left glyph box in clip space.
+  const float quad_scale               = 2.0f;
+  const float pixels_to_cells          = 1.0f / 16.0f; // Convert glyph width in pixels, to a factor 0 to 1 of a full 16 pixel width cell.
+  const float pixels_gap_between_quads = 0.1f;
+  const int pixels_of_linespacing      = 0; // To allow extra spacing between lines, given in a number of glyph pixels.
+  float at_x = 0.0f, at_y = 0.0f;           // This is starting centre of the top-left glyph box in clip space.
   float max_x = 0.0f, min_y = 0.0f;
 
   assert( str_ptr && points_vbo && texcoords_vbo && n_verts_ptr );
@@ -82,8 +47,8 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
   int n_codepoints = apg_utf8_count_cp( str_ptr );
   assert( n_codepoints > 0 );
 
-  float* points_tmp = (float*)malloc( sizeof( float ) * n_codepoints * 12 ); // TODO make this a triangle strip. Remove run-time malloc, use a max string length.
-  float* texcoords_tmp = (float*)malloc( sizeof( float ) * n_codepoints * 12 ); // TODO make this a triangle strip. Remove run-time malloc, use a max string length.
+  float* points_tmp    = (float*)malloc( sizeof( float ) * n_codepoints * 12 ); // Remove run-time malloc, use a max string length.
+  float* texcoords_tmp = (float*)malloc( sizeof( float ) * n_codepoints * 12 ); // Remove run-time malloc, use a max string length.
 
   const float line_start_x = at_x;
   for ( int i = 0, curr_byte = 0; curr_byte < n_bytes; i++, curr_byte++ ) {
@@ -97,32 +62,30 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
     int atlas_row = codepoint / atlas_cols;
 
     float s     = atlas_col * ( 1.0f / atlas_cols );
-    float t     = ( atlas_row + 1 ) * ( 1.0f / atlas_rows ); // TODO why is this row + 1 - because texturing up from bottom?
+    float t     = ( atlas_row + 1 ) * ( 1.0f / atlas_rows );
     float x_pos = at_x;
     float y_pos = at_y;
 
-    // TODO check spacing scaling.
-    int spacing    = _get_spacing_for_codepoint( codepoint );
-    float extent_x = spacing * magic_num * quad_scale;
-    float extent_y = quad_scale;
+    int pixels_wide = _get_spacing_for_codepoint_px( codepoint );
+    float extent_x  = (float)pixels_wide * pixels_to_cells * quad_scale;
+    float extent_y  = quad_scale;
 
-    // Move along for start of next glypg.
-    float gap_between_quads = 0.1f;                                   // 0.1 of a glyph image pixel
-    at_x += ( spacing + gap_between_quads ) * magic_num * quad_scale; // Move next glyph along to the end of this one.
+    // Move along for start of next glypg.                                                // 0.1 of a glyph image pixel
+    at_x += ( (float)pixels_wide + pixels_gap_between_quads ) * pixels_to_cells * quad_scale; // Move next glyph along to the end of this one.
     if ( '\n' == codepoint ) {
       at_x = line_start_x;
-      at_y -= ( quad_scale + magic_linespacing );
+      at_y -= ( quad_scale + ( pixels_gap_between_quads + (float)pixels_of_linespacing * 2.0f ) * pixels_to_cells );
       n_codepoints--; // Don't include vertices/accounting for linebreak.
       i--;
-    } else if ( ' ' == codepoint || '\r' == codepoint ) { // TODO all other control symbols here.
-      n_codepoints--;                                     // Don't include vertices/accounting for space.
+    } else if ( ' ' == codepoint || codepoint < 32 || 127 == codepoint ) { // Whitespace and control symbols and DEL.
+      n_codepoints--;                                                      // Don't include vertices/accounting for space.
       i--;
     } else {
       max_x = x_pos + extent_x > max_x ? x_pos + extent_x : max_x;
       min_y = y_pos - extent_y < min_y ? y_pos - extent_y : min_y;
 
       // Add 6 points and texture coordinates to buffers for each glyph.
-      points_tmp[i * 12]     = x_pos;
+      points_tmp[i * 12 + 0] = x_pos;
       points_tmp[i * 12 + 1] = y_pos;
       points_tmp[i * 12 + 2] = x_pos;
       points_tmp[i * 12 + 3] = y_pos - extent_y;
@@ -136,16 +99,16 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
       points_tmp[i * 12 + 10] = x_pos;
       points_tmp[i * 12 + 11] = y_pos;
 
-      texcoords_tmp[i * 12]     = s;
+      texcoords_tmp[i * 12 + 0] = s;
       texcoords_tmp[i * 12 + 1] = 1.0 - t + 1.0 / atlas_rows;
       texcoords_tmp[i * 12 + 2] = s;
       texcoords_tmp[i * 12 + 3] = 1.0 - t;
-      texcoords_tmp[i * 12 + 4] = s + 1.0 / atlas_cols * spacing * magic_num;
+      texcoords_tmp[i * 12 + 4] = s + 1.0 / atlas_cols * pixels_wide * pixels_to_cells;
       texcoords_tmp[i * 12 + 5] = 1.0 - t;
 
-      texcoords_tmp[i * 12 + 6]  = s + 1.0 / atlas_cols * spacing * magic_num;
+      texcoords_tmp[i * 12 + 6]  = s + 1.0 / atlas_cols * pixels_wide * pixels_to_cells;
       texcoords_tmp[i * 12 + 7]  = 1.0 - t;
-      texcoords_tmp[i * 12 + 8]  = s + 1.0 / atlas_cols * spacing * magic_num;
+      texcoords_tmp[i * 12 + 8]  = s + 1.0 / atlas_cols * pixels_wide * pixels_to_cells;
       texcoords_tmp[i * 12 + 9]  = 1.0 - t + 1.0 / atlas_rows;
       texcoords_tmp[i * 12 + 10] = s;
       texcoords_tmp[i * 12 + 11] = 1.0 - t + 1.0 / atlas_rows;
@@ -153,15 +116,15 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
   }
 
   glBindBuffer( GL_ARRAY_BUFFER, points_vbo );
-  glBufferData( GL_ARRAY_BUFFER, n_codepoints * 12 * sizeof( float ), points_tmp, GL_DYNAMIC_DRAW ); // TODO make triangle strip
+  glBufferData( GL_ARRAY_BUFFER, n_codepoints * 12 * sizeof( float ), points_tmp, GL_DYNAMIC_DRAW );
   glBindBuffer( GL_ARRAY_BUFFER, texcoords_vbo );
-  glBufferData( GL_ARRAY_BUFFER, n_codepoints * 12 * sizeof( float ), texcoords_tmp, GL_DYNAMIC_DRAW ); // TODO make triangle strip
+  glBufferData( GL_ARRAY_BUFFER, n_codepoints * 12 * sizeof( float ), texcoords_tmp, GL_DYNAMIC_DRAW );
   glBindBuffer( GL_ARRAY_BUFFER, 0 );
 
   free( points_tmp );
   free( texcoords_tmp );
 
-  *n_verts_ptr = n_codepoints * 6; // TODO make triangle strip
+  *n_verts_ptr = n_codepoints * 6; // NB Triangle Strip can't work because it will try to join geom across gaps.
   *total_w     = max_x;
   *total_h     = -min_y;
 }
@@ -189,7 +152,6 @@ int main( int argc, char** argv ) {
   gfx_mesh_t mesh = gfx_mesh_create_empty( true, false, false, true, false, false, false, false, true );
   float total_x = 0.0f, total_y = 0.0f;
 
-  // TODO - at_x, at_y for position should be a uniform. this should always use 0,0 for top-left, otherwise it's a nightmare to align with aspect ratio.
   text_to_vbo( user_str, mesh.points_vbo, mesh.texcoords_vbo, &mesh.n_vertices, &total_x, &total_y );
 
   printf( "\nn_verts = %u\n", (uint32_t)mesh.n_vertices );
