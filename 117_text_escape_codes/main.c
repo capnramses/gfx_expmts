@@ -16,7 +16,7 @@ const int outline   = 1; // HACK
 const char* image_filenames[] = { "atlas.png", "atlas_bold.png", "atlas_italic.png", "atlas_underline.png", "atlas_strikethrough.png" };
 
 // TODO replace with look-up tables from each atlas.
-static int _get_spacing_for_codepoint_px( uint32_t codepoint ) {
+static int _get_spacing_for_codepoint_px( uint32_t codepoint, int style ) {
   if ( 'l' == codepoint || '!' == codepoint || '\'' == codepoint || '|' == codepoint || ':' == codepoint ) { return 2; }
   if ( ',' == codepoint || '.' == codepoint || '`' == codepoint || ';' == codepoint ) { return 3; }
   if ( '(' == codepoint || ')' == codepoint || ' ' == codepoint ) { return 4; }
@@ -150,12 +150,13 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
   float* style_tmp     = (float*)malloc( sizeof( float ) * n_codepoints * 6 );  // float   Remove run-time malloc, use a max string length.
 
   const float line_start_x = at_x;
-  for ( int i = 0, curr_byte = 0; curr_byte < n_bytes; i++, curr_byte++ ) {
+  for ( int i = 0, curr_byte = 0; curr_byte < n_bytes; curr_byte++ ) {
     {
       int bytes_used_in_md = 0;
       _read_markdown( str_ptr + curr_byte, max_len, &bytes_used_in_md );
       if ( bytes_used_in_md > 0 ) {
         curr_byte += ( bytes_used_in_md - 1 );
+        n_codepoints -= ( bytes_used_in_md ); // Don't try to draw these as we aren't loading any data.
         continue;
       }
     }
@@ -165,6 +166,7 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
        if ( esc_code > -1 && bytes_in_esc_code > 0 ) {
          printf( "DB: Setting escape code %i biec=%i\n", esc_code, bytes_in_esc_code );
          curr_byte += ( bytes_in_esc_code - 1 );
+        n_codepoints -= bytes_used_in_md;
          continue;
        }
      }*/
@@ -191,11 +193,12 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
     float x_pos = at_x;
     float y_pos = at_y;
 
-    int pixels_wide = _get_spacing_for_codepoint_px( codepoint );
+    int pixels_wide = _get_spacing_for_codepoint_px( codepoint, style ); // TODO LUT
     if ( style == 1 ) { pixels_wide++; }
-    if ( 2 == style ) { pixels_wide = pixels_wide + 7; } // TODO LUT
-    if ( 3 == style || 4 == style ) { pixels_wide = pixels_wide + thickness; } // LUT
-    if ( outline ) { pixels_wide++; }
+    if ( 2 == style ) { pixels_wide = pixels_wide + 7; }
+    // if ( 3 == style || 4 == style ) { pixels_wide = pixels_wide + thickness; } // LUT
+
+    // if ( outline ) { pixels_wide++; }
 
     float extent_x = (float)pixels_wide * pixels_to_cells * quad_scale;
     float extent_y = quad_scale;
@@ -245,6 +248,7 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
 
       for ( int s = 0; s < 6; s++ ) { style_tmp[i * 6 + s] = (float)style; }
     }
+    i++;
   }
 
   glBindBuffer( GL_ARRAY_BUFFER, points_vbo );
@@ -262,10 +266,11 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
   *n_verts_ptr = n_codepoints * 6; // NB Triangle Strip can't work because it will try to join geom across gaps.
   *total_w     = max_x;
   *total_h     = -min_y;
+  printf( "n codepoints = %i\n", n_codepoints );
 }
 
 int main( int argc, char** argv ) {
-  const char* default_str = "\"'Hello', `World`!\"\náéíóú\n{12345}\n(09876)\n{HellÓ}\n&is the&biggest& char\n";
+  const char* default_str = "\"'Hello', `World`!\"\náéíóú\n{~12345~}\n(09876)\n*{HellÓ}*\n&is the&**biggest**& _char_\n";
   const char* user_str    = default_str;
 
   // Allow user-specified string.
