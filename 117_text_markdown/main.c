@@ -195,7 +195,11 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
 
     int pixels_wide = _get_spacing_for_codepoint_px( codepoint, style ); // TODO LUT
     if ( style == 1 ) { pixels_wide++; }
-    if ( 2 == style ) { pixels_wide = pixels_wide + 7; }
+    int next_quad_spacing = pixels_wide; // Note. offset by bold pixel size but not italic.
+    if ( 2 == style ) {
+      pixels_wide = pixels_wide + 7;
+      next_quad_spacing += 1;
+    } // ITALIC.
     // if ( 3 == style || 4 == style ) { pixels_wide = pixels_wide + thickness; } // LUT
 
     // if ( outline ) { pixels_wide++; }
@@ -204,7 +208,7 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
     float extent_y = quad_scale;
 
     // Move along for start of next glypg.                                                // 0.1 of a glyph image pixel
-    at_x += ( (float)pixels_wide + pixels_gap_between_quads ) * pixels_to_cells * quad_scale; // Move next glyph along to the end of this one.
+    at_x += ( (float)next_quad_spacing + pixels_gap_between_quads ) * pixels_to_cells * quad_scale; // Move next glyph along to the end of this one.
     if ( '\n' == codepoint ) {
       at_x = line_start_x;
       at_y -= ( quad_scale + ( pixels_gap_between_quads + (float)pixels_of_linespacing * 2.0f ) * pixels_to_cells );

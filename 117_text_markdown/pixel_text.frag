@@ -33,4 +33,7 @@ void main() {
 	//rgba.rgb = pow( rgba.rgb, vec3( 1.0 / 2.2 ) ); // Gamma correction must be the last op.
 	o_frag_colour = rgba;
 	//if ( o_frag_colour.a < 1.0 ) { o_frag_colour.a = 0.15; } // For debugging boxes don't overlap. Comment out for real view.
+
+
+	//if ( o_frag_colour.a < 0.05 ) { discard; } 
 }
