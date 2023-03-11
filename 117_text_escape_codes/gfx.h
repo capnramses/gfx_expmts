@@ -97,6 +97,8 @@ typedef struct gfx_shader_t {
   int u_texture_a; // default to value 0
   int u_texture_b; // default to value 1
   int u_texture_c; // default to value 2
+  int u_texture_d; // default to value 3
+  int u_texture_e; // default to value 4
 
   char vs_filename[GFX_SHADER_PATH_MAX], fs_filename[GFX_SHADER_PATH_MAX];
   bool loaded;

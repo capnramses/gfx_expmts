@@ -173,6 +173,8 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
   shader.u_texture_a             = glGetUniformLocation( shader.program_gl, "u_texture_a" );
   shader.u_texture_b             = glGetUniformLocation( shader.program_gl, "u_texture_b" );
   shader.u_texture_c             = glGetUniformLocation( shader.program_gl, "u_texture_c" );
+  shader.u_texture_d             = glGetUniformLocation( shader.program_gl, "u_texture_d" );
+  shader.u_texture_e             = glGetUniformLocation( shader.program_gl, "u_texture_e" );
   shader.u_scroll                = glGetUniformLocation( shader.program_gl, "u_scroll" );
   shader.u_progress_factor       = glGetUniformLocation( shader.program_gl, "u_progress_factor" );
   shader.u_time                  = glGetUniformLocation( shader.program_gl, "u_time" );
@@ -190,7 +192,9 @@ gfx_shader_t gfx_create_shader_program_from_strings( const char* vert_shader_str
 
   if ( shader.u_texture_a > -1 ) { glProgramUniform1i( shader.program_gl, shader.u_texture_a, 0 ); }
   if ( shader.u_texture_b > -1 ) { glProgramUniform1i( shader.program_gl, shader.u_texture_b, 1 ); }
-  if ( shader.u_texture_c > -1 ) { glProgramUniform1i( shader.program_gl, shader.u_texture_c, 1 ); }
+  if ( shader.u_texture_c > -1 ) { glProgramUniform1i( shader.program_gl, shader.u_texture_c, 2 ); }
+  if ( shader.u_texture_d > -1 ) { glProgramUniform1i( shader.program_gl, shader.u_texture_d, 3 ); }
+  if ( shader.u_texture_e > -1 ) { glProgramUniform1i( shader.program_gl, shader.u_texture_e, 4 ); }
   if ( shader.u_output_tint_rgb > -1 ) { glProgramUniform3f( shader.program_gl, shader.u_output_tint_rgb, 1.0f, 1.0f, 1.0f ); }
 
   bool linked = true;
@@ -1124,8 +1128,8 @@ gfx_texture_t gfx_texture_create_skybox( const char** six_filenames, uint32_t w,
 }
 
 gfx_texture_t gfx_texture_array_create_from_files( const char** filenames, int n_files, int w, int h, int n, gfx_texture_properties_t properties ) {
-  assert( n == 3 ); // NOTE(Anton) only tested with GL_RGB8
-  if ( !filenames || n_files <= 0 || w <= 0 || h <= 0 || n != 3 ) {
+  assert( n == 3 || n == 4 ); // NOTE(Anton) only tested with GL_RGB8 and GL_RGBA8
+  if ( !filenames || n_files <= 0 || w <= 0 || h <= 0 || ( n != 3 && n != 4 ) ) {
     fprintf( stderr, "ERROR: Loading array texture from files. Bad parameters.\n" );
     return gfx_checkerboard_texture;
   }
@@ -1145,30 +1149,43 @@ gfx_texture_t gfx_texture_array_create_from_files( const char** filenames, int n
   // Use glTexStorage3D() from 4.2+ or texture storage extension, where n layers is specified by MAX_ARRAY_TEXTURE_LAYERS (min 256 in GL 3, min 2048 in 4.5).
   // Otherwise use glTexImage2D()? no example is given in https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_texture_array.txt
   const GLsizei mip_level_count = 5;
-  glTexStorage3D( GL_TEXTURE_2D_ARRAY, mip_level_count, GL_RGB8, texture.w, texture.h, APG_M_MIN( n_files, 256 ) );
+  GLenum type                   = n == 3 ? GL_RGB8 : GL_RGBA8;
+  glTexStorage3D( GL_TEXTURE_2D_ARRAY, mip_level_count, type, texture.w, texture.h, APG_M_MIN( n_files, 256 ) );
   // NOTE(Anton) not SRGB here - could do that and remove 2.2 from shader
 
   for ( int i = 0; i < n_files; i++ ) {
     bool use_stand_in = false;
-    int x = 0, y = 0, nc = 0;
-    uint8_t* img_ptr = stbi_load( filenames[i], &x, &y, &nc, n );
+    int x = 0, y = 0;
+    uint32_t nc = 0;
+
+    uint8_t* img_ptr = stbi_load( filenames[i], &x, &y, &nc, texture.n_channels );
+    // uint8_t* img_ptr = stbi_load( filenames[i], &x, &y, &nc, n );
     if ( !img_ptr ) {
       fprintf( stderr, "WARNING: could not open image `%s`\n", filenames[i] );
       use_stand_in = true;
     }
     if ( !use_stand_in && ( x != texture.w || y != texture.h ) ) {
-      fprintf( stderr, "WARNING: array texture creation: dimensions of `%s` mismatch arguments.\n", filenames[i] );
+      fprintf( stderr, "WARNING: array texture: dims of `%s` mismatch arguments.\n", filenames[i] );
       use_stand_in = true;
     }
     if ( use_stand_in ) {
+      if ( img_ptr ) {
+        free( img_ptr );
+        img_ptr = NULL;
+      }
       img_ptr = malloc( w * h * n );
       _gen_checkerboard_img( img_ptr, w, h, n );
       x  = w;
       y  = h;
       nc = n;
     }
-    glTexSubImage3D( GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, w, h, 1, GL_RGB, GL_UNSIGNED_BYTE, img_ptr ); // note that 'depth' param must be 1
+    GLenum other_type = n == 3 ? GL_RGB : GL_RGBA;
+    glTexSubImage3D( GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, w, h, 1, other_type, GL_UNSIGNED_BYTE, img_ptr ); // note that 'depth' param must be 1
+
     free( img_ptr );
+    // stbi_image_free( img_ptr );
+
+    img_ptr = NULL;
   }
   _texture_set_param_states( properties ); // once all textures loaded at mip 0 - generate other mipmaps
   glBindTexture( GL_TEXTURE_2D_ARRAY, 0 );

@@ -5,11 +5,12 @@
 // Subpixel clamp anti-aliasing and pre-multiplied alpha.
 
 in vec2 v_st;
+in float v_palidx;
 flat in int v_codepoint;
 flat in int v_spacing;
 
 uniform vec2 u_fb_dims;
-uniform sampler2D u_texture; // Ideally a bi-linear filter with no mipmaps.
+uniform sampler2DArray u_texture; // 5 layers.
 uniform vec4 u_tint;
 
 out vec4 o_frag_colour;
@@ -24,8 +25,8 @@ vec2 pixelart_aa( vec2 st, vec2 tex_dims, float thresh ) {
 }
 
 void main() {
-	vec2 aa_st    = pixelart_aa( v_st, textureSize( u_texture, 0 ), 1.0 ); // Assuming no mipmaps.
-	vec4 texel_aa = texture( u_texture, aa_st );
+	vec2 aa_st    = pixelart_aa( v_st, textureSize( u_texture, 0 ).xy, 1.0 ); // Assuming no mipmaps.
+	vec4 texel_aa = texture( u_texture, vec3( aa_st, v_palidx ) );
 	vec4 rgba     = texel_aa * u_tint;
 
 	//rgba.rgb *= rgba.a; // Premultiply alpha. Image must be pre-multiplied first.

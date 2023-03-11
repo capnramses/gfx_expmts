@@ -10,7 +10,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-const int style     = 3; // bold. TODO TMP HACK
 const int thickness = 1; // HACK
 const int outline   = 1; // HACK
 
@@ -128,7 +127,7 @@ static int _read_control_code( const char* str, int max_n, int* bytes_used_ptr )
  * @param n_verts_ptr     Address of a variable to store the number of vertex points created. Must not be NULL.
  * @param total_w,total_h Total width and height of the whole text area in i.e. clip space. Can be used to centre the text when given to a position uniform.
  */
-void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, size_t* n_verts_ptr, float* total_w, float* total_h ) {
+void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, GLuint palidx_vbo, size_t* n_verts_ptr, float* total_w, float* total_h ) {
   const int atlas_cols = 16, atlas_rows = 16;
   const size_t max_len = 2048;
   // Size of a full glyph box in clip space, before aspect ratio calculation. 2.0 would cover the whole range from -1,1 on x and y on a square viewport.
@@ -139,15 +138,16 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
   float at_x = 0.0f, at_y = 0.0f;                      // This is starting centre of the top-left glyph box in clip space.
   float max_x = 0.0f, min_y = 0.0f;
 
-  assert( str_ptr && points_vbo && texcoords_vbo && n_verts_ptr );
+  assert( str_ptr && points_vbo && texcoords_vbo && palidx_vbo && n_verts_ptr );
 
   size_t n_bytes = strnlen( str_ptr, max_len );
   if ( n_bytes < 1 ) { return; }
   int n_codepoints = apg_utf8_count_cp( str_ptr );
   assert( n_codepoints > 0 );
 
-  float* points_tmp    = (float*)malloc( sizeof( float ) * n_codepoints * 12 ); // Remove run-time malloc, use a max string length.
-  float* texcoords_tmp = (float*)malloc( sizeof( float ) * n_codepoints * 12 ); // Remove run-time malloc, use a max string length.
+  float* points_tmp    = (float*)malloc( sizeof( float ) * n_codepoints * 12 ); // vec2    Remove run-time malloc, use a max string length.
+  float* texcoords_tmp = (float*)malloc( sizeof( float ) * n_codepoints * 12 ); // vec2    Remove run-time malloc, use a max string length.
+  float* style_tmp     = (float*)malloc( sizeof( float ) * n_codepoints * 6 );  // float   Remove run-time malloc, use a max string length.
 
   const float line_start_x = at_x;
   for ( int i = 0, curr_byte = 0; curr_byte < n_bytes; i++, curr_byte++ ) {
@@ -168,6 +168,13 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
          continue;
        }
      }*/
+
+    uint32_t style = 0;
+    if ( _md_bold ) { style = 1; }
+    if ( _md_italic ) { style = 2; }
+    if ( _md_underlined ) { style = 3; }
+    if ( _md_strikethrough ) { style = 4; }
+
     int bytes_in_codepoint = 0;
     uint32_t codepoint     = apg_utf8_to_cp( str_ptr + curr_byte, &bytes_in_codepoint );
     assert( bytes_in_codepoint > 0 );
@@ -186,9 +193,9 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
 
     int pixels_wide = _get_spacing_for_codepoint_px( codepoint );
     if ( style == 1 ) { pixels_wide++; }
-    // if ( 2 == style ) { pixels_wide = pixels_wide + 7; } // TODO
-    // if ( 3 == style || 4 == style ) { pixels_wide = pixels_wide + thickness; }
-    // if ( outline ) { pixels_wide++; }
+    if ( 2 == style ) { pixels_wide = pixels_wide + 7; } // TODO LUT
+    if ( 3 == style || 4 == style ) { pixels_wide = pixels_wide + thickness; } // LUT
+    if ( outline ) { pixels_wide++; }
 
     float extent_x = (float)pixels_wide * pixels_to_cells * quad_scale;
     float extent_y = quad_scale;
@@ -235,6 +242,8 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
       texcoords_tmp[i * 12 + 9]  = 1.0 - t + 1.0 / atlas_rows;
       texcoords_tmp[i * 12 + 10] = s;
       texcoords_tmp[i * 12 + 11] = 1.0 - t + 1.0 / atlas_rows;
+
+      for ( int s = 0; s < 6; s++ ) { style_tmp[i * 6 + s] = (float)style; }
     }
   }
 
@@ -242,10 +251,13 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
   glBufferData( GL_ARRAY_BUFFER, n_codepoints * 12 * sizeof( float ), points_tmp, GL_DYNAMIC_DRAW );
   glBindBuffer( GL_ARRAY_BUFFER, texcoords_vbo );
   glBufferData( GL_ARRAY_BUFFER, n_codepoints * 12 * sizeof( float ), texcoords_tmp, GL_DYNAMIC_DRAW );
+  glBindBuffer( GL_ARRAY_BUFFER, palidx_vbo );
+  glBufferData( GL_ARRAY_BUFFER, n_codepoints * 6 * sizeof( float ), style_tmp, GL_DYNAMIC_DRAW );
   glBindBuffer( GL_ARRAY_BUFFER, 0 );
 
   free( points_tmp );
   free( texcoords_tmp );
+  free( style_tmp );
 
   *n_verts_ptr = n_codepoints * 6; // NB Triangle Strip can't work because it will try to join geom across gaps.
   *total_w     = max_x;
@@ -267,18 +279,17 @@ int main( int argc, char** argv ) {
   if ( !gfx_start( "bitmap font antialiasing demo", NULL, false ) ) { return 1; }
   gfx_shader_t pixel_shader = gfx_create_shader_program_from_files( "pixel_text.vert", "pixel_text.frag" );
   if ( pixel_shader.program_gl == 0 ) { return 1; }
-  gfx_texture_t pixel_textures[5];
-  for ( int i = 0; i < 5; i++ ) {
-    pixel_textures[i] = gfx_texture_create_from_file( image_filenames[i], ( gfx_texture_properties_t ){ .bilinear = true, .is_srgb = true } );
-  }
+  gfx_texture_t pixel_texture_array;
+  pixel_texture_array =
+    gfx_texture_array_create_from_files( image_filenames, 5, 256, 256, 4, ( gfx_texture_properties_t ){ .bilinear = true, .is_srgb = true, .is_array = true } );
   uint32_t u_fb_dims_loc     = gfx_uniform_loc( &pixel_shader, "u_fb_dims" );
   uint32_t u_atlas_index_loc = gfx_uniform_loc( &pixel_shader, "u_atlas_index" );
 
   // Create the quads with atlas-looked texture coords.
-  gfx_mesh_t mesh = gfx_mesh_create_empty( true, false, false, true, false, false, false, false, true );
+  gfx_mesh_t mesh = gfx_mesh_create_empty( true, true, false, true, false, false, false, false, true );
   float total_x = 0.0f, total_y = 0.0f;
 
-  text_to_vbo( user_str, mesh.points_vbo, mesh.texcoords_vbo, &mesh.n_vertices, &total_x, &total_y );
+  text_to_vbo( user_str, mesh.points_vbo, mesh.texcoords_vbo, mesh.palidx_vbo, &mesh.n_vertices, &total_x, &total_y );
 
   printf( "\nn_verts = %u\n", (uint32_t)mesh.n_vertices );
 
@@ -289,9 +300,11 @@ int main( int argc, char** argv ) {
     glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, 0, NULL ); // Vertex positions.
     glBindBuffer( GL_ARRAY_BUFFER, mesh.texcoords_vbo );
     glEnableVertexAttribArray( 1 );
-    glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, 0, NULL ); // Texture coordinates.
-    // TODO - Vertex colours from escape codes.
-    // TODO - Atlas index from escape codes.
+    glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, 0, NULL ); // Texture coordinates.ns.
+    glBindBuffer( GL_ARRAY_BUFFER, mesh.palidx_vbo );
+    glEnableVertexAttribArray( 4 );
+    glVertexAttribPointer( 4, 1, GL_FLOAT, GL_FALSE, 0, NULL ); // Pallette index is 4.
+    // TODO - Vertex colours from escape codes. Maybe
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
     glBindVertexArray( 0 );
   }
@@ -328,8 +341,7 @@ int main( int argc, char** argv ) {
       } else {
         gfx_uniform2f( &pixel_shader, pixel_shader.u_pos, 0.0f, 0.0f );
       }
-      // TODO style - load all textures
-      gfx_draw_mesh( GFX_PT_TRIANGLES, &pixel_shader, identity_mat4(), identity_mat4(), M, mesh.vao, mesh.n_vertices, &pixel_textures[style], 1 );
+      gfx_draw_mesh( GFX_PT_TRIANGLES, &pixel_shader, identity_mat4(), identity_mat4(), M, mesh.vao, mesh.n_vertices, &pixel_texture_array, 1 );
 
       gfx_alpha_testing( false );
     }
