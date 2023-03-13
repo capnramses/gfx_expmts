@@ -30,34 +30,34 @@ static bool _md_italic        = false;
 static bool _md_underlined    = false;
 static bool _md_strikethrough = false;
 
-static void _read_markdown( const char* str, size_t max_n, int* bytes_used_ptr ) {
+static void _read_markdown( const char* str, size_t current_byte, size_t max_n, int* bytes_used_ptr ) {
   *bytes_used_ptr = 0;
   assert( str && max_n > 0 && bytes_used_ptr );
   if ( !str || max_n < 1 || !bytes_used_ptr ) { return; }
   size_t str_len = strnlen( str, max_n );
-  if ( str_len < 1 ) { return; }
+  if ( str_len < 3 ) { return; }
 
-  switch ( str[0] ) {
+  switch ( str[current_byte] ) {
   case '*':
-    if ( str_len > 1 && str[1] == '*' ) { // **word is bold.
-      if ( _md_bold ) {
+    if ( current_byte + 1 < max_n && str[current_byte + 1] == '*' ) { // **word is bold.
+      if ( _md_bold && current_byte > 0 && str[current_byte - 1] > ' ' ) {
         _md_bold        = false;
         *bytes_used_ptr = 2;
         printf( "md_bold off\n" );
         return;
-      } else if ( str_len > 2 && str[2] > ' ' ) {
+      } else if ( current_byte + 2 < max_n && str[current_byte + 2] > ' ' ) {
         _md_bold        = !_md_bold;
         *bytes_used_ptr = 2;
         printf( "md_bold %i\n", _md_bold );
         return;
       }
     } else {
-      if ( _md_italic ) {
+      if ( _md_italic && current_byte > 0 && str[current_byte - 1] > ' ' ) {
         _md_italic      = false;
         *bytes_used_ptr = 1;
         printf( "_md_italic off\n" );
         return;
-      } else if ( str_len > 1 && str[1] > ' ' ) { // *word is italic.
+      } else if ( current_byte + 1 < max_n && str[current_byte + 1] > ' ' ) { // *word is italic.
         _md_italic      = !_md_italic;
         *bytes_used_ptr = 1;
         printf( "_md_italic %i\n", _md_italic );
@@ -65,12 +65,12 @@ static void _read_markdown( const char* str, size_t max_n, int* bytes_used_ptr )
       }
       break;
     case '_':
-      if ( _md_underlined ) {
+      if ( _md_underlined && current_byte > 0 && str[current_byte - 1] > ' ' ) {
         _md_underlined  = false;
         *bytes_used_ptr = 1;
         printf( "_md_underlined off\n" );
         return;
-      } else if ( str_len > 1 && str[1] > ' ' ) { // _word is underlined.
+      } else if ( current_byte + 1 < max_n && str[current_byte + 1] > ' ' ) { // _word is underlined.
         _md_underlined  = !_md_underlined;
         *bytes_used_ptr = 1;
         printf( "_md_underlined %i\n", _md_underlined );
@@ -78,12 +78,12 @@ static void _read_markdown( const char* str, size_t max_n, int* bytes_used_ptr )
       }
       break;
     case '~':
-      if ( _md_strikethrough ) {
+      if ( _md_strikethrough && current_byte > 0 && str[current_byte - 1] > ' ' ) {
         _md_strikethrough = false;
         *bytes_used_ptr   = 1;
         printf( "_md_strikethrough off\n" );
         return;
-      } else if ( str_len > 1 && str[1] > ' ' ) { // _word is underlined.
+      } else if ( current_byte + 1 < max_n && str[current_byte + 1] > ' ' ) { // _word is underlined.
         _md_strikethrough = !_md_strikethrough;
         *bytes_used_ptr   = 1;
         printf( "_md_strikethrough %i\n", _md_strikethrough );
@@ -93,31 +93,6 @@ static void _read_markdown( const char* str, size_t max_n, int* bytes_used_ptr )
     default: return;
     }
   } // endswitch.
-}
-
-static int _read_control_code( const char* str, int max_n, int* bytes_used_ptr ) {
-  int esc_code = -1;
-  char tmp[10] = { 0 };
-
-  int str_len = strnlen( str, max_n );
-  int tmp_len = str_len < 9 ? str_len : 9;
-  strncat( tmp, str, str_len );
-  printf( "db: tmp=%s len %i\n", tmp, tmp_len );
-
-  if ( 0 == strncmp( tmp, "\\033[m", tmp_len ) ) {
-    *bytes_used_ptr = 6;
-    return 0;
-  }
-  // TODO sscanf fails here: \033[1nm - it think thats valid because it sees the n _eventually_. urgh.
-  if ( 1 == sscanf( tmp, "\\033[%im", &esc_code ) ) {
-    int hundreds    = esc_code / 100;
-    int tens        = ( esc_code - hundreds * 100 ) / 10;
-    int code_len    = hundreds > 0 ? 3 : tens > 0 ? 2 : 1;
-    *bytes_used_ptr = 6 + code_len;
-    return esc_code;
-  }
-  *bytes_used_ptr = 0;
-  return -1;
 }
 
 /**
@@ -153,23 +128,13 @@ void text_to_vbo( const char* str_ptr, GLuint points_vbo, GLuint texcoords_vbo, 
   for ( int i = 0, curr_byte = 0; curr_byte < n_bytes; curr_byte++ ) {
     {
       int bytes_used_in_md = 0;
-      _read_markdown( str_ptr + curr_byte, max_len, &bytes_used_in_md );
+      _read_markdown( str_ptr, curr_byte, max_len, &bytes_used_in_md );
       if ( bytes_used_in_md > 0 ) {
         curr_byte += ( bytes_used_in_md - 1 );
         n_codepoints -= ( bytes_used_in_md ); // Don't try to draw these as we aren't loading any data.
         continue;
       }
     }
-    /* {
-       int bytes_in_esc_code = 0;
-       int esc_code          = _read_control_code( str_ptr + curr_byte, max_len, &bytes_in_esc_code );
-       if ( esc_code > -1 && bytes_in_esc_code > 0 ) {
-         printf( "DB: Setting escape code %i biec=%i\n", esc_code, bytes_in_esc_code );
-         curr_byte += ( bytes_in_esc_code - 1 );
-        n_codepoints -= bytes_used_in_md;
-         continue;
-       }
-     }*/
 
     uint32_t style = 0;
     if ( _md_bold ) { style = 1; }
