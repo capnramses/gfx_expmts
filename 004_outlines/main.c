@@ -233,7 +233,7 @@ int main () {
 	glEnable (GL_CULL_FACE); // enable culling of faces
 	glCullFace (GL_BACK);
 	glFrontFace (GL_CCW);
-	glClearColor (0.04, 0.04, 0.75, 1.0);
+	glClearColor (0.5, 0.5, 0.5, 1.0);
 
 	float a = 0.0f;
 	double prev = glfwGetTime ();
