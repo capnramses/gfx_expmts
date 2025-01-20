@@ -14,7 +14,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 ## Contents
 
 | numerus | titulus                     | descriptio                                                                     | status              |
-|---------|-----------------------------|--------------------------------------------------------------------------------|---------------------|
+| ------- | --------------------------- | ------------------------------------------------------------------------------ | ------------------- |
 | 000     | `video_modus`               | find and list all video modes on troublesome hardware                          | working             |
 | 001     | `cube_map_depth`            | depth writing to cube maps for omni-direc. shadows                             | abandoned           |
 | 002     | `bezier_curve`              | demo from splines and curves lecture last year                                 | working             |
@@ -133,6 +133,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 115     | `pixelart_subpixel`         | Anti-aliasing shader to display pixel art without shimmering artifacts.        | working             |
 | 116     | `pixelfont_shader`          | Typical font atlas rendering, also using pixel art anti-aliasing.              | working             |
 | 117     | `pixelfont_markdown`        | 116 but strings can use markdown to have bold, italic etc. Uses texture array. | working             |
+| 118     | `glfragcoord`               | Double-checking coordinate space of gl_FragCoord.                              | working             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                        | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                                 | proposed            |
