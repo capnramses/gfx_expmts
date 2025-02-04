@@ -134,6 +134,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 116     | `pixelfont_shader`          | Typical font atlas rendering, also using pixel art anti-aliasing.              | working             |
 | 117     | `pixelfont_markdown`        | 116 but strings can use markdown to have bold, italic etc. Uses texture array. | working             |
 | 118     | `glfragcoord`               | Double-checking coordinate space of gl_FragCoord.                              | working             |
+| 119     | `cuda_quickstart`           | CUDA Quickstart and Windows build.bat.                                         | working             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                        | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                                 | proposed            |
