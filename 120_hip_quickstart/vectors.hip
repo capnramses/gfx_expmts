@@ -16,7 +16,9 @@ __global__ void VecAdd( float* A, float* B, float* C ) {
 }
 
 int main() {
-  printf( "Hello HIP\n" );
+  hipDeviceProp_t devProp;
+  hipGetDeviceProperties( &devProp, 0 );
+  printf( "ROCm HIP System: %i.%i %s\n", devProp.major, devProp.minor, devProp.name );
 
 #define N 3
   float a[N] = { 1, 2, 3 };

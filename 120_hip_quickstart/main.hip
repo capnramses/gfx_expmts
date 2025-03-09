@@ -20,7 +20,7 @@ __global__ void hello_kernel( char* in, char* out ) {
 int main() {
   hipDeviceProp_t devProp;
   hipGetDeviceProperties( &devProp, 0 );
-  printf( "System: %i.%i %s\n", devProp.major, devProp.minor, devProp.name );
+  printf( "ROCm HIP System: %i.%i %s\n", devProp.major, devProp.minor, devProp.name );
 
   /* Initial input,output for the host and create memory objects for the kernel*/
   const char* input = "GdkknVnqkc";

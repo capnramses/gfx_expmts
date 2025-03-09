@@ -136,6 +136,8 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 118     | `glfragcoord`               | Double-checking coordinate space of gl_FragCoord.                              | working             |
 | 119     | `cuda_quickstart`           | CUDA Quickstart and Windows build.bat.                                         | working             |
 | 120     | `hip_quickstart`            | Same as 119 but with AMD's ROCm HIP.                                           | working             |
+| 121     | `hip_imagegen`              | Generating an image with AMD's ROCm HIP.                                       | working             |
+| 122     | `hip_raytracer `            | Ray tracing demo with AMD's ROCM HIP.                                          | started             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                        | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                                 | proposed            |
