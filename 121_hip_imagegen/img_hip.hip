@@ -6,9 +6,6 @@
  * hipcc img_hip.hip apg_bmp.c
  */
 
-#include "apg_bmp.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
 #include <hip/hip_runtime.h>
 #include <assert.h>
 #include <stdint.h>
