@@ -3,7 +3,7 @@
  *
  * 6 Mar 2025 by Anton Gerdelan.
  *
- * hipcc img_hip.hip apg_bmp.c
+ * hipcc img_hip.hip
  */
 
 #include <hip/hip_runtime.h>
