@@ -50,7 +50,7 @@ __device__ __host__ vec3 normalisev3( vec3 v ) {
 }
 __device__ __host__ vec3 reflectv3v3( vec3 i, vec3 n ) { return subv3v3( i, mulv3f( mulv3f( n, dotv3v3( n, i ) ), 2.0f ) ); }
 
-__device__ __host__ float ray_sphere( vec3 ray_o, vec3 ray_d, vec3 sphere_c, float sphere_r ) {
+__device__ __host__ float ray_sphere( vec3 ray_o, vec3 ray_d, vec3 sphere_c, float sphere_r, vec3* px ) {
   // t = -b +- sqrt (b*b - c)
   vec3 omc    = subv3v3( ray_o, sphere_c );
   float b     = dotv3v3( ray_d, omc );
@@ -64,6 +64,43 @@ __device__ __host__ float ray_sphere( vec3 ray_o, vec3 ray_d, vec3 sphere_c, flo
   float neg_t   = -b - srbsqmc;
   if ( pos_t <= 0.0f || neg_t <= 0.0f ) { return t; }
   t = pos_t < neg_t ? pos_t : neg_t;
+
+
+  vec3 light_pos  = (vec3){ 5.0, 2.0, 0.0 };
+  vec3 light_spec = (vec3){ 0.5, 0.5, 0.5 };
+  vec3 light_diff = (vec3){ 0.5, 0.5, 0.5 };
+  vec3 light_amb  = (vec3){ 0.33, 0.33, 0.33 };
+  float spec_exp = 100.0f;
+
+  vec3 sphere_kd = (vec3){ 0.2, 0.2, 0.9 };
+  vec3 sphere_ka = (vec3){ 0.2, 0.2, 0.9 };
+  vec3 sphere_ks = (vec3){ 1.0, 1.0, 1.0 };
+
+  if ( t > 0.0f && t < 10000.0f ) {
+    /* AMBIENT */
+    vec3 rgb_a = mulv3v3( light_amb, sphere_ka );
+    /* LAMBERT */
+    // normal to a sphere is normalize (P - C);
+    vec3 p = addv3v3( ray_o, mulv3f( ray_d, t ) );
+    vec3 n = normalisev3( subv3v3( p, sphere_c ) );
+
+    vec3 light_dir = normalisev3( subv3v3( p, light_pos ) );
+    float diff_dp  = -dotv3v3( n, light_dir );
+    diff_dp        = APG_MAX( diff_dp, 0.0 );
+
+    // float max_range = 7.0f;
+    // texel.g = 1.0 * (1.0 - t / max_range) + 0.5;
+    vec3 rgb_d = mulv3v3( light_diff, mulv3f( sphere_kd, diff_dp ) );
+
+    /* (not BLINN) PHONG */
+    vec3 reflection        = reflectv3v3( light_dir, n );
+    vec3 surface_to_viewer = mulv3f( normalisev3( p ), -1.0f ); // viewer is 0,0,0 so no need v-p
+    float spec_dp          = dotv3v3( reflection, surface_to_viewer );
+    spec_dp                = APG_MAX( spec_dp, 0.0 );
+    float spec_fac         = powf( spec_dp, spec_exp );
+    vec3 rgb_s             = mulv3v3( light_spec, mulv3f( sphere_ks, spec_fac ) );
+    *px                    = addv3v3( rgb_a, addv3v3( rgb_d, rgb_s ) );
+  }
 
   return t;
 }
@@ -98,10 +135,10 @@ __device__ __host__ float dist_line_line( vec3 line_a_point_a, vec3 line_a_point
 }
 
 // capsule  ( a|----|b )
-__device__ __host__ float ray_capsule( vec3 ray_o, vec3 ray_d, vec3 point_a, vec3 point_b, float cap_r ) {
+__device__ __host__ float ray_capsule( vec3 ray_o, vec3 ray_d, vec3 point_a, vec3 point_b, float cap_r, vec3* px ) {
   // do sphere-ray calcs for ends
-  float t_a = ray_sphere( ray_o, ray_d, point_a, cap_r );
-  float t_b = ray_sphere( ray_o, ray_d, point_b, cap_r );
+  float t_a = ray_sphere( ray_o, ray_d, point_a, cap_r, px );
+  float t_b = ray_sphere( ray_o, ray_d, point_b, cap_r, px );
 
   // ss and tt are the factors 0<->1 along each segment of nearest point
   float ss = 0.0, tt = 0.0;
@@ -110,7 +147,7 @@ __device__ __host__ float ray_capsule( vec3 ray_o, vec3 ray_d, vec3 point_a, vec
   if ( dist < cap_r && tt >= 0.0 && tt <= 1.0 ) {
     vec3 t_vec                    = subv3v3( point_b, point_a );
     vec3 point_on_cyl_medial_axis = addv3v3( point_a, mulv3f( t_vec, tt ) );
-    float mid_t                   = ray_sphere( ray_o, ray_d, point_on_cyl_medial_axis, cap_r );
+    float mid_t                   = ray_sphere( ray_o, ray_d, point_on_cyl_medial_axis, cap_r, px );
     return mid_t;
   }
   return APG_MIN( t_a, t_b );
@@ -127,10 +164,6 @@ __global__ void render_kernel( uint8_t* fb_ptr ) {
   vec3 light_spec = (vec3){ 0.5, 0.5, 0.5 };
   vec3 light_diff = (vec3){ 0.5, 0.5, 0.5 };
   vec3 light_amb  = (vec3){ 0.33, 0.33, 0.33 };
-
-  vec3 sphere_kd = (vec3){ 0.2, 0.2, 0.9 };
-  vec3 sphere_ka = (vec3){ 0.2, 0.2, 0.9 };
-  vec3 sphere_ks = (vec3){ 1.0, 1.0, 1.0 };
   float spec_exp = 100.0f;
 
   // sample or work-out ray origin and direction
@@ -146,33 +179,9 @@ __global__ void render_kernel( uint8_t* fb_ptr ) {
   /* SPHERE */
   vec3 sphere_c  = (vec3){ 0.0, 0.0, -10.0 };
   float sphere_r = 1.0;
-  float sphere_t = ray_sphere( ray_o, ray_d, sphere_c, sphere_r );
-  if ( sphere_t > 0.0f && sphere_t < 10000.0f ) {
-    /* AMBIENT */
-    px = mulv3v3( light_amb, sphere_ka );
-    /* LAMBERT */
-    // normal to a sphere is normalize (P - C);
-    vec3 p = addv3v3( ray_o, mulv3f( ray_d, sphere_t ) );
-    vec3 n = normalisev3( subv3v3( p, sphere_c ) );
+  float sphere_t = ray_sphere( ray_o, ray_d, sphere_c, sphere_r, &px );
 
-    vec3 light_dir = normalisev3( subv3v3( p, light_pos ) );
-    float diff_dp  = -dotv3v3( n, light_dir );
-    diff_dp        = APG_MAX( diff_dp, 0.0 );
 
-    // float max_range = 7.0f;
-    // texel.g = 1.0 * (1.0 - t / max_range) + 0.5;
-    px = addv3v3( px, mulv3v3( light_diff, mulv3f( sphere_kd, diff_dp ) ) );
-
-    /* (not BLINN) PHONG */
-    vec3 reflection        = reflectv3v3( light_dir, n );
-    vec3 surface_to_viewer = mulv3f( normalisev3( p ), -1.0f ); // viewer is 0,0,0 so no need v-p
-    float spec_dp          = dotv3v3( reflection, surface_to_viewer );
-    spec_dp                = APG_MAX( spec_dp, 0.0 );
-    float spec_fac         = powf( spec_dp, spec_exp );
-    px                     = addv3v3( px, mulv3v3( light_spec, mulv3f( sphere_ks, spec_fac ) ) );
-  }
-
-#if CAPSULE
   /* CAPSULE */
   // NOTE: to make capsule cast a shadow, later for the plane do a light ray v
   // capsule and see if the cylinder OR the sphere is closer than view ray->plane t value
@@ -181,33 +190,9 @@ __global__ void render_kernel( uint8_t* fb_ptr ) {
   vec3 capsule_b   = (vec3){ 2.0f, -2.0f, -10.0 };
   float cap_r      = 1.0f;
   vec3 cyl_kd      = (vec3){ 0.5, 0.02, 0.02 };
-  float cap_t      = ray_capsule( ray_o, ray_d, capsule_a, capsule_b, cap_r );
-  if ( cap_t > 0.0f && cap_t < 10000.0f ) {
-    /* AMBIENT */
-    px = mulv3v3( light_amb, sphere_ka );
-    /* LAMBERT */
-    // normal to a sphere is normalize (P - C);
-    vec3 p = addv3v3( ray_o, mulv3f( ray_d, cap_t ) );
-    vec3 n = normalisev3( subv3v3( p, capsule_a ) );
-
-    vec3 light_dir = normalisev3( subv3v3( p, light_pos ) );
-    float diff_dp  = -dotv3v3( n, light_dir );
-    diff_dp        = APG_MAX( diff_dp, 0.0 );
-
-    // float max_range = 7.0f;
-    // texel.g = 1.0 * (1.0 - t / max_range) + 0.5;
-    px = addv3v3( px, mulv3v3( light_diff, mulv3f( cyl_kd, diff_dp ) ) );
-
-    /* (not BLINN) PHONG */
-    vec3 reflection        = reflectv3v3( light_dir, n );
-    vec3 surface_to_viewer = mulv3f( normalisev3( p ), -1.0f ); // viewer is 0,0,0 so no need v-p
-    float spec_dp          = dotv3v3( reflection, surface_to_viewer );
-    spec_dp                = APG_MAX( spec_dp, 0.0 );
-    float spec_fac         = powf( spec_dp, spec_exp );
-    px                     = addv3v3( px, mulv3v3( light_spec, mulv3f( sphere_ks, spec_fac ) ) );
-  }
+  float cap_t      = ray_capsule( ray_o, ray_d, capsule_a, capsule_b, cap_r, &px );
   sphere_t = APG_MIN( sphere_t, cap_t );
-#endif
+
   /* PLANE */
   vec3 plane_n  = normalisev3( (vec3){ 0.0, 0.0, 1.0 } );
   float plane_d = 11.0;
@@ -231,10 +216,9 @@ __global__ void render_kernel( uint8_t* fb_ptr ) {
     // hit one or both sides
     if ( bsqmc >= 0.0 ) { shadow = true; }
 
-#if CAPSULE
-    float cap_light_t = ray_capsule( light_pos, light_dir, capsule_a, capsule_b, cap_r );
+    float cap_light_t = ray_capsule( light_pos, light_dir, capsule_a, capsule_b, cap_r, &px );
     if ( cap_light_t < plane_light_t ) { shadow = true; }
-#endif
+
     px = mulv3v3( light_amb, plane_ka );
     if ( !shadow ) {
       float diff_dp = -dotv3v3( plane_n, light_dir );
@@ -251,9 +235,6 @@ __global__ void render_kernel( uint8_t* fb_ptr ) {
   }
 
   /////////////////////////////////////
-
-  //  px.x = (float)i / IMG_W;
-  // px.y = (float)j / IMG_H;
 
   int px_idx         = j * IMG_W * N_CHANS + i * N_CHANS;
   fb_ptr[px_idx + 0] = (uint8_t)APG_CLAMP( px.x * 255.9f, 0.0f, 255.0f );
