@@ -148,6 +148,8 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | xxx     | `3ds parse`                 | a 3ds binary format loader                                                     | proposed            |
 | xxx     | `widgets`                   | simple slider and text field widgets drop-in for demos                         | proposed            |
 | xxx     | `stencil buffer`            | render outlines like in Lindsay Kay's CAD renderer                             | proposed            |
+| xxx     | `voxel_terrain_sw`          | voxel terrain rendering a la Pikuma | proposed |
+| xxx     | `voxel_terrain_glsl`        | voxel terrain rendering in a shader |
 
 ## LICENCE
 
