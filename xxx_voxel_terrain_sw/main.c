@@ -20,10 +20,16 @@
 #define SCREEN_HEIGHT 200
 #define MAP_N 1024
 #define SCALE_FACTOR 120.0
-ver: The Voxel Space engine. This technique was used to render the terrain in the Comanche: Maximum Overkill game.
 
+typedef struct cam_t {
   float x, y, height, zfar, attitude, heading;
 } cam_t;
+
+typedef struct img_t {
+  uint8_t* c_ptr, *h_ptr;
+  uint8_t pal[256 * 3];
+  int w,h;
+} img_t;
 
 void ppm_write( const char* fn, img_t img ) {
   FILE* f = fopen( fn, "wb" );
