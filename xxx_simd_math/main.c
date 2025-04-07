@@ -53,12 +53,13 @@ int main() {
 //  __m256i i; // 256-bit "  with either 32x 8-bits, 16x 16-bits, 8x 32-bits, or 4x64-bit integers.
 
   float a[8] ={1,2,3,4,5,6,7,8};
-  f = _mm256_loadu_ps(a); // u is unaligned memory in
+  f = _mm256_loadu_ps(a); // u is unaligned memory in.
+  // if using without u postfix and a is not aligned ->segfault.
   __m256 ff = _mm256_setzero_ps();
   ff = _mm256_add_ps( f, f );
 
   float b[8] = { 0 };
-  _mm256_storeu_ps( b, ff );
+  _mm256_storeu_ps( b, ff ); // also needs u if unaligned mem.
   printf("b={%f,%f,%f,%f,%f,%f,%f,%f}\n",b[0],b[1],b[2],b[3],b[4],b[5],b[6],b[7]);
 
   // pick a for-loop that goes i++
