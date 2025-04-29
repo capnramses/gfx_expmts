@@ -40,7 +40,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 022     | `glfw_getkeyname`           | testing new key name localisation for glfw                                     | working             |
 | 023     | `webgl_quats`               | webgl demo of quaternion rotation mathematics                                  | working             |
 | 024     | `hmap_terrain`              | the traditional heightmapped terrain demo                                      | working             |
-| 025     | `depth_antioverdraw`        | http://fabiensanglard.net/doom3/renderer.php                                   | working             |
+| 025     | `depth_antioverdraw`        | <http://fabiensanglard.net/doom3/renderer.php>                                 | working             |
 | 026     | `x11_cube`                  | software 3d renderer built on X11 (not opengl)                                 | working             |
 | 027     | `omni_shads_cheating`       | omni-directional shadows with cubemap texture                                  | unstable            |
 | 028     | `more_cube`                 | second pass at shadow mapping with cubemap textures                            | working             |
@@ -56,7 +56,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 038     | `SPEW`                      | home-made GLEW replacement. not an acronym, just loud                          | working             |
 | 039     | `wad_render`                | render geometry from a DOOM WAD file in OpenGL                                 | working             |
 | 040     | `compute_shader_neural_net` | a neural network encoded in a compute shader                                   | started             |
-| 041     | `node_terrain `             | terrain that subdivides and can do LOD                                         | working             |
+| 041     | `node_terrain`              | terrain that subdivides and can do LOD                                         | working             |
 | 042     | `dissolve`                  | a simple dissolving mesh effect in webgl                                       | working             |
 | 043     | `stb_ttf`                   | font atlas generator using [stb_truetype](https://github.com/nothings/stb)     | working             |
 | 044     | `webgl_skybox`              | WebGL skybox to render one of my `pano2cube` boxes                             | working             |
@@ -137,19 +137,19 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 119     | `cuda_quickstart`           | CUDA Quickstart and Windows build.bat.                                         | working             |
 | 120     | `hip_quickstart`            | Same as 119 but with AMD's ROCm HIP.                                           | working             |
 | 121     | `hip_imagegen`              | Generating an image with AMD's ROCm HIP.                                       | working             |
-| 122     | `hip_raytracer `            | Port of compute shader ray tracer 006 to AMD's ROCM HIP.                       | working             |
+| 122     | `hip_raytracer`             | Port of compute shader ray tracer 006 to AMD's ROCM HIP.                       | working             |
+| 123     | `voxel_terrain_sw`          | voxel terrain rendering _a la_ Pikuma                                          | working             |
+| 124     | `geo_mipmap`                | Heightmap terrain sampled in vertex shader, scrolling camera mesh.             | working             |
+| 125     | `simd_math`                 | Experiments with SIMD extensions.                                              | started             |
+| xxx     | `wolf_tracer`               | Ray tracer _a la_ Wolfenstein 3-D.                                             | proposed            |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                        | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                                 | proposed            |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                                | proposed            |
-| xxx     | `geo_mipmap`                | heightmap terrain sampled in vertex shader, scrolling camera mesh              | proposed            |
 | xxx     | `fresnel_prism`             | refraction/reflection colour split as in nvidia cg_tutorial_chapter07          | proposed            |
 | xxx     | `wu_line`                   | wu's line drawing algorithm (pseudo on wiki)                                   | proposed            |
-| xxx     | `3ds parse`                 | a 3ds binary format loader                                                     | proposed            |
-| xxx     | `widgets`                   | simple slider and text field widgets drop-in for demos                         | proposed            |
 | xxx     | `stencil buffer`            | render outlines like in Lindsay Kay's CAD renderer                             | proposed            |
-| xxx     | `voxel_terrain_sw`          | voxel terrain rendering a la Pikuma | proposed |
-| xxx     | `voxel_terrain_glsl`        | voxel terrain rendering in a shader |
+| xxx     | `voxel_terrain_glsl`        | voxel terrain rendering in a shader                                            | proposed            |
 
 ## LICENCE
 
@@ -164,16 +164,16 @@ FIRST LICENCE OPTION
 >                                  Apache License
 >                            Version 2.0, January 2004
 >                         http://www.apache.org/licenses/
->    Copyright 2019 Anton Gerdelan.
->    Licensed under the Apache License, Version 2.0 (the "License");
->    you may not use this file except in compliance with the License.
->    You may obtain a copy of the License at
->        http://www.apache.org/licenses/LICENSE-2.0
->    Unless required by applicable law or agreed to in writing, software
->    distributed under the License is distributed on an "AS IS" BASIS,
->    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
->    See the License for the specific language governing permissions and
->    limitations under the License.
+> Copyright 2019 Anton Gerdelan.
+> Licensed under the Apache License, Version 2.0 (the "License");
+> you may not use this file except in compliance with the License.
+> You may obtain a copy of the License at
+> <http://www.apache.org/licenses/LICENSE-2.0>
+> Unless required by applicable law or agreed to in writing, software
+> distributed under the License is distributed on an "AS IS" BASIS,
+> WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+> See the License for the specific language governing permissions and
+> limitations under the License.
 -------------------------------------------------------------------------------------
 SECOND LICENCE OPTION
 
@@ -183,7 +183,7 @@ SECOND LICENCE OPTION
 > distribute this software, either in source code form or as a compiled
 > binary, for any purpose, commercial or non-commercial, and by any
 > means.
-> 
+>
 > In jurisdictions that recognize copyright laws, the author or authors
 > of this software dedicate any and all copyright interest in the
 > software to the public domain. We make this dedication for the benefit
@@ -191,7 +191,7 @@ SECOND LICENCE OPTION
 > successors. We intend this dedication to be an overt act of
 > relinquishment in perpetuity of all present and future rights to this
 > software under copyright law.
-> 
+>
 > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 > EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 > MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -199,7 +199,7 @@ SECOND LICENCE OPTION
 > OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 > ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 > OTHER DEALINGS IN THE SOFTWARE.
-> 
+>
 > For more information, please refer to <http://unlicense.org>
 -------------------------------------------------------------------------------------
 
@@ -209,4 +209,4 @@ SECOND LICENCE OPTION
 
 ## Cool Thing to Try
 
-* http://www.codersnotes.com/notes/untonemapping/
+* <http://www.codersnotes.com/notes/untonemapping/>
