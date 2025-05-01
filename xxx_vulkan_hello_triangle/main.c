@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define APG_IMPLEMENTATION
+#define APG_NO_BACKTRACES
+#include "apg.h" // C stuff like file loading.
+
 #define APG_M_MIN( a, b ) ( ( a ) < ( b ) ? ( a ) : ( b ) )
 #define APG_M_MAX( a, b ) ( ( a ) > ( b ) ? ( a ) : ( b ) )
 #define APG_M_CLAMP( x, lo, hi ) ( APG_M_MIN( hi, APG_M_MAX( lo, x ) ) )
@@ -21,24 +25,29 @@ const char* required_extensions[N_REQUIRED_EXTENSIONS]               = { VK_KHR_
 const char* required_validation_layers[N_REQUIRED_VALIDATION_LAYERS] = { "VK_LAYER_KHRONOS_validation" };
 
 typedef struct gfx_vul_t {
-  GLFWwindow* window_ptr;
-  VkApplicationInfo app_info;
-  VkInstance instance;
-  VkPhysicalDevice physical_device;      //
-  VkDevice device;                       // "Logical" device.
-  VkSurfaceKHR surface;                  // "KHR" suffix implies it's from an extension.
-  VkSwapchainKHR swapchain;              // Collection of render targets. e.g. front & back.
-  VkImage swapchain_images[16];          //
-  uint32_t n_swapchain_images;           //
-  VkFormat swapchain_image_format;       //
-  VkExtent2D swapchain_extent;           //
-  VkImageView swapchain_image_views[16]; // 1 per swapchain image.
-  // NB: Typical 1 image view and 1 framebuffer per swapchain image.
-  // VkImageView image_view;    // Required to draw any part of an image from swapchain.
-  // VkFramebuffer framebuffer; // Image views used for colour, depth, stencil targets.
-  // VkPipeline pipeline;       // Graphics pipeline. All render state. One per shader/render set up.
-  // VkCommandPool command_pool;
-  // VkCommandBuffer command_buffer;
+  GLFWwindow* window_ptr;                   //
+  VkApplicationInfo app_info;               //
+  VkInstance instance;                      //
+  VkPhysicalDevice physical_device;         //
+  VkDevice device;                          // "Logical" device.
+  VkSurfaceKHR surface;                     // "KHR" suffix implies it's from an extension.
+  VkSwapchainKHR swapchain;                 // Collection of render targets. e.g. front & back.
+  VkImage swapchain_images[16];             // NB: Typical 1 image view and 1 framebuffer per swapchain image.
+  uint32_t n_swapchain_images;              //
+  VkFormat swapchain_image_format;          //
+  VkExtent2D swapchain_extent;              //
+  VkImageView swapchain_image_views[16];    // 1 per swapchain image. Required to draw any part of an image from swapchain.
+  VkRenderPass render_pass;                 //
+  VkPipelineLayout pipeline_layout;         //
+  VkPipeline pipeline;                      // Graphics pipeline. All render state. One per shader/render set up.
+  VkFramebuffer swapchain_framebuffers[16]; // Image views used for colour, depth, stencil targets.
+  VkCommandPool command_pool;               //
+  VkCommandBuffer command_buffer;           //
+  VkSemaphore image_available_semaphore;    //
+  VkSemaphore render_finished_semaphore;    //
+  VkFence in_flight_fence;                  //
+  VkQueue present_queue;
+  VkQueue graphics_queue;
 } gfx_vul_t;
 
 // Command Queues Required. Most ops performed async by submitting to a VkQueue.
@@ -282,8 +291,8 @@ bool create_logical_device( void ) {
     fprintf( stderr, "ERROR: Failed to create logical device!\n" );
     return false;
   }
-  VkQueue present_queue;
-  vkGetDeviceQueue( gfx.device, indices.present_idx, 0, &present_queue );
+  vkGetDeviceQueue( gfx.device, indices.gfx_idx, 0, &gfx.graphics_queue );
+  vkGetDeviceQueue( gfx.device, indices.present_idx, 0, &gfx.present_queue );
 
   return true;
 }
@@ -414,13 +423,328 @@ bool create_image_views( void ) {
   return true;
 }
 
-void create_render_pass( void ) {}
+bool create_render_pass( void ) {
+  // Attachment description.
+  VkAttachmentDescription color_attachment = (VkAttachmentDescription){
+    .format        = gfx.swapchain_image_format,     //
+    .samples       = VK_SAMPLE_COUNT_1_BIT,          // No MSAA yet.
+    .loadOp        = VK_ATTACHMENT_LOAD_OP_CLEAR,    // Clear the FB before drawing new frame.
+    .storeOp       = VK_ATTACHMENT_STORE_OP_STORE,   // Store so we can render to screen.
+    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,      //
+    .finalLayout   = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR // Means images are to be presented in the swapchain.
+  };
 
-void create_graphics_pipeline( void ) {
-  //
+  VkAttachmentReference color_attachment_ref = (VkAttachmentReference){
+    .attachment = 0,                                       //
+    .layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL //
+  };
+
+  VkSubpassDescription subpass = (VkSubpassDescription){
+    .pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS, //
+    .colorAttachmentCount = 1,                               //
+    .pColorAttachments    = &color_attachment_ref            //
+  };
+
+  VkRenderPassCreateInfo render_pass_create_info = (VkRenderPassCreateInfo){
+    .sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, //
+    .attachmentCount = 1,                                         //
+    .pAttachments    = &color_attachment,                         //
+    .subpassCount    = 1,                                         //
+    .pSubpasses      = &subpass                                   //
+  };
+
+  if ( VK_SUCCESS != vkCreateRenderPass( gfx.device, &render_pass_create_info, NULL, &gfx.render_pass ) ) {
+    fprintf( stderr, "ERROR: Failed to create render pass!\n" );
+    return false;
+  }
+  return true;
 }
 
-void create_framebuffer( void ) {}
+VkShaderModule create_shader_module( apg_file_t file ) {
+  VkShaderModuleCreateInfo create_info = (VkShaderModuleCreateInfo){
+    .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, //
+    .codeSize = file.sz,                                     //
+    .pCode    = file.data_ptr                                //
+  };
+  VkShaderModule shader_module;
+  if ( vkCreateShaderModule( gfx.device, &create_info, NULL, &shader_module ) != VK_SUCCESS ) {
+    fprintf( stderr, "ERROR: Failed to create shader module!\n" );
+    assert( false );
+  }
+  return shader_module;
+}
+
+bool create_graphics_pipeline( void ) {
+  apg_file_t vert, frag;
+  if ( !apg_read_entire_file( "vert.spv", &vert ) ) {
+    fprintf( stderr, "ERROR: Loading vert.spv\n" );
+    return 1;
+  }
+  if ( !apg_read_entire_file( "frag.spv", &frag ) ) {
+    fprintf( stderr, "ERROR: Loading frag.spv\n" );
+    return 1;
+  }
+  VkShaderModule vert_shader_module = create_shader_module( vert );
+  VkShaderModule frag_shader_module = create_shader_module( frag );
+
+  VkPipelineShaderStageCreateInfo vert_stage_info = (VkPipelineShaderStageCreateInfo){
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = vert_shader_module, .pName = "main"
+  };
+  VkPipelineShaderStageCreateInfo frag_stage_info = (VkPipelineShaderStageCreateInfo){
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = frag_shader_module, .pName = "main"
+  };
+  VkPipelineShaderStageCreateInfo shader_stages[] = { vert_stage_info, frag_stage_info };
+
+  ///////////
+#define N_DYNAMIC_STATES 2
+  VkDynamicState dynamic_states[N_DYNAMIC_STATES]            = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+  VkPipelineDynamicStateCreateInfo dynamic_state_create_info = (VkPipelineDynamicStateCreateInfo){
+    .sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO, //
+    .dynamicStateCount = N_DYNAMIC_STATES,                                     //
+    .pDynamicStates    = dynamic_states                                        //
+  };
+
+  VkPipelineVertexInputStateCreateInfo vertex_input_info = (VkPipelineVertexInputStateCreateInfo){
+    .sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, //
+    .vertexBindingDescriptionCount   = 0,                                                         //
+    .pVertexBindingDescriptions      = NULL,                                                      // Optional
+    .vertexAttributeDescriptionCount = 0,                                                         //
+    .pVertexAttributeDescriptions    = NULL,                                                      // Optional
+  };
+
+  VkPipelineInputAssemblyStateCreateInfo input_assembly = (VkPipelineInputAssemblyStateCreateInfo){
+    .sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, //
+    .topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,                         //
+    .primitiveRestartEnable = VK_FALSE                                                     //
+  };
+
+  VkViewport viewport = (VkViewport){
+    viewport.x        = 0.0f,                               //
+    viewport.y        = 0.0f,                               //
+    viewport.width    = (float)gfx.swapchain_extent.width,  //
+    viewport.height   = (float)gfx.swapchain_extent.height, //
+    viewport.minDepth = 0.0f,                               //
+    viewport.maxDepth = 1.0f                                //
+  };
+
+  VkRect2D scissor = (VkRect2D){ scissor.offset = (VkOffset2D){ 0, 0 }, scissor.extent = gfx.swapchain_extent };
+
+  VkPipelineViewportStateCreateInfo viewport_state = (VkPipelineViewportStateCreateInfo){
+    .sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, //
+    .viewportCount = 1,                                                     //
+    .pViewports    = &viewport,                                             //
+    .scissorCount  = 1,                                                     //
+    .pScissors     = &scissor                                               //
+  };
+
+  VkPipelineRasterizationStateCreateInfo rasteriser = (VkPipelineRasterizationStateCreateInfo){
+    .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO, //
+    .depthClampEnable        = VK_FALSE,                                                   // True useful for shadow maps.
+    .rasterizerDiscardEnable = VK_FALSE,                                                   // True disables output to fb.
+    .polygonMode             = VK_POLYGON_MODE_FILL,                                       //
+    .lineWidth               = 1.0f,                                                       // Thicker requires wideLines GPU feature.
+    .cullMode                = VK_CULL_MODE_BACK_BIT,                                      //
+    .frontFace               = VK_FRONT_FACE_CLOCKWISE,                                    //
+    .depthBiasEnable         = VK_FALSE,                                                   //
+    .depthBiasConstantFactor = 0.0f,                                                       // Optional
+    .depthBiasClamp          = 0.0f,                                                       // Optional
+    .depthBiasSlopeFactor    = 0.0f                                                        // Optional
+  };
+
+  VkPipelineMultisampleStateCreateInfo multisampling = (VkPipelineMultisampleStateCreateInfo){
+    .sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+    .sampleShadingEnable   = VK_FALSE,
+    .rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT,
+    .minSampleShading      = 1.0f,     // Optional
+    .pSampleMask           = NULL,     // Optional
+    .alphaToCoverageEnable = VK_FALSE, // Optional
+    .alphaToOneEnable      = VK_FALSE  // Optional
+  };
+
+  VkPipelineColorBlendAttachmentState color_blend_attachment = (VkPipelineColorBlendAttachmentState){
+    .colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+    .blendEnable         = VK_FALSE,
+    .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,  // Optional
+    .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
+    .colorBlendOp        = VK_BLEND_OP_ADD,      // Optional
+    .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,  // Optional
+    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
+    .alphaBlendOp        = VK_BLEND_OP_ADD       // Optional
+  };
+
+  VkPipelineColorBlendStateCreateInfo color_blending = (VkPipelineColorBlendStateCreateInfo){
+    .sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+    .logicOpEnable     = VK_FALSE,
+    .logicOp           = VK_LOGIC_OP_COPY, // Optional
+    .attachmentCount   = 1,
+    .pAttachments      = &color_blend_attachment,
+    .blendConstants[0] = 0.0f, // Optional
+    .blendConstants[1] = 0.0f, // Optional
+    .blendConstants[2] = 0.0f, // Optional
+    .blendConstants[3] = 0.0f  // Optional
+  };
+
+  VkPipelineLayoutCreateInfo pipeline_layout_create_info = (VkPipelineLayoutCreateInfo){
+    .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+    .setLayoutCount         = 0,    // Optional
+    .pSetLayouts            = NULL, // Optional
+    .pushConstantRangeCount = 0,    // Optional
+    .pPushConstantRanges    = NULL  // Optional
+  };
+
+  if ( VK_SUCCESS != vkCreatePipelineLayout( gfx.device, &pipeline_layout_create_info, NULL, &gfx.pipeline_layout ) ) {
+    fprintf( stderr, "ERROR: Failed to create pipeline layout!\n" );
+    return false;
+  }
+
+  VkGraphicsPipelineCreateInfo pipeline_create_info = (VkGraphicsPipelineCreateInfo){
+    .sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, //
+    .stageCount          = 2,                                               //
+    .pStages             = shader_stages,                                   //
+    .pVertexInputState   = &vertex_input_info,                              //
+    .pInputAssemblyState = &input_assembly,                                 //
+    .pViewportState      = &viewport_state,                                 //
+    .pRasterizationState = &rasteriser,                                     //
+    .pMultisampleState   = &multisampling,                                  //
+    .pDepthStencilState  = NULL,                                            // Optional
+    .pColorBlendState    = &color_blending,                                 //
+    .pDynamicState       = &dynamic_state_create_info,                      //
+    .layout              = gfx.pipeline_layout,                             //
+    .renderPass          = gfx.render_pass,                                 //
+    .subpass             = 0,                                               //
+    .basePipelineHandle  = VK_NULL_HANDLE,                                  // Optional
+    .basePipelineIndex   = -1                                               // Optional
+  };
+  // NB Addtional params allow you to create a pipeline based on an existing one.
+
+  if ( VK_SUCCESS != vkCreateGraphicsPipelines( gfx.device, VK_NULL_HANDLE, 1, &pipeline_create_info, NULL, &gfx.pipeline ) ) {
+    fprintf( stderr, "ERROR: Failed to create graphics pipeline!\n" );
+    return false;
+  }
+
+  //////////////
+
+  vkDestroyShaderModule( gfx.device, frag_shader_module, NULL );
+  vkDestroyShaderModule( gfx.device, vert_shader_module, NULL );
+  free( vert.data_ptr );
+  free( frag.data_ptr );
+
+  return true;
+}
+
+bool create_framebuffers( void ) {
+  for ( int i = 0; i < gfx.n_swapchain_images; i++ ) {
+    VkImageView attachments[] = { gfx.swapchain_image_views[i] };
+
+    VkFramebufferCreateInfo framebuffer_create_info = (VkFramebufferCreateInfo){
+      .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, //
+      .renderPass      = gfx.render_pass,                           //
+      .attachmentCount = 1,                                         //
+      .pAttachments    = attachments,                               //
+      .width           = gfx.swapchain_extent.width,                //
+      .height          = gfx.swapchain_extent.height,               //
+      .layers          = 1                                          //
+    };
+
+    if ( VK_SUCCESS != vkCreateFramebuffer( gfx.device, &framebuffer_create_info, NULL, &gfx.swapchain_framebuffers[i] ) ) {
+      fprintf( stderr, "ERROR: Failed to create framebuffer!\n" );
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool create_command_pool( void ) {
+  queue_family_indices_t queue_fam_indices = find_queue_families( gfx.physical_device );
+
+  VkCommandPoolCreateInfo pool_create_info = (VkCommandPoolCreateInfo){
+    .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,      //
+    .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, //  Allow command buffers re=recorded individually. W/o flag all have to be reset together.
+    .queueFamilyIndex = queue_fam_indices.gfx_idx             //
+  };
+
+  if ( VK_SUCCESS != vkCreateCommandPool( gfx.device, &pool_create_info, NULL, &gfx.command_pool ) ) {
+    fprintf( stderr, "ERROR: Failed to create command pool!\n" );
+    return false;
+  }
+
+  return true;
+}
+
+bool create_command_buffer( void ) {
+  VkCommandBufferAllocateInfo alloc_info = (VkCommandBufferAllocateInfo){
+    .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, //
+    .commandPool        = gfx.command_pool,                               //
+    .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,                //
+    .commandBufferCount = 1                                               //
+  };
+
+  if ( VK_SUCCESS != vkAllocateCommandBuffers( gfx.device, &alloc_info, &gfx.command_buffer ) ) {
+    fprintf( stderr, "ERROR: Failed to create command buffers!\n" );
+    return false;
+  }
+
+  return true;
+}
+
+bool record_command_buffer( VkCommandBuffer command_buffer, uint32_t image_idx ) {
+  VkCommandBufferBeginInfo begin_info = (VkCommandBufferBeginInfo){
+    .sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, //
+    .flags            = 0,                                           // Optional
+    .pInheritanceInfo = NULL                                         // Optional
+  };
+
+  if ( VK_SUCCESS != vkBeginCommandBuffer( command_buffer, &begin_info ) ) {
+    fprintf( stderr, "ERROR: Failed to begin recording command buffer!\n" );
+    return false;
+  }
+
+  // Start render pass:
+  VkClearValue clear_colour                    = { { { 0.3f, 0.3f, 0.3f, 1.0f } } };
+  VkRenderPassBeginInfo render_pass_begin_info = (VkRenderPassBeginInfo){
+    .sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, //
+    .renderPass        = gfx.render_pass,                          //
+    .framebuffer       = gfx.swapchain_framebuffers[image_idx],    //
+    .renderArea.offset = { 0, 0 },                                 //
+    .renderArea.extent = gfx.swapchain_extent,                     //
+    .clearValueCount   = 1,                                        //
+    .pClearValues      = &clear_colour                             //
+  };
+  vkCmdBeginRenderPass( command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE );
+  /////
+  vkCmdBindPipeline( command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gfx.pipeline );
+  VkViewport viewport = (VkViewport){ viewport.x = 0.0f, viewport.y = 0.0f, viewport.width = (float)gfx.swapchain_extent.width,
+    viewport.height = (float)gfx.swapchain_extent.height, viewport.minDepth = 0.0f, viewport.maxDepth = 1.0f };
+  vkCmdSetViewport( command_buffer, 0, 1, &viewport );
+
+  VkRect2D scissor = (VkRect2D){ .offset = { 0, 0 }, .extent = gfx.swapchain_extent };
+  vkCmdSetScissor( command_buffer, 0, 1, &scissor );
+
+  // Draw triangle! (cmd, n_verts, n_instances, first_vert, first_instance )
+  vkCmdDraw( command_buffer, 3, 1, 0, 0 );
+
+  vkCmdEndRenderPass( command_buffer ); // End render pass.
+  // Stop recording.
+  if ( VK_SUCCESS != vkEndCommandBuffer( command_buffer ) ) {
+    fprintf( stderr, "ERROR: Failed to record command buffer!\n" );
+    return false;
+  }
+
+  return true;
+}
+
+bool create_sync_objects( void ) {
+  VkSemaphoreCreateInfo semaphore_create_info = (VkSemaphoreCreateInfo){ .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+  VkFenceCreateInfo fence_create_info         = (VkFenceCreateInfo){ .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .flags = VK_FENCE_CREATE_SIGNALED_BIT };
+  if ( VK_SUCCESS != vkCreateSemaphore( gfx.device, &semaphore_create_info, NULL, &gfx.image_available_semaphore ) ||
+       VK_SUCCESS != vkCreateSemaphore( gfx.device, &semaphore_create_info, NULL, &gfx.render_finished_semaphore ) ||
+       VK_SUCCESS != vkCreateFence( gfx.device, &fence_create_info, NULL, &gfx.in_flight_fence ) ) {
+    fprintf( stderr, "ERROR: Failed to create semaphores.\n" );
+    return false;
+  }
+  return true;
+}
 
 bool init_gfx( bool enable_validation ) {
   if ( !create_instance( enable_validation ) ) {
@@ -431,7 +755,6 @@ bool init_gfx( bool enable_validation ) {
     fprintf( stderr, "ERROR: Failed to create_window_and_surface.\n" );
     return false;
   }
-  // TODO setupDebugMessenger();
   if ( !pick_physical_device() ) {
     fprintf( stderr, "ERROR: Failed to pick_physical_device.\n" );
     return false;
@@ -448,16 +771,79 @@ bool init_gfx( bool enable_validation ) {
     fprintf( stderr, "ERROR: Failed to create_image_views.\n" );
     return false;
   }
-  create_render_pass();
-  create_graphics_pipeline();
-  create_framebuffer();
+  if ( !create_render_pass() ) {
+    fprintf( stderr, "ERROR: Failed to create_render_passs.\n" );
+    return false;
+  }
+  if ( !create_graphics_pipeline() ) {
+    fprintf( stderr, "ERROR: Failed to create_graphics_pipeline.\n" );
+    return false;
+  }
+  if ( !create_framebuffers() ) {
+    fprintf( stderr, "ERROR: Failed to create_framebuffers.\n" );
+    return false;
+  }
+  if ( !create_command_pool() ) {
+    fprintf( stderr, "ERROR: Failed to create_command_pool.\n" );
+    return false;
+  }
+  if ( !create_command_buffer() ) {
+    fprintf( stderr, "ERROR: Failed to create_command_buffer.\n" );
+    return false;
+  }
+  if ( !create_sync_objects() ) {
+    fprintf( stderr, "ERROR: Failed to create_sync_objects.\n" );
+    return false;
+  }
   return true;
 }
 
-void draw_frame( void ) {
-  // vkAcquireNextImageKHR(); // Aquire next image from swapchain.
-  // vkQueueSubmit(); // Execute a command buffer for that image.
-  // vkQueuePresentKHR(); // Return image to the swapchain for presentation.
+bool draw_frame( void ) {
+  vkWaitForFences( gfx.device, 1, &gfx.in_flight_fence, VK_TRUE, UINT64_MAX );
+  vkResetFences( gfx.device, 1, &gfx.in_flight_fence );
+
+  // Aquire next image from swapchain.
+  uint32_t image_idx = 0;
+  vkAcquireNextImageKHR( gfx.device, gfx.swapchain, UINT64_MAX, gfx.image_available_semaphore, VK_NULL_HANDLE, &image_idx );
+
+  vkResetCommandBuffer( gfx.command_buffer, 0 );
+  record_command_buffer( gfx.command_buffer, image_idx );
+
+  // Submit command buffer.
+  VkSemaphore wait_semaphores[]      = { gfx.image_available_semaphore };
+  VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+  VkSemaphore signal_semaphores[]    = { gfx.render_finished_semaphore };
+
+  VkSubmitInfo submit_info = (VkSubmitInfo){ //
+    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .waitSemaphoreCount   = 1,
+    .pWaitSemaphores      = wait_semaphores,
+    .pWaitDstStageMask    = wait_stages,
+    .commandBufferCount   = 1,
+    .pCommandBuffers      = &gfx.command_buffer,
+    .signalSemaphoreCount = 1,
+    .pSignalSemaphores    = signal_semaphores
+  };
+
+  // Execute a command buffer for that image.
+  if ( VK_SUCCESS != vkQueueSubmit( gfx.graphics_queue, 1, &submit_info, gfx.in_flight_fence ) ) {
+    fprintf( stderr, "ERROR: Failed to submit draw command buffer!\n" );
+    return false;
+  }
+
+  VkSwapchainKHR swapchains[]   = { gfx.swapchain };
+  VkPresentInfoKHR present_info = (VkPresentInfoKHR){
+    .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores    = signal_semaphores,
+    .swapchainCount     = 1,
+    .pSwapchains        = swapchains,
+    .pImageIndices      = &image_idx //
+  };
+
+  vkQueuePresentKHR( gfx.present_queue, &present_info ); // Return image to the swapchain for presentation.
+
+  return true;
 }
 
 void main_loop( void ) {
@@ -471,6 +857,14 @@ void main_loop( void ) {
 }
 
 void free_gfx( void ) {
+  vkDestroySemaphore( gfx.device, gfx.image_available_semaphore, NULL );
+  vkDestroySemaphore( gfx.device, gfx.render_finished_semaphore, NULL );
+  vkDestroyFence( gfx.device, gfx.in_flight_fence, NULL );
+  vkDestroyCommandPool( gfx.device, gfx.command_pool, NULL );
+  for ( int i = 0; i < gfx.n_swapchain_images; i++ ) { vkDestroyFramebuffer( gfx.device, gfx.swapchain_framebuffers[i], NULL ); }
+  vkDestroyPipeline( gfx.device, gfx.pipeline, NULL );
+  vkDestroyPipelineLayout( gfx.device, gfx.pipeline_layout, NULL );
+  vkDestroyRenderPass( gfx.device, gfx.render_pass, NULL );
   for ( int i = 0; i < gfx.n_swapchain_images; i++ ) { vkDestroyImageView( gfx.device, gfx.swapchain_image_views[i], NULL ); }
   vkDestroySwapchainKHR( gfx.device, gfx.swapchain, NULL );
   vkDestroySurfaceKHR( gfx.instance, gfx.surface, NULL );

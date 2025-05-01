@@ -24,6 +24,7 @@
 
 ## ToDo
 
+* Subpass dependencies. VkSubpassDependency
 * try using integrated device on new PC
 * try no-graphics vulkan, with a view to ML or generic GPGPU workloads in compute shaders.
   * also why doesn't pytorch support that instead of 'cuda' rocm? it would work on more devices?
