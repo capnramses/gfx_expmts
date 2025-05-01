@@ -847,9 +847,22 @@ bool draw_frame( void ) {
 }
 
 void main_loop( void ) {
+  double prev_s           = glfwGetTime();
+  double text_countdown_s = 0.1;
   while ( !glfwWindowShouldClose( gfx.window_ptr ) ) {
     glfwPollEvents();
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_ESCAPE ) ) { break; }
+    double curr_s    = glfwGetTime();
+    double elapsed_s = curr_s - prev_s;
+    prev_s           = curr_s;
+    text_countdown_s -= elapsed_s;
+    if ( text_countdown_s <= 0.0 ) {
+      text_countdown_s = 0.1;
+      double fps = 1.0 / elapsed_s;
+      char title_str[2048];
+      sprintf( title_str, "Anton's Vulkan Hello Triangle @ %.2lf FPS", fps );
+      glfwSetWindowTitle( gfx.window_ptr, title_str );
+    }
 
     draw_frame();
   }
