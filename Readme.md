@@ -141,6 +141,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 123     | `voxel_terrain_sw`          | voxel terrain rendering _a la_ Pikuma                                          | working             |
 | 124     | `geo_mipmap`                | Heightmap terrain sampled in vertex shader, scrolling camera mesh.             | working             |
 | 125     | `simd_math`                 | Experiments with SIMD extensions.                                              | started             |
+| 126     | `vulkan_hello_triangle`     | Another Vulkan starter.                                                        | working             |
 | xxx     | `wolf_tracer`               | Ray tracer _a la_ Wolfenstein 3-D.                                             | proposed            |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                        | proposed            |
