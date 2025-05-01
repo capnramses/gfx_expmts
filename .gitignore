@@ -23,6 +23,10 @@ output.png
 out.*
 *.xyz
 
+*.vox
+*.lib
+*.spv
+
 # other program names
 bye
 cubemap
@@ -128,7 +132,6 @@ unfiltered_heightmap_out.png
 089_voxedit_edges/out_*
 doog.jpg
 external-content.duckduckgo.com.jpeg
-*.vox
 106_voxedit2/texture-vp.png
 106_voxedit2/screens/*.png
 frame0000.png
@@ -136,5 +139,4 @@ frame0000.png
 Hocus_Pocus_palette.png
 my.ply
 hersk-export.png
-*.lib
 output.ppm
