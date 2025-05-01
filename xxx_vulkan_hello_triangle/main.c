@@ -24,14 +24,15 @@ typedef struct gfx_vul_t {
   GLFWwindow* window_ptr;
   VkApplicationInfo app_info;
   VkInstance instance;
-  VkPhysicalDevice physical_device; //
-  VkDevice device;                  // "Logical" device.
-  VkSurfaceKHR surface;             // "KHR" suffix implies it's from an extension.
-  VkSwapchainKHR swapchain;         // Collection of render targets. e.g. front & back.
-  VkImage swapchain_images[16];     //
-  uint32_t n_swapchain_images;      //
-  VkFormat swapchain_image_format;  //
-  VkExtent2D swapchain_extent;      //
+  VkPhysicalDevice physical_device;      //
+  VkDevice device;                       // "Logical" device.
+  VkSurfaceKHR surface;                  // "KHR" suffix implies it's from an extension.
+  VkSwapchainKHR swapchain;              // Collection of render targets. e.g. front & back.
+  VkImage swapchain_images[16];          //
+  uint32_t n_swapchain_images;           //
+  VkFormat swapchain_image_format;       //
+  VkExtent2D swapchain_extent;           //
+  VkImageView swapchain_image_views[16]; // 1 per swapchain image.
   // NB: Typical 1 image view and 1 framebuffer per swapchain image.
   // VkImageView image_view;    // Required to draw any part of an image from swapchain.
   // VkFramebuffer framebuffer; // Image views used for colour, depth, stencil targets.
@@ -387,11 +388,38 @@ bool create_swap_chain( void ) {
   return true;
 }
 
-void create_image_views( void ) {}
+bool create_image_views( void ) {
+  for ( size_t i = 0; i < gfx.n_swapchain_images; i++ ) {
+    VkImageViewCreateInfo create_info = (VkImageViewCreateInfo){
+      //
+      .sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, //
+      .image                           = gfx.swapchain_images[i],                  //
+      .viewType                        = VK_IMAGE_VIEW_TYPE_2D,                    //
+      .format                          = gfx.swapchain_image_format,               //
+      .components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY,            // Can e.g. map all chans to red for monochrome.
+      .components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY,            // Or set constant value e.g. 0 or 1 to a chan.
+      .components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY,            // But this is the default mapping.
+      .components.a                    = VK_COMPONENT_SWIZZLE_IDENTITY,            //
+      .subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,                //
+      .subresourceRange.baseMipLevel   = 0,                                        //
+      .subresourceRange.levelCount     = 1,                                        //
+      .subresourceRange.baseArrayLayer = 0,                                        //
+      .subresourceRange.layerCount     = 1                                         // Stereoscopic apps have multiple layers for left and right eyes.
+    };
+    if ( VK_SUCCESS != vkCreateImageView( gfx.device, &create_info, NULL, &gfx.swapchain_image_views[i] ) ) {
+      fprintf( stderr, "ERROR: Failed to create image view!\n" );
+      return false;
+    }
+  }
+  return true;
+}
 
 void create_render_pass( void ) {}
 
-void create_graphics_pipeline( void ) {}
+void create_graphics_pipeline( void ) {
+  //
+}
+
 void create_framebuffer( void ) {}
 
 bool init_gfx( bool enable_validation ) {
@@ -416,7 +444,10 @@ bool init_gfx( bool enable_validation ) {
     fprintf( stderr, "ERROR: Failed to create_swap_chain.\n" );
     return false;
   }
-  create_image_views();
+  if ( !create_image_views() ) {
+    fprintf( stderr, "ERROR: Failed to create_image_views.\n" );
+    return false;
+  }
   create_render_pass();
   create_graphics_pipeline();
   create_framebuffer();
@@ -440,6 +471,7 @@ void main_loop( void ) {
 }
 
 void free_gfx( void ) {
+  for ( int i = 0; i < gfx.n_swapchain_images; i++ ) { vkDestroyImageView( gfx.device, gfx.swapchain_image_views[i], NULL ); }
   vkDestroySwapchainKHR( gfx.device, gfx.swapchain, NULL );
   vkDestroySurfaceKHR( gfx.instance, gfx.surface, NULL );
   vkDestroyDevice( gfx.device, NULL );
