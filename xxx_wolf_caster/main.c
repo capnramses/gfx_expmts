@@ -31,6 +31,12 @@ typedef struct texture_t {
   int w, h;
 } texture_t;
 
+typedef struct player_t {
+  float pos_x, pos_y;
+  float angle;
+  float dir_x, dir_y;
+} player_t;
+
 mesh_t quad_mesh;
 shader_t textured_shader;
 
@@ -166,12 +172,13 @@ GLFWwindow* gfx_start( int win_w, int win_h, const char* title ) {
   return window;
 }
 
-void raycast( int w, int h, uint8_t* main_img_ptr ) {
+void raycast( int w, int h, uint8_t* main_img_ptr, player_t player ) {
   const uint8_t ceil_colour[]  = { 0x44, 0x44, 0x44 };
   const uint8_t floor_colour[] = { 0x33, 0x33, 0x33 };
 
   memset( main_img_ptr, 0, w * h * 3 ); // Should really be a single colour pal index.
 
+  // Set ceiling and floor colours.
   for ( int y = 0; y < h / 2; y++ ) {
     for ( int x = 0; x < w; x++ ) {
       int img_idx = ( y * w + x ) * 3;
@@ -241,12 +248,6 @@ void plot_line( int x_i, int y_i, int x_f, int y_f, uint8_t* rgb, uint8_t* img_p
   } // endif
 } // endfunc
 
-typedef struct player_t {
-  float pos_x, pos_y;
-  float angle;
-  float dir_x, dir_y;
-} player_t;
-
 const int map_w     = 8;
 const int map_h     = 8;
 const uint8_t map[] = {
@@ -265,6 +266,7 @@ void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_
   uint8_t wall_col[]   = { 0x77, 0x77, 0x77 };
   uint8_t floor_col[]  = { 0x22, 0x22, 0x22 };
   uint8_t player_col[] = { 0xCC, 0xCC, 0x00 };
+  uint8_t ray_col[]    = { 0x00, 0xCC, 0x00 };
   memset( minimap_img_ptr, 0, minimap_texture->w * minimap_texture->h * 3 );
   // walls
   for ( int y = 0; y < map_h; y++ ) {
@@ -291,6 +293,43 @@ void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_
     }
     plot_line( x, y, x + player.dir_x * 15, y + player.dir_y * 15, player_col, minimap_img_ptr, minimap_texture->w, minimap_texture->h, 3 );
   }
+
+  float ray_angle = player.angle;
+  float x_offs = 0, y_offs = 0;
+  float rx = 0, ry = 0;
+  int dof = 0, mx = 0, my = 0, mp = 0;
+  float a_tan = -1.0f / tanf( ray_angle );
+  for ( int r = 0; r < 1; r++ ) {
+    if ( ray_angle > PI ) {
+      ry     = ( ( (int)player.pos_y >> 6 ) << 6 )  - 0.0001f; // Round to nearest 64 by /64 then *64.
+      rx     = ( player.pos_y - ry ) * a_tan + player.pos_x;
+      y_offs = -64.0f;
+      x_offs = -y_offs * a_tan;
+    } else if ( ray_angle > 0.0f && ray_angle < PI ) {
+      ry     = ( ( (int)player.pos_y >> 6 ) << 6 )+ 64.0f; // Round to nearest 64 by /64 then *64.
+      rx     = ( player.pos_y - ry ) * a_tan + player.pos_x;
+      y_offs = 64.0f;
+      x_offs = -y_offs * a_tan;
+    } else if ( 0.0f == ray_angle || PI == ray_angle ) { // Exactly left or right.
+      rx  = player.pos_x;
+      ry  = player.pos_y;
+      dof = 8;
+    }
+    while ( dof < 8 ) {
+      mx = (int)( rx ) >> 6;
+      my = (int)( ry ) >> 6;
+      mp = my * map_w + mx; // mp = map position i guess.
+      if ( mp < map_w * map_h && 1 == map[mp] ) {
+        dof = 8;
+      } // Hit wall.
+      else {
+        rx += x_offs;
+        ry + y_offs;
+        dof += 1;
+      } // next line.
+    }
+    plot_line( player.pos_x, player.pos_y, rx, ry, ray_col, minimap_img_ptr, minimap_texture->w, minimap_texture->h, 3 );
+  }
 }
 
 void move_player( GLFWwindow* window, player_t* p_ptr, double elapsed_s ) {
@@ -299,8 +338,9 @@ void move_player( GLFWwindow* window, player_t* p_ptr, double elapsed_s ) {
   if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_LEFT ) ) { p_ptr->angle -= rot_speed * elapsed_s; }
   if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_RIGHT ) ) { p_ptr->angle += rot_speed * elapsed_s; }
   p_ptr->angle = fmodf( p_ptr->angle, 2.0 * PI );
-  p_ptr->dir_x = cosf( p_ptr->angle - PI * 0.5 );
-  p_ptr->dir_y = sinf( p_ptr->angle - PI * 0.5 );
+  p_ptr->angle = p_ptr->angle >= 0.0f ? p_ptr->angle : p_ptr->angle + 2.0 * PI;
+  p_ptr->dir_x = cosf( p_ptr->angle );
+  p_ptr->dir_y = sinf( p_ptr->angle );
   if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_UP ) ) {
     p_ptr->pos_x += p_ptr->dir_x * speed * elapsed_s;
     p_ptr->pos_y += p_ptr->dir_y * speed * elapsed_s;
@@ -327,11 +367,6 @@ int main() {
   texture_t main_texture    = gfx_create_texture_from_mem( rt_res_w, rt_res_h, main_img_ptr );
   texture_t minimap_texture = gfx_create_texture_from_mem( minimap_res_w, minimap_res_h, minimap_img_ptr );
 
-  raycast( rt_res_w, rt_res_h, main_img_ptr );
-  gfx_update_texture_from_mem( &main_texture, main_img_ptr );
-  draw_minimap( minimap_img_ptr, &minimap_texture, player );
-  gfx_update_texture_from_mem( &minimap_texture, minimap_img_ptr );
-
   double prev_s = glfwGetTime();
   while ( !glfwWindowShouldClose( window ) ) {
     double curr_s    = glfwGetTime();
@@ -342,6 +377,8 @@ int main() {
 
     move_player( window, &player, elapsed_s );
 
+    raycast( rt_res_w, rt_res_h, main_img_ptr, player );
+    gfx_update_texture_from_mem( &main_texture, main_img_ptr );
     draw_minimap( minimap_img_ptr, &minimap_texture, player );
     gfx_update_texture_from_mem( &minimap_texture, minimap_img_ptr );
 
