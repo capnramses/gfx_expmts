@@ -1,3 +1,10 @@
+/**
+ * 
+ * References:
+ * https://lodev.org/cgtutor/raycasting.html
+ * https://www.youtube.com/watch?v=gYRrGTC7GtA
+ * 
+ */
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <math.h>
@@ -194,12 +201,63 @@ void raycast( int w, int h, uint8_t* main_img_ptr ) {
   }
 }
 
+typedef struct player_t {
+  float pos_x, pos_y;
+  float rot_y;
+} player_t;
+
+const int map_w     = 8;
+const int map_h     = 8;
+const uint8_t map[] = {
+  1, 1, 1, 1, 1, 1, 1, 1, // 0
+  1, 0, 1, 0, 1, 0, 0, 1, // 1
+  1, 0, 1, 0, 1, 0, 0, 1, // 2
+  1, 0, 0, 0, 0, 0, 0, 1, // 3
+  1, 0, 0, 0, 1, 1, 1, 1, // 4
+  1, 0, 0, 1, 1, 0, 0, 1, // 5
+  1, 1, 0, 0, 0, 0, 0, 1, // 6
+  1, 1, 1, 1, 1, 1, 1, 1  // 7
+};
+
+void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_t player ) {
+  const int wall_w     = 32;
+  uint8_t wall_col[]   = { 0x77, 0x77, 0x77 };
+  uint8_t player_col[] = { 0x88, 0x88, 0x00 };
+  memset( minimap_img_ptr, 0, minimap_texture->w * minimap_texture->h * 3 );
+  // walls
+  for ( int y = 0; y < map_h; y++ ) {
+    for ( int x = 0; x < map_w; x++ ) {
+      int map_idx = y * map_w + x;
+      if ( 1 == map[map_idx] ) {
+        for ( int r = 1; r < wall_w - 1; r++ ) {
+          for ( int c = 1; c < wall_w - 1; c++ ) {
+            int img_idx = ( y * wall_w * minimap_texture->h + x * wall_w + r * minimap_texture->h + c ) * 3;
+            memcpy( &minimap_img_ptr[img_idx], wall_col, 3 ); //
+          }
+        }
+      } // endif
+    }
+  }
+  { // draw player
+    int x = (int)( player.pos_x / ( (float)map_w  ) * minimap_texture->w );
+    int y = (int)( player.pos_y / ( (float)map_h ) * minimap_texture->h );
+    for ( int r = y-5; r < y+5; r++ ) {
+      for ( int c = x-5; c < x+5; c++ ) {
+        int img_idx = ( r * minimap_texture->w + c ) * 3;
+        memcpy( &minimap_img_ptr[img_idx], player_col, 3 );
+      }
+    }
+  }
+}
+
 int main() {
   int rt_res_w = 320, rt_res_h = 200;
   int minimap_res_w = 256, minimap_res_h = 256;
   int win_w = 1024, win_h = 768;
   GLFWwindow* window = gfx_start( win_w, win_h, "Antolf 3-D" );
   if ( !window ) { return 1; }
+
+  player_t player = { .pos_x = 1.5f, .pos_y = 3.5f };
 
   uint8_t* main_img_ptr    = calloc( rt_res_w * rt_res_h * 3, 1 );
   uint8_t* minimap_img_ptr = calloc( minimap_res_w * minimap_res_h * 3, 1 );
@@ -210,6 +268,8 @@ int main() {
 
   raycast( rt_res_w, rt_res_h, main_img_ptr );
   gfx_update_texture_from_mem( &main_texture, main_img_ptr );
+  draw_minimap( minimap_img_ptr, &minimap_texture, player );
+  gfx_update_texture_from_mem( &minimap_texture, minimap_img_ptr );
 
   while ( !glfwWindowShouldClose( window ) ) {
     glfwPollEvents();
@@ -229,8 +289,8 @@ int main() {
 
     glActiveTexture( GL_TEXTURE0 );
     glBindTexture( GL_TEXTURE_2D, minimap_texture.handle );
-    glUniform2f( textured_shader.u_scale, 0.25f, 0.25f );
-    glUniform2f( textured_shader.u_pos, 0.75f, 0.75f );
+    glUniform2f( textured_shader.u_scale, 0.5f, 0.5f );
+    glUniform2f( textured_shader.u_pos, 0.5f, 0.5f );
     glDrawArrays( quad_mesh.primitive, 0, quad_mesh.n_points );
 
     glfwSwapBuffers( window );
