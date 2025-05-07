@@ -84,7 +84,7 @@ shader_t gfx_create_shader_from_strings( const char* vert_str, const char* frag_
 }
 
 texture_t gfx_create_texture_from_mem( int w, int h, void* pixels ) {
-  texture_t texture = { .handle = 0 };
+  texture_t texture = { .handle = 0, .w = w, .h = h };
   glActiveTexture( GL_TEXTURE0 );
   glGenTextures( 1, &texture.handle );
   glBindTexture( GL_TEXTURE_2D, texture.handle );
@@ -95,6 +95,15 @@ texture_t gfx_create_texture_from_mem( int w, int h, void* pixels ) {
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
   glBindTexture( GL_TEXTURE_2D, 0 );
   return texture;
+}
+
+void gfx_update_texture_from_mem( texture_t* texture_ptr, void* pixels ) {
+  // glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+  glActiveTexture( GL_TEXTURE0 );
+  glBindTexture( GL_TEXTURE_2D, texture_ptr->handle );
+  glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, texture_ptr->w, texture_ptr->h, GL_RGB, GL_UNSIGNED_BYTE, pixels );
+  glBindTexture( GL_TEXTURE_2D, 0 );
+  // glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
 }
 
 GLFWwindow* gfx_start( int win_w, int win_h, const char* title ) {
@@ -149,17 +158,40 @@ GLFWwindow* gfx_start( int win_w, int win_h, const char* title ) {
   return window;
 }
 
+void raycast( int w, int h, uint8_t* main_img_ptr ) {
+  memset( main_img_ptr, 0, w * h * 3 ); // Should really be a single colour pal index.
+  for ( int x = 0; x < w; x++ ) {
+    // Raycast distance to nearest square here.
+    float dist                    = 100.0f;
+    const float max_visible_range = 500.0f;
+    float height_on_screen        = ( 1.0f - dist / max_visible_range ) * h;
+    int half_gap_y                = (int)( ( h - height_on_screen ) / 2.0f );
+    for ( int y = half_gap_y; y < h - half_gap_y; y++ ) {
+      // Draw a column of texture here.
+      int img_idx               = ( y * w + x ) * 3;
+      main_img_ptr[img_idx + 0] = 0x00;
+      main_img_ptr[img_idx + 1] = 0xFF;
+      main_img_ptr[img_idx + 2] = 0x00;
+    }
+  }
+}
+
 int main() {
+  int rt_res_w = 320, rt_res_h = 200;
+  int map_res_w = 256, map_res_h = 256;
   int win_w = 1024, win_h = 768;
   GLFWwindow* window = gfx_start( win_w, win_h, "Antolf 3-D" );
   if ( !window ) { return 1; }
 
-  uint8_t* main_img_ptr = calloc( win_w * win_h * 3, 1 );
-  uint8_t* map_img_ptr  = calloc( win_w / 8 * win_h / 8 * 3, 1 );
+  uint8_t* main_img_ptr = calloc( rt_res_w * rt_res_h * 3, 1 );
+  uint8_t* map_img_ptr  = calloc( map_res_w * map_res_h * 3, 1 );
 
-  for ( int i = 0; i < win_w * win_h * 3; i++ ) { main_img_ptr[i] = rand() % 255; }
-  texture_t main_texture = gfx_create_texture_from_mem( win_w, win_h, main_img_ptr );
-  texture_t map_texture  = gfx_create_texture_from_mem( win_w / 8, win_h / 8, map_img_ptr );
+  // for ( int i = 0; i < rt_res_w * rt_res_h * 3; i++ ) { main_img_ptr[i] = rand() % 255; }
+  texture_t main_texture = gfx_create_texture_from_mem( rt_res_w, rt_res_h, main_img_ptr );
+  texture_t map_texture  = gfx_create_texture_from_mem( map_res_w, map_res_h, map_img_ptr );
+
+  raycast( rt_res_w, rt_res_h, main_img_ptr );
+  gfx_update_texture_from_mem( &main_texture, main_img_ptr );
 
   while ( !glfwWindowShouldClose( window ) ) {
     glViewport( 0, 0, win_w, win_h );
