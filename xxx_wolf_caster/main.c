@@ -1,9 +1,9 @@
 /**
- * 
+ *
  * References:
  * https://lodev.org/cgtutor/raycasting.html
  * https://www.youtube.com/watch?v=gYRrGTC7GtA
- * 
+ *
  */
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -239,15 +239,23 @@ void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_
     }
   }
   { // draw player
-    int x = (int)( player.pos_x / ( (float)map_w  ) * minimap_texture->w );
+    int x = (int)( player.pos_x / ( (float)map_w ) * minimap_texture->w );
     int y = (int)( player.pos_y / ( (float)map_h ) * minimap_texture->h );
-    for ( int r = y-5; r < y+5; r++ ) {
-      for ( int c = x-5; c < x+5; c++ ) {
+    for ( int r = y - 5; r < y + 5; r++ ) {
+      for ( int c = x - 5; c < x + 5; c++ ) {
         int img_idx = ( r * minimap_texture->w + c ) * 3;
         memcpy( &minimap_img_ptr[img_idx], player_col, 3 );
       }
     }
   }
+}
+
+void move_player( GLFWwindow* window, player_t* p_ptr, double elapsed_s ) {
+  const float speed = 1.0f;
+  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_A ) ) { p_ptr->pos_x -= speed * elapsed_s; }
+  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_D ) ) { p_ptr->pos_x += speed * elapsed_s; }
+  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_W ) ) { p_ptr->pos_y -= speed * elapsed_s; }
+  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_S ) ) { p_ptr->pos_y += speed * elapsed_s; }
 }
 
 int main() {
@@ -271,9 +279,18 @@ int main() {
   draw_minimap( minimap_img_ptr, &minimap_texture, player );
   gfx_update_texture_from_mem( &minimap_texture, minimap_img_ptr );
 
+  double prev_s = glfwGetTime();
   while ( !glfwWindowShouldClose( window ) ) {
+    double curr_s    = glfwGetTime();
+    double elapsed_s = curr_s - prev_s;
+    prev_s           = curr_s;
     glfwPollEvents();
     if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_ESCAPE ) ) { break; }
+
+    move_player( window, &player, elapsed_s );
+
+    draw_minimap( minimap_img_ptr, &minimap_texture, player );
+    gfx_update_texture_from_mem( &minimap_texture, minimap_img_ptr );
 
     glViewport( 0, 0, win_w, win_h );
     glClearColor( 0.2f, 0.2f, 0.2f, 1.0f );
