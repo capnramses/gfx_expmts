@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PI 3.14159265358979323846f
+
 typedef struct mesh_t {
   GLuint vao, vbo;
   int n_points;
@@ -95,7 +97,7 @@ texture_t gfx_create_texture_from_mem( int w, int h, void* pixels ) {
   glActiveTexture( GL_TEXTURE0 );
   glGenTextures( 1, &texture.handle );
   glBindTexture( GL_TEXTURE_2D, texture.handle );
-  glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels );
+  glTexImage2D( GL_TEXTURE_2D, 0, GL_SRGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
@@ -105,12 +107,10 @@ texture_t gfx_create_texture_from_mem( int w, int h, void* pixels ) {
 }
 
 void gfx_update_texture_from_mem( texture_t* texture_ptr, void* pixels ) {
-  // glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
   glActiveTexture( GL_TEXTURE0 );
   glBindTexture( GL_TEXTURE_2D, texture_ptr->handle );
   glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, texture_ptr->w, texture_ptr->h, GL_RGB, GL_UNSIGNED_BYTE, pixels );
   glBindTexture( GL_TEXTURE_2D, 0 );
-  // glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
 }
 
 GLFWwindow* gfx_start( int win_w, int win_h, const char* title ) {
@@ -154,7 +154,7 @@ GLFWwindow* gfx_start( int win_w, int win_h, const char* title ) {
       "out vec4 frag_colour;"
       "void main() {"
       "  vec4 texel = texture( u_tex, st );"
-      "  frag_colour = vec4( texel.rgb, 1.0 );"
+      "  frag_colour = vec4( pow(texel.rgb, vec3( 1.0 / 2.2 ) ), 1.0 );"
       "}";
     textured_shader = gfx_create_shader_from_strings( vertex_shader, fragment_shader );
     if ( 0 == textured_shader.program ) {
@@ -201,9 +201,50 @@ void raycast( int w, int h, uint8_t* main_img_ptr ) {
   }
 }
 
+void plot_line( int x_i, int y_i, int x_f, int y_f, uint8_t* rgb, uint8_t* img_ptr, int w, int h, int n_chans ) {
+  int x = x_i, y = y_i, d_x = x_f - x_i, d_y = y_f - y_i, i_x = 1, i_y = 1;
+  if ( d_x < 0 ) {
+    i_x = -1;
+    d_x = abs( d_x );
+  }
+  if ( d_y < 0 ) {
+    i_y = -1;
+    d_y = abs( d_y );
+  }
+  int d2_x = d_x * 2, d2_y = d_y * 2;
+  if ( d_x > d_y ) {
+    int err = d2_y - d_x;
+    for ( int i = 0; i <= d_x; i++ ) {
+      memcpy( &img_ptr[( y * w + x ) * n_chans], rgb, n_chans );
+      // plot( x, y + 1, R2, G2, B2 );
+      // plot( x, y - 1, R2, G2, B2 );
+      if ( err >= 0 ) {
+        err -= d2_x;
+        y += i_y;
+      }
+      err += d2_y;
+      x += i_x;
+    } // endfor
+  } else {
+    int err = d2_x - d_y;
+    for ( int i = 0; i <= d_y; i++ ) {
+      memcpy( &img_ptr[( y * w + x ) * n_chans], rgb, n_chans );
+      // plot( x + 1, y, R2, G2, B2 );
+      // plot( x - 1, y, R2, G2, B2 );
+      if ( err >= 0 ) {
+        err -= d2_y;
+        x += i_x;
+      }
+      err += d2_x;
+      y += i_y;
+    } // endfor
+  } // endif
+} // endfunc
+
 typedef struct player_t {
   float pos_x, pos_y;
-  float rot_y;
+  float angle;
+  float dir_x, dir_y;
 } player_t;
 
 const int map_w     = 8;
@@ -222,20 +263,21 @@ const uint8_t map[] = {
 void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_t player ) {
   const int wall_w     = 32;
   uint8_t wall_col[]   = { 0x77, 0x77, 0x77 };
-  uint8_t player_col[] = { 0x88, 0x88, 0x00 };
+  uint8_t floor_col[]  = { 0x22, 0x22, 0x22 };
+  uint8_t player_col[] = { 0xCC, 0xCC, 0x00 };
   memset( minimap_img_ptr, 0, minimap_texture->w * minimap_texture->h * 3 );
   // walls
   for ( int y = 0; y < map_h; y++ ) {
     for ( int x = 0; x < map_w; x++ ) {
-      int map_idx = y * map_w + x;
-      if ( 1 == map[map_idx] ) {
-        for ( int r = 1; r < wall_w - 1; r++ ) {
-          for ( int c = 1; c < wall_w - 1; c++ ) {
-            int img_idx = ( y * wall_w * minimap_texture->h + x * wall_w + r * minimap_texture->h + c ) * 3;
-            memcpy( &minimap_img_ptr[img_idx], wall_col, 3 ); //
-          }
+      int map_idx      = y * map_w + x;
+      uint8_t colour[] = { 0x22, 0x22, 0x22 };
+      if ( 1 == map[map_idx] ) { memcpy( colour, wall_col, 3 ); }
+      for ( int r = 1; r < wall_w - 1; r++ ) {
+        for ( int c = 1; c < wall_w - 1; c++ ) {
+          int img_idx = ( y * wall_w * minimap_texture->h + x * wall_w + r * minimap_texture->h + c ) * 3;
+          memcpy( &minimap_img_ptr[img_idx], colour, 3 );
         }
-      } // endif
+      }
     }
   }
   { // draw player
@@ -247,15 +289,26 @@ void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_
         memcpy( &minimap_img_ptr[img_idx], player_col, 3 );
       }
     }
+    plot_line( x, y, x + player.dir_x * 15, y + player.dir_y * 15, player_col, minimap_img_ptr, minimap_texture->w, minimap_texture->h, 3 );
   }
 }
 
 void move_player( GLFWwindow* window, player_t* p_ptr, double elapsed_s ) {
-  const float speed = 1.0f;
-  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_A ) ) { p_ptr->pos_x -= speed * elapsed_s; }
-  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_D ) ) { p_ptr->pos_x += speed * elapsed_s; }
-  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_W ) ) { p_ptr->pos_y -= speed * elapsed_s; }
-  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_S ) ) { p_ptr->pos_y += speed * elapsed_s; }
+  const float speed     = 1.0f;
+  const float rot_speed = 2.0f;
+  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_LEFT ) ) { p_ptr->angle -= rot_speed * elapsed_s; }
+  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_RIGHT ) ) { p_ptr->angle += rot_speed * elapsed_s; }
+  p_ptr->angle = fmodf( p_ptr->angle, 2.0 * PI );
+  p_ptr->dir_x = cosf( p_ptr->angle - PI * 0.5 );
+  p_ptr->dir_y = sinf( p_ptr->angle - PI * 0.5 );
+  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_UP ) ) {
+    p_ptr->pos_x += p_ptr->dir_x * speed * elapsed_s;
+    p_ptr->pos_y += p_ptr->dir_y * speed * elapsed_s;
+  }
+  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_DOWN ) ) {
+    p_ptr->pos_x -= p_ptr->dir_x * speed * elapsed_s;
+    p_ptr->pos_y -= p_ptr->dir_y * speed * elapsed_s;
+  }
 }
 
 int main() {
