@@ -212,7 +212,6 @@ int main() {
   gfx_update_texture_from_mem( &main_texture, main_img_ptr );
 
   while ( !glfwWindowShouldClose( window ) ) {
-    glViewport( 0, 0, win_w, win_h );
     glfwPollEvents();
     if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_ESCAPE ) ) { break; }
 
