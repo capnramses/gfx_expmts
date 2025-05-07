@@ -196,17 +196,17 @@ void raycast( int w, int h, uint8_t* main_img_ptr ) {
 
 int main() {
   int rt_res_w = 320, rt_res_h = 200;
-  int map_res_w = 256, map_res_h = 256;
+  int minimap_res_w = 256, minimap_res_h = 256;
   int win_w = 1024, win_h = 768;
   GLFWwindow* window = gfx_start( win_w, win_h, "Antolf 3-D" );
   if ( !window ) { return 1; }
 
-  uint8_t* main_img_ptr = calloc( rt_res_w * rt_res_h * 3, 1 );
-  uint8_t* map_img_ptr  = calloc( map_res_w * map_res_h * 3, 1 );
+  uint8_t* main_img_ptr    = calloc( rt_res_w * rt_res_h * 3, 1 );
+  uint8_t* minimap_img_ptr = calloc( minimap_res_w * minimap_res_h * 3, 1 );
 
-  // for ( int i = 0; i < rt_res_w * rt_res_h * 3; i++ ) { main_img_ptr[i] = rand() % 255; }
-  texture_t main_texture = gfx_create_texture_from_mem( rt_res_w, rt_res_h, main_img_ptr );
-  texture_t map_texture  = gfx_create_texture_from_mem( map_res_w, map_res_h, map_img_ptr );
+  for ( int i = 0; i < minimap_res_w * minimap_res_h * 3; i++ ) { minimap_img_ptr[i] = rand() % 255; }
+  texture_t main_texture    = gfx_create_texture_from_mem( rt_res_w, rt_res_h, main_img_ptr );
+  texture_t minimap_texture = gfx_create_texture_from_mem( minimap_res_w, minimap_res_h, minimap_img_ptr );
 
   raycast( rt_res_w, rt_res_h, main_img_ptr );
   gfx_update_texture_from_mem( &main_texture, main_img_ptr );
@@ -229,7 +229,7 @@ int main() {
     glDrawArrays( quad_mesh.primitive, 0, quad_mesh.n_points );
 
     glActiveTexture( GL_TEXTURE0 );
-    glBindTexture( GL_TEXTURE_2D, map_texture.handle );
+    glBindTexture( GL_TEXTURE_2D, minimap_texture.handle );
     glUniform2f( textured_shader.u_scale, 0.25f, 0.25f );
     glUniform2f( textured_shader.u_pos, 0.75f, 0.75f );
     glDrawArrays( quad_mesh.primitive, 0, quad_mesh.n_points );
@@ -239,7 +239,7 @@ int main() {
 
   glfwTerminate();
   free( main_img_ptr );
-  free( map_img_ptr );
+  free( minimap_img_ptr );
 
   printf( "Normal exit.\n" );
   return 0;
