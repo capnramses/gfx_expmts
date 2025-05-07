@@ -137,6 +137,7 @@ GLFWwindow* gfx_start( int win_w, int win_h, const char* title ) {
       "out vec2 st;"
       "void main() {"
       "  st = vp.xy * 0.5 + 0.5;"
+      "  st.t = 1.0 - st.t;"
       "  gl_Position = vec4( vp * u_scale + u_pos, 0.0, 1.0 );"
       "}";
     const char* fragment_shader =
@@ -159,7 +160,24 @@ GLFWwindow* gfx_start( int win_w, int win_h, const char* title ) {
 }
 
 void raycast( int w, int h, uint8_t* main_img_ptr ) {
+  const uint8_t ceil_colour[]  = { 0x44, 0x44, 0x44 };
+  const uint8_t floor_colour[] = { 0x33, 0x33, 0x33 };
+
   memset( main_img_ptr, 0, w * h * 3 ); // Should really be a single colour pal index.
+
+  for ( int y = 0; y < h / 2; y++ ) {
+    for ( int x = 0; x < w; x++ ) {
+      int img_idx = ( y * w + x ) * 3;
+      memcpy( &main_img_ptr[img_idx], ceil_colour, 3 );
+    }
+  }
+  for ( int y = h / 2; y < h; y++ ) {
+    for ( int x = 0; x < w; x++ ) {
+      int img_idx = ( y * w + x ) * 3;
+      memcpy( &main_img_ptr[img_idx], floor_colour, 3 );
+    }
+  }
+
   for ( int x = 0; x < w; x++ ) {
     // Raycast distance to nearest square here.
     float dist                    = 100.0f;
@@ -169,9 +187,9 @@ void raycast( int w, int h, uint8_t* main_img_ptr ) {
     for ( int y = half_gap_y; y < h - half_gap_y; y++ ) {
       // Draw a column of texture here.
       int img_idx               = ( y * w + x ) * 3;
-      main_img_ptr[img_idx + 0] = 0x00;
-      main_img_ptr[img_idx + 1] = 0xFF;
-      main_img_ptr[img_idx + 2] = 0x00;
+      main_img_ptr[img_idx + 0] = 0x11;
+      main_img_ptr[img_idx + 1] = 0x22;
+      main_img_ptr[img_idx + 2] = 0x88;
     }
   }
 }
