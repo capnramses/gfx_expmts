@@ -7,6 +7,7 @@
  */
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#include <float.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -40,8 +41,25 @@ typedef struct player_t {
   float dir_x, dir_y;
 } player_t;
 
+typedef struct rgb_t {
+  uint8_t r, g, b;
+} rgb_t;
+
 mesh_t quad_mesh;
 shader_t textured_shader;
+
+const int map_w     = 8;
+const int map_h     = 8;
+const uint8_t map[] = {
+  1, 1, 1, 1, 1, 1, 1, 1, // 0
+  1, 0, 1, 0, 1, 0, 0, 1, // 1
+  1, 0, 1, 0, 1, 0, 0, 1, // 2
+  1, 0, 0, 0, 0, 0, 0, 1, // 3
+  1, 0, 0, 0, 1, 1, 1, 1, // 4
+  1, 0, 0, 1, 1, 0, 0, 1, // 5
+  1, 1, 0, 0, 0, 0, 0, 1, // 6
+  1, 1, 1, 1, 1, 1, 1, 1  // 7
+};
 
 mesh_t gfx_create_mesh_from_mem( float* points, int n_comps, int n_points, GLenum primitive ) {
   mesh_t mesh = { .n_points = n_points, .primitive = primitive };
@@ -195,18 +213,109 @@ void raycast( int w, int h, uint8_t* main_img_ptr, player_t player ) {
     }
   }
 
+  // Which box of the map we're in. Assumes boxes are 1.0 wide.
+  int map_x = (int)player.pos_x;
+  int map_y = (int)player.pos_y;
+
+  float dir_x = player.dir_x, dir_y = player.dir_y;
+  float plane_x = 0.0f, plane_y = 0.0f;
+
   for ( int x = 0; x < w; x++ ) {
-    // Raycast distance to nearest square here.
-    float dist                    = 100.0f;
-    const float max_visible_range = 500.0f;
-    float height_on_screen        = ( 1.0f - dist / max_visible_range ) * h;
-    int half_gap_y                = (int)( ( h - height_on_screen ) / 2.0f );
-    for ( int y = half_gap_y; y < h - half_gap_y; y++ ) {
+    float angle_max       = 0.7854f;
+    float angle_per_pixel = angle_max / ( w / 2 );
+    const int ray_dist    = 1000;
+    int xxx               = x;
+    if ( x >= w / 2 ) { xxx = w / 2 - x; }
+    float angle_a = xxx * angle_per_pixel + player.angle;
+    float ray_dir_x   = cosf( angle_a );
+    float ray_dir_y   = sinf( angle_a );
+
+   // float camera_x  = 2 * x / (float)w - 1; // x-coordinate in camera space
+   // float ray_dir_x = dir_x + plane_x * camera_x;
+  //  float ray_dir_y = dir_y + plane_y * camera_x;
+
+    // Length of ray from current position to next x or y-side.
+    float side_dist_x;
+    float side_dist_y;
+
+    // Length of ray from one x or y-side to next x or y-side.
+    float delta_dist_x = ( ray_dir_x == 0 ) ? FLT_MAX : fabsf( 1 / ray_dir_x );
+    float delta_dist_y = ( ray_dir_y == 0 ) ? FLT_MAX : fabsf( 1 / ray_dir_y );
+    float perpWallDist;
+
+    // what direction to step in x or y-direction (either +1 or -1)
+    int stepX;
+    int stepY;
+
+    int hit = 0; // was there a wall hit?
+    int side;    // was a NS or a EW wall hit?
+
+    // calculate step and initial sideDist
+    if ( ray_dir_x < 0 ) {
+      stepX       = -1;
+      side_dist_x = ( player.pos_x - map_x ) * delta_dist_x;
+    } else {
+      stepX       = 1;
+      side_dist_x = ( map_x + 1.0 - player.pos_x ) * delta_dist_x;
+    }
+    if ( ray_dir_y < 0 ) {
+      stepY       = -1;
+      side_dist_y = ( player.pos_y - map_y ) * delta_dist_y;
+    } else {
+      stepY       = 1;
+      side_dist_y = ( map_y + 1.0 - player.pos_y ) * delta_dist_y;
+    }
+
+    // perform DDA
+    while ( hit == 0 ) {
+      // jump to next map square, either in x-direction, or in y-direction
+      if ( side_dist_x < side_dist_y ) {
+        side_dist_x += delta_dist_x;
+        map_x += stepX;
+        side = 0;
+      } else {
+        side_dist_y += delta_dist_y;
+        map_y += stepY;
+        side = 1;
+      }
+      // Check if ray has hit a wall
+      if ( map[map_y * map_w + map_x] > 0 ) hit = 1;
+    }
+
+    // Calculate distance projected on camera direction (Euclidean distance would give fisheye effect!)
+    if ( side == 0 )
+      perpWallDist = ( side_dist_x - delta_dist_x );
+    else
+      perpWallDist = ( side_dist_y - delta_dist_y );
+
+    // Calculate height of line to draw on screen
+    int lineHeight = (int)( h / perpWallDist );
+
+    // calculate lowest and highest pixel to fill in current stripe
+    int drawStart = -lineHeight / 2 + h / 2;
+    if ( drawStart < 0 ) drawStart = 0;
+    int drawEnd = lineHeight / 2 + h / 2;
+    if ( drawEnd >= h ) drawEnd = h - 1;
+
+    // choose wall color
+    rgb_t colour;
+    switch ( map[map_y * map_w + map_x] ) {
+    case 1: colour = (rgb_t){ 0x11, 0x22, 0x88 }; break;  // blue
+    case 2: colour = (rgb_t){ 0x11, 0x88, 0x22 }; break;  // green
+    case 3: colour = (rgb_t){ 0x88, 0x22, 0x11 }; break;  // red
+    case 4: colour = (rgb_t){ 0x88, 0x88, 0x88 }; break;  // white
+    case 0: colour = (rgb_t){ 0x00, 0x00, 0x00 }; break;  // white
+    default: colour = (rgb_t){ 0x88, 0x88, 0x11 }; break; // yellow
+    }
+
+    // give x and y sides different brightness
+    if ( side == 1 ) { colour = (rgb_t){ colour.r / 2, colour.g / 2, colour.b / 2 }; }
+
+    // draw the pixels of the stripe as a vertical line
+    for ( int y = drawStart; y < drawEnd; y++ ) {
       // Draw a column of texture here.
-      int img_idx               = ( y * w + x ) * 3;
-      main_img_ptr[img_idx + 0] = 0x11;
-      main_img_ptr[img_idx + 1] = 0x22;
-      main_img_ptr[img_idx + 2] = 0x88;
+      int img_idx = ( y * w + x ) * 3;
+      memcpy( &main_img_ptr[img_idx], &colour, 3 );
     }
   }
 }
@@ -256,19 +365,6 @@ void plot_line( int x_i, int y_i, int x_f, int y_f, uint8_t* rgb, uint8_t* img_p
     } // endfor
   } // endif
 } // endfunc
-
-const int map_w     = 8;
-const int map_h     = 8;
-const uint8_t map[] = {
-  1, 1, 1, 1, 1, 1, 1, 1, // 0
-  1, 0, 1, 0, 1, 0, 0, 1, // 1
-  1, 0, 1, 0, 1, 0, 0, 1, // 2
-  1, 0, 0, 0, 0, 0, 0, 1, // 3
-  1, 0, 0, 0, 1, 1, 1, 1, // 4
-  1, 0, 0, 1, 1, 0, 0, 1, // 5
-  1, 1, 0, 0, 0, 0, 0, 1, // 6
-  1, 1, 1, 1, 1, 1, 1, 1  // 7
-};
 
 void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_t player ) {
   int wall_w           = minimap_texture->w / 8;
@@ -358,20 +454,18 @@ void cast_rays( player_t player, int res_w, int res_h, uint8_t* minimap_img_ptr,
   float angle_per_pixel = angle_max / ( res_w / 2 );
 
   uint8_t ray_rgb[] = { 0x00, 0xFF, 0x00 };
-  for ( int i = 0; i < res_w / 2; i++ ) {
+  for ( int i = 0; i < res_w; i++ ) {
     const int ray_dist = 1000;
     int x              = (int)( player.pos_x / ( (float)map_w ) * minimap_texture.w );
     int y              = (int)( player.pos_y / ( (float)map_h ) * minimap_texture.h );
-    float angle_a      = i * angle_per_pixel + player.angle;
-    // RHS
-    float dir_x = cosf( angle_a );
-    float dir_y = sinf( angle_a );
+    int xxx            = i;
+    if ( i >= res_w / 2 ) { xxx = res_w / 2 - i; }
+    float angle_a = xxx * angle_per_pixel + player.angle;
+    float dir_x   = cosf( angle_a );
+    float dir_y   = sinf( angle_a );
     plot_line( x, y, x + dir_x * ray_dist, y + dir_y * ray_dist, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
-    float angle_b = angle_a - angle_max;
-    // LHS
-    dir_x = cosf( angle_b );
-    dir_y = sinf( angle_b );
-    plot_line( x, y, x + dir_x * ray_dist, y + dir_y * ray_dist, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+
+    {}
 
     // TODO
   }
