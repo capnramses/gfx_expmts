@@ -13,6 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define APG_MIN( a, b ) ( ( a ) < ( b ) ? ( a ) : ( b ) )
+#define APG_MAX( a, b ) ( ( a ) > ( b ) ? ( a ) : ( b ) )
+#define APG_CLAMP( x, lo, hi ) ( APG_MIN( hi, APG_MAX( lo, x ) ) )
 #define PI 3.14159265358979323846f
 
 typedef struct mesh_t {
@@ -222,28 +225,34 @@ void plot_line( int x_i, int y_i, int x_f, int y_f, uint8_t* rgb, uint8_t* img_p
   if ( d_x > d_y ) {
     int err = d2_y - d_x;
     for ( int i = 0; i <= d_x; i++ ) {
+      if ( x < 0 || x >= w || y < 0 || y >= h ) { break; }
       memcpy( &img_ptr[( y * w + x ) * n_chans], rgb, n_chans );
       // plot( x, y + 1, R2, G2, B2 );
       // plot( x, y - 1, R2, G2, B2 );
       if ( err >= 0 ) {
         err -= d2_x;
         y += i_y;
+        if ( y >= h ) { break; }
       }
       err += d2_y;
       x += i_x;
+      if ( x >= w ) { break; }
     } // endfor
   } else {
     int err = d2_x - d_y;
     for ( int i = 0; i <= d_y; i++ ) {
+      if ( x < 0 || x >= w || y < 0 || y >= h ) { break; }
       memcpy( &img_ptr[( y * w + x ) * n_chans], rgb, n_chans );
       // plot( x + 1, y, R2, G2, B2 );
       // plot( x - 1, y, R2, G2, B2 );
       if ( err >= 0 ) {
         err -= d2_y;
         x += i_x;
+        if ( x >= w ) { break; }
       }
       err += d2_x;
       y += i_y;
+      if ( y >= h ) { break; }
     } // endfor
   } // endif
 } // endfunc
@@ -293,42 +302,78 @@ void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_
     }
     plot_line( x, y, x + player.dir_x * 15, y + player.dir_y * 15, player_col, minimap_img_ptr, minimap_texture->w, minimap_texture->h, 3 );
   }
-
-  float ray_angle = player.angle;
-  float x_offs = 0, y_offs = 0;
-  float rx = 0, ry = 0;
-  int dof = 0, mx = 0, my = 0, mp = 0;
-  float a_tan = -1.0f / tanf( ray_angle );
-  for ( int r = 0; r < 1; r++ ) {
-    if ( ray_angle > PI ) {
-      ry     = ( ( (int)player.pos_y >> 6 ) << 6 )  - 0.0001f; // Round to nearest 64 by /64 then *64.
-      rx     = ( player.pos_y - ry ) * a_tan + player.pos_x;
-      y_offs = -64.0f;
-      x_offs = -y_offs * a_tan;
-    } else if ( ray_angle > 0.0f && ray_angle < PI ) {
-      ry     = ( ( (int)player.pos_y >> 6 ) << 6 )+ 64.0f; // Round to nearest 64 by /64 then *64.
-      rx     = ( player.pos_y - ry ) * a_tan + player.pos_x;
-      y_offs = 64.0f;
-      x_offs = -y_offs * a_tan;
-    } else if ( 0.0f == ray_angle || PI == ray_angle ) { // Exactly left or right.
-      rx  = player.pos_x;
-      ry  = player.pos_y;
-      dof = 8;
-    }
-    while ( dof < 8 ) {
-      mx = (int)( rx ) >> 6;
-      my = (int)( ry ) >> 6;
-      mp = my * map_w + mx; // mp = map position i guess.
-      if ( mp < map_w * map_h && 1 == map[mp] ) {
+  /*
+    float ray_angle = player.angle;
+    float x_offs = 0, y_offs = 0;
+    float rx = 0, ry = 0;
+    int dof = 0, mx = 0, my = 0, mp = 0;
+    float a_tan = -1.0f / tanf( ray_angle );
+    for ( int r = 0; r < 1; r++ ) {
+      if ( ray_angle > PI ) {
+        ry     = ( ( (int)player.pos_y >> 6 ) << 6 )  - 0.0001f; // Round to nearest 64 by /64 then *64.
+        rx     = ( player.pos_y - ry ) * a_tan + player.pos_x;
+        y_offs = -64.0f;
+        x_offs = -y_offs * a_tan;
+      } else if ( ray_angle > 0.0f && ray_angle < PI ) {
+        ry     = ( ( (int)player.pos_y >> 6 ) << 6 )+ 64.0f; // Round to nearest 64 by /64 then *64.
+        rx     = ( player.pos_y - ry ) * a_tan + player.pos_x;
+        y_offs = 64.0f;
+        x_offs = -y_offs * a_tan;
+      } else if ( 0.0f == ray_angle || PI == ray_angle ) { // Exactly left or right.
+        rx  = player.pos_x;
+        ry  = player.pos_y;
         dof = 8;
-      } // Hit wall.
-      else {
-        rx += x_offs;
-        ry + y_offs;
-        dof += 1;
-      } // next line.
-    }
-    plot_line( player.pos_x, player.pos_y, rx, ry, ray_col, minimap_img_ptr, minimap_texture->w, minimap_texture->h, 3 );
+      }
+      while ( dof < 8 ) {
+        mx = (int)( rx ) >> 6;
+        my = (int)( ry ) >> 6;
+        mp = my * map_w + mx; // mp = map position i guess.
+        if ( mp < map_w * map_h && 1 == map[mp] ) {
+          dof = 8;
+        } // Hit wall.
+        else {
+          rx += x_offs;
+          ry + y_offs;
+          dof += 1;
+        } // next line.
+      }
+      plot_line( player.pos_x, player.pos_y, rx, ry, ray_col, minimap_img_ptr, minimap_texture->w, minimap_texture->h, 3 );
+    }*/
+}
+
+void cast_rays( player_t player, int res_w, int res_h, uint8_t* minimap_img_ptr, texture_t minimap_texture ) {
+  const float viewplane_w = 1.0f;
+  const float viewplane_d = 0.5f; // Equiv. to near clip plane distance.
+  /*     w/2      w/2 (o)
+    min--------+-------max
+      \        |        /
+          \    | d (a)
+             \ | /
+               p
+    angle = tan^-1( (0.5*w) / d ) == (tOa)
+          = tan^-1( 0.5 / 0.5 )
+          = 45 degrees or 0.7854 radians
+  */
+  float angle_max       = 0.7854f;
+  float angle_per_pixel = angle_max / ( res_w / 2 );
+
+  uint8_t ray_rgb[] = { 0x00, 0xFF, 0x00 };
+  for ( int i = 0; i < res_w / 2; i++ ) {
+    const int ray_dist = 200;
+    int x              = (int)( player.pos_x / ( (float)map_w ) * minimap_texture.w );
+    int y              = (int)( player.pos_y / ( (float)map_h ) * minimap_texture.h );
+    float angle_a      = i * angle_per_pixel + player.angle;
+    // RHS
+    float dir_x = cosf( angle_a );
+    float dir_y = sinf( angle_a );
+    plot_line( x, y, x + dir_x * ray_dist, y + dir_y * ray_dist, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+    float angle_b = angle_a - angle_max;
+    // LHS
+    dir_x = cosf( angle_b );
+    dir_y = sinf( angle_b );
+    plot_line( x, y, x + dir_x * ray_dist, y + dir_y * ray_dist, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+
+    // TODO
   }
 }
 
@@ -380,6 +425,7 @@ int main() {
     raycast( rt_res_w, rt_res_h, main_img_ptr, player );
     gfx_update_texture_from_mem( &main_texture, main_img_ptr );
     draw_minimap( minimap_img_ptr, &minimap_texture, player );
+    cast_rays( player, rt_res_w, rt_res_h, minimap_img_ptr, minimap_texture );
     gfx_update_texture_from_mem( &minimap_texture, minimap_img_ptr );
 
     glViewport( 0, 0, win_w, win_h );
