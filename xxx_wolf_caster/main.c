@@ -109,8 +109,8 @@ texture_t gfx_create_texture_from_mem( int w, int h, void* pixels ) {
   glTexImage2D( GL_TEXTURE_2D, 0, GL_SRGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
   glBindTexture( GL_TEXTURE_2D, 0 );
   return texture;
 }
@@ -271,7 +271,7 @@ const uint8_t map[] = {
 };
 
 void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_t player ) {
-  const int wall_w     = 32;
+  int wall_w           = minimap_texture->w / 8;
   uint8_t wall_col[]   = { 0x77, 0x77, 0x77 };
   uint8_t floor_col[]  = { 0x22, 0x22, 0x22 };
   uint8_t player_col[] = { 0xCC, 0xCC, 0x00 };
@@ -283,8 +283,8 @@ void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_
       int map_idx      = y * map_w + x;
       uint8_t colour[] = { 0x22, 0x22, 0x22 };
       if ( 1 == map[map_idx] ) { memcpy( colour, wall_col, 3 ); }
-      for ( int r = 1; r < wall_w - 1; r++ ) {
-        for ( int c = 1; c < wall_w - 1; c++ ) {
+      for ( int r = 1; r < wall_w; r++ ) {
+        for ( int c = 1; c < wall_w; c++ ) {
           int img_idx = ( y * wall_w * minimap_texture->h + x * wall_w + r * minimap_texture->h + c ) * 3;
           memcpy( &minimap_img_ptr[img_idx], colour, 3 );
         }
@@ -294,13 +294,13 @@ void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_
   { // draw player
     int x = (int)( player.pos_x / ( (float)map_w ) * minimap_texture->w );
     int y = (int)( player.pos_y / ( (float)map_h ) * minimap_texture->h );
-    for ( int r = y - 5; r < y + 5; r++ ) {
-      for ( int c = x - 5; c < x + 5; c++ ) {
+    for ( int r = y - 10; r < y + 10; r++ ) {
+      for ( int c = x - 10; c < x + 10; c++ ) {
         int img_idx = ( r * minimap_texture->w + c ) * 3;
         memcpy( &minimap_img_ptr[img_idx], player_col, 3 );
       }
     }
-    plot_line( x, y, x + player.dir_x * 15, y + player.dir_y * 15, player_col, minimap_img_ptr, minimap_texture->w, minimap_texture->h, 3 );
+    plot_line( x, y, x + player.dir_x * 20, y + player.dir_y * 20, player_col, minimap_img_ptr, minimap_texture->w, minimap_texture->h, 3 );
   }
   /*
     float ray_angle = player.angle;
@@ -359,7 +359,7 @@ void cast_rays( player_t player, int res_w, int res_h, uint8_t* minimap_img_ptr,
 
   uint8_t ray_rgb[] = { 0x00, 0xFF, 0x00 };
   for ( int i = 0; i < res_w / 2; i++ ) {
-    const int ray_dist = 200;
+    const int ray_dist = 1000;
     int x              = (int)( player.pos_x / ( (float)map_w ) * minimap_texture.w );
     int y              = (int)( player.pos_y / ( (float)map_h ) * minimap_texture.h );
     float angle_a      = i * angle_per_pixel + player.angle;
@@ -398,7 +398,7 @@ void move_player( GLFWwindow* window, player_t* p_ptr, double elapsed_s ) {
 
 int main() {
   int rt_res_w = 320, rt_res_h = 200;
-  int minimap_res_w = 256, minimap_res_h = 256;
+  int minimap_res_w = 1024, minimap_res_h = 1024;
   int win_w = 1024, win_h = 768;
   GLFWwindow* window = gfx_start( win_w, win_h, "Antolf 3-D" );
   if ( !window ) { return 1; }
@@ -412,6 +412,9 @@ int main() {
   texture_t main_texture    = gfx_create_texture_from_mem( rt_res_w, rt_res_h, main_img_ptr );
   texture_t minimap_texture = gfx_create_texture_from_mem( minimap_res_w, minimap_res_h, minimap_img_ptr );
 
+  bool draw_rays    = true;
+  bool ray_key_down = false;
+
   double prev_s = glfwGetTime();
   while ( !glfwWindowShouldClose( window ) ) {
     double curr_s    = glfwGetTime();
@@ -419,13 +422,21 @@ int main() {
     prev_s           = curr_s;
     glfwPollEvents();
     if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_ESCAPE ) ) { break; }
+    if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_C ) ) {
+      if ( !ray_key_down ) {
+        draw_rays    = !draw_rays;
+        ray_key_down = true;
+      }
+    } else {
+      ray_key_down = false;
+    }
 
     move_player( window, &player, elapsed_s );
 
     raycast( rt_res_w, rt_res_h, main_img_ptr, player );
     gfx_update_texture_from_mem( &main_texture, main_img_ptr );
     draw_minimap( minimap_img_ptr, &minimap_texture, player );
-    cast_rays( player, rt_res_w, rt_res_h, minimap_img_ptr, minimap_texture );
+    if ( draw_rays ) { cast_rays( player, rt_res_w, rt_res_h, minimap_img_ptr, minimap_texture ); }
     gfx_update_texture_from_mem( &minimap_texture, minimap_img_ptr );
 
     glViewport( 0, 0, win_w, win_h );
