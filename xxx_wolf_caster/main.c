@@ -5,48 +5,20 @@
  * https://www.youtube.com/watch?v=gYRrGTC7GtA
  *
  */
-#include <glad/gl.h>
-#include <GLFW/glfw3.h>
+#include "gfx.h"
+#include "maths.h"
 #include <float.h>
 #include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define APG_MIN( a, b ) ( ( a ) < ( b ) ? ( a ) : ( b ) )
-#define APG_MAX( a, b ) ( ( a ) > ( b ) ? ( a ) : ( b ) )
-#define APG_CLAMP( x, lo, hi ) ( APG_MIN( hi, APG_MAX( lo, x ) ) )
-#define PI 3.14159265358979323846f
-
-typedef struct mesh_t {
-  GLuint vao, vbo;
-  int n_points;
-  GLenum primitive;
-} mesh_t;
-
-typedef struct shader_t {
-  GLuint program;
-  GLint u_scale, u_pos;
-} shader_t;
-
-typedef struct texture_t {
-  GLuint handle;
-  int w, h;
-} texture_t;
-
 typedef struct player_t {
-  float pos_x, pos_y;
+  vec2_t pos, dir;
   float angle;
-  float dir_x, dir_y;
 } player_t;
-
-typedef struct rgb_t {
-  uint8_t r, g, b;
-} rgb_t;
-
-mesh_t quad_mesh;
-shader_t textured_shader;
 
 const int map_w     = 8;
 const int map_h     = 8;
@@ -60,138 +32,6 @@ const uint8_t map[] = {
   1, 1, 0, 0, 0, 0, 0, 1, // 6
   1, 1, 1, 1, 1, 1, 1, 1  // 7
 };
-
-mesh_t gfx_create_mesh_from_mem( float* points, int n_comps, int n_points, GLenum primitive ) {
-  mesh_t mesh = { .n_points = n_points, .primitive = primitive };
-
-  glGenVertexArrays( 1, &mesh.vao );
-  glGenBuffers( 1, &mesh.vbo );
-  glBindVertexArray( mesh.vao );
-  glBindBuffer( GL_ARRAY_BUFFER, mesh.vbo );
-  glBufferData( GL_ARRAY_BUFFER, n_comps * n_points * sizeof( float ), points, GL_STATIC_DRAW );
-  glEnableVertexAttribArray( 0 );
-  glVertexAttribPointer( 0, n_comps, GL_FLOAT, GL_FALSE, 0, NULL );
-  glBindBuffer( GL_ARRAY_BUFFER, 0 );
-  glBindVertexArray( 0 );
-
-  return mesh;
-}
-
-shader_t gfx_create_shader_from_strings( const char* vert_str, const char* frag_str ) {
-  shader_t shader = { .program = 0 };
-  int params = -1, max_length = 2048, actual_length = 0;
-  char slog[2048];
-
-  GLuint vs = glCreateShader( GL_VERTEX_SHADER );
-  glShaderSource( vs, 1, &vert_str, NULL );
-  glCompileShader( vs );
-  glGetShaderiv( vs, GL_COMPILE_STATUS, &params );
-  if ( GL_TRUE != params ) {
-    glGetShaderInfoLog( vs, max_length, &actual_length, slog );
-    fprintf( stderr, "ERROR: Shader index %u did not compile.\n%s\n", vs, slog );
-    return shader;
-  }
-
-  GLuint fs = glCreateShader( GL_FRAGMENT_SHADER );
-  glShaderSource( fs, 1, &frag_str, NULL );
-  glCompileShader( fs );
-  glGetShaderiv( fs, GL_COMPILE_STATUS, &params );
-  if ( GL_TRUE != params ) {
-    glGetShaderInfoLog( fs, max_length, &actual_length, slog );
-    fprintf( stderr, "ERROR: Shader index %u did not compile.\n%s\n", vs, slog );
-    return shader;
-  }
-
-  GLuint program = glCreateProgram();
-  glAttachShader( program, fs );
-  glAttachShader( program, vs );
-  glLinkProgram( program );
-  glGetProgramiv( program, GL_LINK_STATUS, &params );
-  if ( GL_TRUE != params ) {
-    glGetProgramInfoLog( program, max_length, &actual_length, slog );
-    fprintf( stderr, "ERROR: Could not link shader program GL index %u.\n%s\n", program, slog );
-    return shader;
-  }
-
-  shader.u_scale = glGetUniformLocation( program, "u_scale" );
-  shader.u_pos   = glGetUniformLocation( program, "u_pos" );
-  shader.program = program;
-  return shader;
-}
-
-texture_t gfx_create_texture_from_mem( int w, int h, void* pixels ) {
-  texture_t texture = { .handle = 0, .w = w, .h = h };
-  glActiveTexture( GL_TEXTURE0 );
-  glGenTextures( 1, &texture.handle );
-  glBindTexture( GL_TEXTURE_2D, texture.handle );
-  glTexImage2D( GL_TEXTURE_2D, 0, GL_SRGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-  glBindTexture( GL_TEXTURE_2D, 0 );
-  return texture;
-}
-
-void gfx_update_texture_from_mem( texture_t* texture_ptr, void* pixels ) {
-  glActiveTexture( GL_TEXTURE0 );
-  glBindTexture( GL_TEXTURE_2D, texture_ptr->handle );
-  glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, texture_ptr->w, texture_ptr->h, GL_RGB, GL_UNSIGNED_BYTE, pixels );
-  glBindTexture( GL_TEXTURE_2D, 0 );
-}
-
-GLFWwindow* gfx_start( int win_w, int win_h, const char* title ) {
-  if ( !glfwInit() ) { return false; }
-  glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
-  glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 1 );
-  glfwWindowHint( GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE );
-  glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
-  GLFWwindow* window = glfwCreateWindow( win_w, win_h, title, NULL, NULL );
-  if ( !window ) {
-    glfwTerminate();
-    return NULL;
-  }
-  glfwMakeContextCurrent( window );
-  int version_glad = gladLoadGL( glfwGetProcAddress );
-  if ( version_glad == 0 ) { return false; }
-  printf( "Loaded OpenGL %i.%i\n", GLAD_VERSION_MAJOR( version_glad ), GLAD_VERSION_MINOR( version_glad ) );
-  printf( "Renderer: %s.\n", glGetString( GL_RENDERER ) );
-  printf( "OpenGL version supported %s.\n", glGetString( GL_VERSION ) );
-
-  { // 2D mesh.
-    float points[] = { -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f };
-    quad_mesh      = gfx_create_mesh_from_mem( points, 2, 4, GL_TRIANGLE_STRIP );
-  }
-
-  {
-    const char* vertex_shader =
-      "#version 410 core\n"
-      "in vec2 vp;"
-      "uniform vec2 u_scale, u_pos;"
-      "out vec2 st;"
-      "void main() {"
-      "  st = vp.xy * 0.5 + 0.5;"
-      "  st.t = 1.0 - st.t;"
-      "  gl_Position = vec4( vp * u_scale + u_pos, 0.0, 1.0 );"
-      "}";
-    const char* fragment_shader =
-      "#version 410 core\n"
-      "in vec2 st;"
-      "uniform sampler2D u_tex;"
-      "out vec4 frag_colour;"
-      "void main() {"
-      "  vec4 texel = texture( u_tex, st );"
-      "  frag_colour = vec4( pow(texel.rgb, vec3( 1.0 / 2.2 ) ), 1.0 );"
-      "}";
-    textured_shader = gfx_create_shader_from_strings( vertex_shader, fragment_shader );
-    if ( 0 == textured_shader.program ) {
-      glfwTerminate();
-      return NULL;
-    }
-  }
-
-  return window;
-}
 
 void raycast( int w, int h, uint8_t* main_img_ptr, player_t player ) {
   const uint8_t ceil_colour[]  = { 0x44, 0x44, 0x44 };
@@ -214,10 +54,10 @@ void raycast( int w, int h, uint8_t* main_img_ptr, player_t player ) {
   }
 
   // Which box of the map we're in. Assumes boxes are 1.0 wide.
-  int map_x = (int)player.pos_x;
-  int map_y = (int)player.pos_y;
+  int map_x = (int)player.pos.x;
+  int map_y = (int)player.pos.y;
 
-  float dir_x = player.dir_x, dir_y = player.dir_y;
+  float dir_x = player.dir.x, dir_y = player.dir.y;
   float plane_x = 0.0f, plane_y = 0.0f;
 
   for ( int x = 0; x < w; x++ ) {
@@ -226,21 +66,20 @@ void raycast( int w, int h, uint8_t* main_img_ptr, player_t player ) {
     const int ray_dist    = 1000;
     int xxx               = x;
     if ( x >= w / 2 ) { xxx = w / 2 - x; }
-    float angle_a = xxx * angle_per_pixel + player.angle;
-    float ray_dir_x   = cosf( angle_a );
-    float ray_dir_y   = sinf( angle_a );
+    float angle_a  = xxx * angle_per_pixel + player.angle;
+    vec2_t ray_dir = { cosf( angle_a ), sinf( angle_a ) };
 
-   // float camera_x  = 2 * x / (float)w - 1; // x-coordinate in camera space
-   // float ray_dir_x = dir_x + plane_x * camera_x;
-  //  float ray_dir_y = dir_y + plane_y * camera_x;
+    // float camera_x  = 2 * x / (float)w - 1; // x-coordinate in camera space
+    // float ray_dir.x = dir.x + plane_x * camera_x;
+    //  float ray_dir.y = dir.y + plane_y * camera_x;
 
     // Length of ray from current position to next x or y-side.
     float side_dist_x;
     float side_dist_y;
 
     // Length of ray from one x or y-side to next x or y-side.
-    float delta_dist_x = ( ray_dir_x == 0 ) ? FLT_MAX : fabsf( 1 / ray_dir_x );
-    float delta_dist_y = ( ray_dir_y == 0 ) ? FLT_MAX : fabsf( 1 / ray_dir_y );
+    float delta_dist_x = ( ray_dir.x == 0 ) ? FLT_MAX : fabsf( 1 / ray_dir.x );
+    float delta_dist_y = ( ray_dir.y == 0 ) ? FLT_MAX : fabsf( 1 / ray_dir.y );
     float perpWallDist;
 
     // what direction to step in x or y-direction (either +1 or -1)
@@ -251,19 +90,19 @@ void raycast( int w, int h, uint8_t* main_img_ptr, player_t player ) {
     int side;    // was a NS or a EW wall hit?
 
     // calculate step and initial sideDist
-    if ( ray_dir_x < 0 ) {
+    if ( ray_dir.x < 0 ) {
       stepX       = -1;
-      side_dist_x = ( player.pos_x - map_x ) * delta_dist_x;
+      side_dist_x = ( player.pos.x - map_x ) * delta_dist_x;
     } else {
       stepX       = 1;
-      side_dist_x = ( map_x + 1.0 - player.pos_x ) * delta_dist_x;
+      side_dist_x = ( map_x + 1.0 - player.pos.x ) * delta_dist_x;
     }
-    if ( ray_dir_y < 0 ) {
+    if ( ray_dir.y < 0 ) {
       stepY       = -1;
-      side_dist_y = ( player.pos_y - map_y ) * delta_dist_y;
+      side_dist_y = ( player.pos.y - map_y ) * delta_dist_y;
     } else {
       stepY       = 1;
-      side_dist_y = ( map_y + 1.0 - player.pos_y ) * delta_dist_y;
+      side_dist_y = ( map_y + 1.0 - player.pos.y ) * delta_dist_y;
     }
 
     // perform DDA
@@ -320,52 +159,6 @@ void raycast( int w, int h, uint8_t* main_img_ptr, player_t player ) {
   }
 }
 
-void plot_line( int x_i, int y_i, int x_f, int y_f, uint8_t* rgb, uint8_t* img_ptr, int w, int h, int n_chans ) {
-  int x = x_i, y = y_i, d_x = x_f - x_i, d_y = y_f - y_i, i_x = 1, i_y = 1;
-  if ( d_x < 0 ) {
-    i_x = -1;
-    d_x = abs( d_x );
-  }
-  if ( d_y < 0 ) {
-    i_y = -1;
-    d_y = abs( d_y );
-  }
-  int d2_x = d_x * 2, d2_y = d_y * 2;
-  if ( d_x > d_y ) {
-    int err = d2_y - d_x;
-    for ( int i = 0; i <= d_x; i++ ) {
-      if ( x < 0 || x >= w || y < 0 || y >= h ) { break; }
-      memcpy( &img_ptr[( y * w + x ) * n_chans], rgb, n_chans );
-      // plot( x, y + 1, R2, G2, B2 );
-      // plot( x, y - 1, R2, G2, B2 );
-      if ( err >= 0 ) {
-        err -= d2_x;
-        y += i_y;
-        if ( y >= h ) { break; }
-      }
-      err += d2_y;
-      x += i_x;
-      if ( x >= w ) { break; }
-    } // endfor
-  } else {
-    int err = d2_x - d_y;
-    for ( int i = 0; i <= d_y; i++ ) {
-      if ( x < 0 || x >= w || y < 0 || y >= h ) { break; }
-      memcpy( &img_ptr[( y * w + x ) * n_chans], rgb, n_chans );
-      // plot( x + 1, y, R2, G2, B2 );
-      // plot( x - 1, y, R2, G2, B2 );
-      if ( err >= 0 ) {
-        err -= d2_y;
-        x += i_x;
-        if ( x >= w ) { break; }
-      }
-      err += d2_x;
-      y += i_y;
-      if ( y >= h ) { break; }
-    } // endfor
-  } // endif
-} // endfunc
-
 void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_t player ) {
   int wall_w           = minimap_texture->w / 8;
   uint8_t wall_col[]   = { 0x77, 0x77, 0x77 };
@@ -388,116 +181,172 @@ void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_
     }
   }
   { // draw player
-    int x = (int)( player.pos_x / ( (float)map_w ) * minimap_texture->w );
-    int y = (int)( player.pos_y / ( (float)map_h ) * minimap_texture->h );
+    int x = (int)( player.pos.x / ( (float)map_w ) * minimap_texture->w );
+    int y = (int)( player.pos.y / ( (float)map_h ) * minimap_texture->h );
     for ( int r = y - 10; r < y + 10; r++ ) {
       for ( int c = x - 10; c < x + 10; c++ ) {
         int img_idx = ( r * minimap_texture->w + c ) * 3;
         memcpy( &minimap_img_ptr[img_idx], player_col, 3 );
       }
     }
-    plot_line( x, y, x + player.dir_x * 20, y + player.dir_y * 20, player_col, minimap_img_ptr, minimap_texture->w, minimap_texture->h, 3 );
+    plot_line( x, y, x + player.dir.x * 20, y + player.dir.y * 20, player_col, minimap_img_ptr, minimap_texture->w, minimap_texture->h, 3 );
   }
-  /*
-    float ray_angle = player.angle;
-    float x_offs = 0, y_offs = 0;
-    float rx = 0, ry = 0;
-    int dof = 0, mx = 0, my = 0, mp = 0;
-    float a_tan = -1.0f / tanf( ray_angle );
-    for ( int r = 0; r < 1; r++ ) {
-      if ( ray_angle > PI ) {
-        ry     = ( ( (int)player.pos_y >> 6 ) << 6 )  - 0.0001f; // Round to nearest 64 by /64 then *64.
-        rx     = ( player.pos_y - ry ) * a_tan + player.pos_x;
-        y_offs = -64.0f;
-        x_offs = -y_offs * a_tan;
-      } else if ( ray_angle > 0.0f && ray_angle < PI ) {
-        ry     = ( ( (int)player.pos_y >> 6 ) << 6 )+ 64.0f; // Round to nearest 64 by /64 then *64.
-        rx     = ( player.pos_y - ry ) * a_tan + player.pos_x;
-        y_offs = 64.0f;
-        x_offs = -y_offs * a_tan;
-      } else if ( 0.0f == ray_angle || PI == ray_angle ) { // Exactly left or right.
-        rx  = player.pos_x;
-        ry  = player.pos_y;
-        dof = 8;
-      }
-      while ( dof < 8 ) {
-        mx = (int)( rx ) >> 6;
-        my = (int)( ry ) >> 6;
-        mp = my * map_w + mx; // mp = map position i guess.
-        if ( mp < map_w * map_h && 1 == map[mp] ) {
-          dof = 8;
-        } // Hit wall.
-        else {
-          rx += x_offs;
-          ry + y_offs;
-          dof += 1;
-        } // next line.
-      }
-      plot_line( player.pos_x, player.pos_y, rx, ry, ray_col, minimap_img_ptr, minimap_texture->w, minimap_texture->h, 3 );
-    }*/
 }
 
 void cast_rays( player_t player, int res_w, int res_h, uint8_t* minimap_img_ptr, texture_t minimap_texture ) {
-  const float viewplane_w = 1.0f;
-  const float viewplane_d = 0.5f; // Equiv. to near clip plane distance.
-  /*     w/2      w/2 (o)
-    min--------+-------max
-      \        |        /
-          \    | d (a)
-             \ | /
-               p
+  /*
+           viewplane_width
+         |-------------------|
+
+    +    min--------+-------max  --> viewplane_dir
+    |      \        |        /
+    |        \      |      /
+    |          \    |    /
+    |           \   |   /
+    |             \ | /
+    +               +
+viewplane_dist      player_pos
+
+
     angle = tan^-1( (0.5*w) / d ) == (tOa)
           = tan^-1( 0.5 / 0.5 )
           = 45 degrees or 0.7854 radians
   */
-  float angle_max       = 0.7854f;
-  float angle_per_pixel = angle_max / ( res_w / 2 );
 
-  uint8_t ray_rgb[] = { 0x00, 0xFF, 0x00 };
+  const float viewplane_width = 1.0f, viewplane_dist = 0.5f; // Equiv. to near clip plane distance.
+  vec2_t viewplane_mid_pos = add_vec2( player.pos, mul_vec2_f( player.dir, viewplane_dist ) );
+  vec2_t viewplane_dir     = rot_90_ccw_vec2( player.dir );
+  vec2_t viewplane_min_pos = sub_vec2( viewplane_mid_pos, mul_vec2_f( viewplane_dir, viewplane_width / 2 ) );
+  vec2_t viewplane_max_pos = add_vec2( viewplane_min_pos, mul_vec2_f( viewplane_dir, viewplane_width ) );
+
+  uint8_t ray_rgb[]       = { 0x00, 0xFF, 0x00 };
+  uint8_t viewplane_rgb[] = { 0x66, 0x66, 0xFF };
+
+  int xi = (int)( player.pos.x / ( (float)map_w ) * minimap_texture.w );
+  int yi = (int)( player.pos.y / ( (float)map_h ) * minimap_texture.h );
+  int xf = (int)( viewplane_min_pos.x / ( (float)map_w ) * minimap_texture.w );
+  int yf = (int)( viewplane_min_pos.y / ( (float)map_h ) * minimap_texture.h );
+  plot_line( xi, yi, xf, yf, viewplane_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+  xf = (int)( viewplane_max_pos.x / ( (float)map_w ) * minimap_texture.w );
+  yf = (int)( viewplane_max_pos.y / ( (float)map_h ) * minimap_texture.h );
+  plot_line( xi, yi, xf, yf, viewplane_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+  xi = (int)( viewplane_min_pos.x / ( (float)map_w ) * minimap_texture.w );
+  yi = (int)( viewplane_min_pos.y / ( (float)map_h ) * minimap_texture.h );
+  xf = (int)( viewplane_max_pos.x / ( (float)map_w ) * minimap_texture.w );
+  yf = (int)( viewplane_max_pos.y / ( (float)map_h ) * minimap_texture.h );
+  plot_line( xi, yi, xf, yf, viewplane_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+
   for ( int i = 0; i < res_w; i++ ) {
-    const int ray_dist = 1000;
-    int x              = (int)( player.pos_x / ( (float)map_w ) * minimap_texture.w );
-    int y              = (int)( player.pos_y / ( (float)map_h ) * minimap_texture.h );
-    int xxx            = i;
-    if ( i >= res_w / 2 ) { xxx = res_w / 2 - i; }
-    float angle_a = xxx * angle_per_pixel + player.angle;
-    float dir_x   = cosf( angle_a );
-    float dir_y   = sinf( angle_a );
-    plot_line( x, y, x + dir_x * ray_dist, y + dir_y * ray_dist, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+    float fraction           = (float)i / res_w;
+    vec2_t viewplane_inc_pos = add_vec2( viewplane_min_pos, mul_vec2_f( viewplane_dir, fraction ) );
+    vec2_t ray_dir           = sub_vec2( viewplane_inc_pos, player.pos );
+    ray_dir                  = normalise_vec2( ray_dir ); // Needed?
 
-    {}
+    // Debug angles
+    /* if ( i % 32 == 0 ) {
+       vec2_t dest = add_vec2( ray_dir, player.pos );
+       xi          = (int)( player.pos.x / ( (float)map_w ) * minimap_texture.w );
+       yi          = (int)( player.pos.y / ( (float)map_h ) * minimap_texture.h );
+       xf          = (int)( dest.x / ( (float)map_w ) * minimap_texture.w );
+       yf          = (int)( dest.y / ( (float)map_h ) * minimap_texture.h );
+       plot_line( xi, yi, xf, yf, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+     }*/
 
-    // TODO
+    int player_map_x = (int)player.pos.x; // Just truncate to go from world->map because map cell width 1 is 1.0 real.
+    int player_map_y = (int)player.pos.y;
+    if ( 0 == i ) { printf( "player map %i,%i\n", player_map_x, player_map_y ); }
+
+    // 1. get dist to x and y sides by using remainder after truncation or floor().
+    // 2. divide x by x gradient of ray_dir, same for y to get side_dists.
+    //    biggest component or shortest side dist is first side hit
+    // We already know which is pos ray dir so can ignore 2 distances here.
+    float dist_to_cell_x = ( player.pos.x - floorf( player.pos.x ) );
+    float dist_to_cell_y = ( player.pos.y - floorf( player.pos.y ) );
+    if ( ray_dir.x > 0 ) { dist_to_cell_x = 1.0f - dist_to_cell_x; }
+    if ( ray_dir.y > 0 ) { dist_to_cell_y = 1.0f - dist_to_cell_y; }
+    if ( 0 == i ) { printf( "dist to cell x,y %.2f,%.2f\n", dist_to_cell_x, dist_to_cell_y ); }
+    // TODO check for ray_dir.x of 0
+    float cells_until_x_intersect = dist_to_cell_x / ( ray_dir.x != 0 ? fabsf( ray_dir.x ) : 0.00001f );
+    float cells_until_y_intersect = dist_to_cell_y / ( ray_dir.y != 0 ? fabsf( ray_dir.y ) : 0.00001f );
+    if ( 0 == i ) { printf( "cells until %.2f,%.2f\n", cells_until_x_intersect, cells_until_y_intersect ); }
+
+    // TODO pick shortest route and do that to the first axis intersect.
+    vec2_t ray_isect_pos = player.pos;
+    // TODO get gradient so we know how much to increment.
+    float xs_per_y = ray_dir.x / ray_dir.y, ys_per_x = ray_dir.y / ray_dir.x;
+    if ( cells_until_x_intersect < cells_until_y_intersect ) {
+      // x first
+      ray_isect_pos.x += cells_until_x_intersect;
+      ray_isect_pos.y += cells_until_x_intersect * ys_per_x;
+    } else {
+      // y first
+      ray_isect_pos.y += cells_until_y_intersect;
+      ray_isect_pos.x += cells_until_y_intersect * xs_per_y;
+    }
+
+    if ( 0 == i ) {
+      xi = (int)( player.pos.x / ( (float)map_w ) * minimap_texture.w );
+      yi = (int)( player.pos.y / ( (float)map_h ) * minimap_texture.h );
+      xf = (int)( ray_isect_pos.x / ( (float)map_w ) * minimap_texture.w );
+      yf = (int)( ray_isect_pos.y / ( (float)map_h ) * minimap_texture.h );
+      plot_line( xi, yi, xf, yf, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+    }
+
+    int isect_map_x = (int)ray_isect_pos.x;
+    int isect_map_y = (int)ray_isect_pos.y;
+
+    // Then do the other axis intersect.
+
+    // Then check the first wall tile. with another (int) conversion to map idx.
+
+    // Then alternative steps of 1.0. to subsequent intersections, along the same ray axis until a wall is hit or OOB.
   }
+
+  // float angle_max       = 0.7854f;
+  // float angle_per_pixel = angle_max / ( res_w / 2 );
+  /*  for ( int i = 0; i < res_w; i++ ) {
+      const int ray_dist = 1000;
+      int x              = (int)( player.pos.x / ( (float)map_w ) * minimap_texture.w );
+      int y              = (int)( player.pos.y / ( (float)map_h ) * minimap_texture.h );
+      int xxx            = i;
+      if ( i >= res_w / 2 ) { xxx = res_w / 2 - i; }
+      float angle_a = xxx * angle_per_pixel + player.angle;
+      float dir_x   = cosf( angle_a );
+      float dir_y   = sinf( angle_a );
+      plot_line( x, y, x + dir_x * ray_dist, y + dir_y * ray_dist, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+
+      {}
+
+      // TODO
+    }*/
 }
 
 void move_player( GLFWwindow* window, player_t* p_ptr, double elapsed_s ) {
-  const float speed     = 1.0f;
-  const float rot_speed = 2.0f;
+  const float speed = 1.0f, rot_speed = 2.0f;
   if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_LEFT ) ) { p_ptr->angle -= rot_speed * elapsed_s; }
   if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_RIGHT ) ) { p_ptr->angle += rot_speed * elapsed_s; }
   p_ptr->angle = fmodf( p_ptr->angle, 2.0 * PI );
   p_ptr->angle = p_ptr->angle >= 0.0f ? p_ptr->angle : p_ptr->angle + 2.0 * PI;
-  p_ptr->dir_x = cosf( p_ptr->angle );
-  p_ptr->dir_y = sinf( p_ptr->angle );
+  p_ptr->dir.x = cosf( p_ptr->angle );
+  p_ptr->dir.y = sinf( p_ptr->angle );
   if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_UP ) ) {
-    p_ptr->pos_x += p_ptr->dir_x * speed * elapsed_s;
-    p_ptr->pos_y += p_ptr->dir_y * speed * elapsed_s;
+    p_ptr->pos.x += p_ptr->dir.x * speed * elapsed_s;
+    p_ptr->pos.y += p_ptr->dir.y * speed * elapsed_s;
   }
   if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_DOWN ) ) {
-    p_ptr->pos_x -= p_ptr->dir_x * speed * elapsed_s;
-    p_ptr->pos_y -= p_ptr->dir_y * speed * elapsed_s;
+    p_ptr->pos.x -= p_ptr->dir.x * speed * elapsed_s;
+    p_ptr->pos.y -= p_ptr->dir.y * speed * elapsed_s;
   }
 }
 
 int main() {
   int rt_res_w = 320, rt_res_h = 200;
-  int minimap_res_w = 1024, minimap_res_h = 1024;
-  int win_w = 1024, win_h = 768;
+  int minimap_res_w = 512, minimap_res_h = 512;
+  int win_w = 1024, win_h = 1024;
   GLFWwindow* window = gfx_start( win_w, win_h, "Antolf 3-D" );
   if ( !window ) { return 1; }
 
-  player_t player = { .pos_x = 1.5f, .pos_y = 3.5f };
+  player_t player = { .pos = { 1.5f, 3.5f } };
 
   uint8_t* main_img_ptr    = calloc( rt_res_w * rt_res_h * 3, 1 );
   uint8_t* minimap_img_ptr = calloc( minimap_res_w * minimap_res_h * 3, 1 );
@@ -527,10 +376,10 @@ int main() {
 
     move_player( window, &player, elapsed_s );
 
-    raycast( rt_res_w, rt_res_h, main_img_ptr, player );
-    gfx_update_texture_from_mem( &main_texture, main_img_ptr );
+    // raycast( rt_res_w, rt_res_h, main_img_ptr, player );
+    // gfx_update_texture_from_mem( &main_texture, main_img_ptr );
     draw_minimap( minimap_img_ptr, &minimap_texture, player );
-    if ( draw_rays ) { cast_rays( player, rt_res_w, rt_res_h, minimap_img_ptr, minimap_texture ); }
+    cast_rays( player, rt_res_w, rt_res_h, minimap_img_ptr, minimap_texture );
     gfx_update_texture_from_mem( &minimap_texture, minimap_img_ptr );
 
     glViewport( 0, 0, win_w, win_h );
