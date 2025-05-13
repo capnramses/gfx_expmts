@@ -26,10 +26,10 @@ const int map_h     = 8;
 const uint8_t map[] = {
   1, 1, 1, 1, 1, 1, 1, 1, // 0
   1, 0, 1, 0, 1, 0, 0, 1, // 1
-  1, 0, 1, 0, 1, 0, 0, 1, // 2
-  1, 0, 0, 0, 0, 0, 0, 1, // 3
-  1, 0, 0, 0, 1, 1, 1, 1, // 4
-  1, 0, 0, 1, 1, 0, 0, 1, // 5
+  2, 0, 1, 0, 1, 0, 0, 1, // 2
+  2, 0, 0, 0, 0, 0, 0, 1, // 3
+  3, 0, 0, 0, 1, 1, 1, 1, // 4
+  3, 0, 0, 1, 1, 0, 0, 1, // 5
   1, 1, 0, 0, 0, 0, 0, 1, // 6
   1, 1, 1, 1, 1, 1, 1, 1  // 7
 };
@@ -183,7 +183,7 @@ void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_
     for ( int x = 0; x < map_w; x++ ) {
       int map_idx      = y * map_w + x;
       uint8_t colour[] = { 0x22, 0x22, 0x22 };
-      if ( 1 == map[map_idx] ) { memcpy( colour, wall_col, 3 ); }
+      if ( 0 != map[map_idx] ) { memcpy( colour, wall_col, 3 ); }
       for ( int r = 1; r < wall_w; r++ ) {
         for ( int c = 1; c < wall_w; c++ ) {
           int img_idx = ( y * wall_w * minimap_texture->h + x * wall_w + r * minimap_texture->h + c ) * 3;
