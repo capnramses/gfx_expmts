@@ -211,3 +211,4 @@ SECOND LICENCE OPTION
 ## Cool Thing to Try
 
 * <http://www.codersnotes.com/notes/untonemapping/>
+* Fire effects https://lodev.org/cgtutor/fire.html
