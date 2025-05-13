@@ -260,45 +260,148 @@ viewplane_dist      player_pos
     // 2. divide x by x gradient of ray_dir, same for y to get side_dists.
     //    biggest component or shortest side dist is first side hit
     // We already know which is pos ray dir so can ignore 2 distances here.
+
     float dist_to_cell_x = ( player.pos.x - floorf( player.pos.x ) );
     float dist_to_cell_y = ( player.pos.y - floorf( player.pos.y ) );
     if ( ray_dir.x > 0 ) { dist_to_cell_x = 1.0f - dist_to_cell_x; }
     if ( ray_dir.y > 0 ) { dist_to_cell_y = 1.0f - dist_to_cell_y; }
     if ( 0 == i ) { printf( "dist to cell x,y %.2f,%.2f\n", dist_to_cell_x, dist_to_cell_y ); }
-    // TODO check for ray_dir.x of 0
+
+    if ( 0 == i ) {
+      xi = (int)( player.pos.x / ( (float)map_w ) * minimap_texture.w );
+      yi = (int)( player.pos.y / ( (float)map_h ) * minimap_texture.h );
+
+      // plot ray dir so its less confusing
+      xf = (int)( ( player.pos.x + ray_dir.x ) / ( (float)map_w ) * minimap_texture.w );
+      yf = (int)( ( player.pos.y + ray_dir.y ) / ( (float)map_w ) * minimap_texture.w );
+      plot_line( xi, yi, xf, yf, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+
+      if ( ray_dir.x > 0 ) {
+        xf = (int)( ( player.pos.x + dist_to_cell_x ) / ( (float)map_w ) * minimap_texture.w );
+      } else {
+        xf = (int)( ( player.pos.x - dist_to_cell_x ) / ( (float)map_w ) * minimap_texture.w );
+      }
+      yf = (int)( ( player.pos.y ) / ( (float)map_w ) * minimap_texture.w );
+      // if ( dist_to_cell_x <= dist_to_cell_y) { ray_rgb[0] = 0xFF;} else { ray_rgb[0] = 0x00;} // Note <= so starting angle chooses this.
+      plot_line( xi, yi, xf, yf, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+      if ( ray_dir.y > 0 ) {
+        yf = (int)( ( player.pos.y + dist_to_cell_y ) / ( (float)map_w ) * minimap_texture.w );
+      } else {
+        yf = (int)( ( player.pos.y - dist_to_cell_y ) / ( (float)map_w ) * minimap_texture.w );
+      }
+      xf = (int)( ( player.pos.x ) / ( (float)map_w ) * minimap_texture.w );
+      // if ( dist_to_cell_y < dist_to_cell_x) { ray_rgb[0] = 0xFF;} else { ray_rgb[0] = 0x00;}
+      plot_line( xi, yi, xf, yf, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+    }
+
+    if ( fabsf( ray_dir.x ) >= fabsf( ray_dir.y ) ) { // x hit first
+      float ys_per_x = ray_dir.y / ray_dir.x;
+      float y_dash   = dist_to_cell_x * ys_per_x;
+      float h        = sqrtf( y_dash * y_dash + dist_to_cell_x * dist_to_cell_x );
+      float reverse  = ray_dir.x > 0.0f ? -1.0f : 1.0f;
+
+      vec2_t isect_a = add_vec2( player.pos, mul_vec2_f( ray_dir, h ) );
+
+      if ( 0 == i ) {
+        uint8_t isect_rgb[] = { 0x00, 0xFF, 0xFF };
+        xi                  = (int)( ( player.pos.x - dist_to_cell_x * reverse ) / ( (float)map_w ) * minimap_texture.w );
+        yi                  = (int)( ( player.pos.y ) / ( (float)map_h ) * minimap_texture.h );
+        xf                  = (int)( ( isect_a.x ) / ( (float)map_w ) * minimap_texture.w );
+        yf                  = (int)( ( isect_a.y ) / ( (float)map_w ) * minimap_texture.w );
+        plot_line( xi, yi, xf, yf, isect_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+      }
+    } else { // y hit first
+      float xs_per_y = ray_dir.x / ray_dir.y;
+      float x_dash   = dist_to_cell_y * xs_per_y;
+      float h        = sqrtf( x_dash * x_dash + dist_to_cell_y * dist_to_cell_y );
+      float reverse  = ray_dir.y > 0.0f ? -1.0f : 1.0f;
+
+      vec2_t isect_a = add_vec2( player.pos, mul_vec2_f( ray_dir, h ) );
+
+      if ( 0 == i ) {
+        uint8_t isect_rgb[] = { 0x00, 0xFF, 0xFF };
+        xi                  = (int)( ( player.pos.x ) / ( (float)map_w ) * minimap_texture.w );
+        yi                  = (int)( ( player.pos.y - dist_to_cell_y * reverse ) / ( (float)map_h ) * minimap_texture.h );
+        xf                  = (int)( ( isect_a.x ) / ( (float)map_w ) * minimap_texture.w );
+        yf                  = (int)( ( isect_a.y ) / ( (float)map_w ) * minimap_texture.w );
+        plot_line( xi, yi, xf, yf, isect_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+      }
+      //  float corner_angle = atanf( x_dash / dist_to_cell_y );
+      // if ( 0 == i ) { printf( "corner_angle=%.2f\n", corner_angle ); }
+    }
+
+#if 0
     float cells_until_x_intersect = dist_to_cell_x / ( ray_dir.x != 0 ? fabsf( ray_dir.x ) : 0.00001f );
     float cells_until_y_intersect = dist_to_cell_y / ( ray_dir.y != 0 ? fabsf( ray_dir.y ) : 0.00001f );
     if ( 0 == i ) { printf( "cells until %.2f,%.2f\n", cells_until_x_intersect, cells_until_y_intersect ); }
 
-    // TODO pick shortest route and do that to the first axis intersect.
-    vec2_t ray_isect_pos = player.pos;
-    // TODO get gradient so we know how much to increment.
-    float xs_per_y = ray_dir.x / ray_dir.y, ys_per_x = ray_dir.y / ray_dir.x;
-    if ( cells_until_x_intersect < cells_until_y_intersect ) {
-      // x first
-      ray_isect_pos.x += cells_until_x_intersect;
-      ray_isect_pos.y += cells_until_x_intersect * ys_per_x;
-    } else {
-      // y first
-      ray_isect_pos.y += cells_until_y_intersect;
-      ray_isect_pos.x += cells_until_y_intersect * xs_per_y;
+    if ( 0 == i ) {
+      xi = (int)( player.pos.x / ( (float)map_w ) * minimap_texture.w );
+      yi = (int)( player.pos.y / ( (float)map_h ) * minimap_texture.h );
+      xf = (int)( (player.pos.x + dist_to_cell_x) / ( (float)map_w ) * minimap_texture.w );
+      yf = (int)( (player.pos.y + dist_to_cell_y) / ( (float)map_h ) * minimap_texture.h );
+      plot_line( xi, yi, xf, yf, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+    }
+
+    //    TODO plot cells_until_x_intersect
+
+    /*
+           x   |
+            ''x|
+        +--+---$
+        |     /| <- also 'a which we worked out earlier
+      'y|    / |'y (entire y including 'y)
+        |   /  |
+    ----+--#---+----------
+        | /|   |
+       y|/a|y  |       x = cells_until_x_intersect
+        P--+---+       y = cells_until_y_intersect
+         'x    |       a = gradient
+           x   |       # = x intercept
+                       $ = y intercept
+                      'a = 180 degres - (90 + a)
+                      'x = tOa = tan('a)*y
+                      'y = tOa = tan(a)*x
+                      'x = xs_per_y_gradient * y (alternative)
+                      'y = ys_per_x_gradient * x (alternative)
+                       x_axis_isect_x = P.x + 'x
+                       x_axis_isect_y = P.y - y
+                       y_axis_isect_x = P.x + x
+                       y_axis_isect_y = P.y - 'y
+    */
+    vec2_t x_axis_isect_pos = player.pos, y_axis_isect_pos = player.pos;
+    // get gradient so we know how much to increment.
+    float ys_per_x_gradient = ray_dir.y / ray_dir.x;
+    float xs_per_y_gradient = ray_dir.x / ray_dir.y;
+
+    // pick shortest route and do that to the first axis intersect.
+    if ( cells_until_x_intersect < cells_until_y_intersect ) { // x first
+      float a = fabsf(player.angle);
+      while ( a > PI / 2 ) { a -= PI / 2; }
+      float a_dash = PI - ( PI / 2 + a );
+      float x_dash = tanf( a_dash ) * cells_until_y_intersect;
+      float y_dash = tanf( a ) * cells_until_x_intersect;
+      x_axis_isect_pos.x += x_dash;
+      x_axis_isect_pos.y -= cells_until_y_intersect;
+      y_axis_isect_pos.x += cells_until_x_intersect;
+      y_axis_isect_pos.y -= y_dash;
+    } else { // y first
+      // TODO
     }
 
     if ( 0 == i ) {
       xi = (int)( player.pos.x / ( (float)map_w ) * minimap_texture.w );
       yi = (int)( player.pos.y / ( (float)map_h ) * minimap_texture.h );
-      xf = (int)( ray_isect_pos.x / ( (float)map_w ) * minimap_texture.w );
-      yf = (int)( ray_isect_pos.y / ( (float)map_h ) * minimap_texture.h );
+      xf = (int)( x_axis_isect_pos.x / ( (float)map_w ) * minimap_texture.w );
+      yf = (int)( x_axis_isect_pos.y / ( (float)map_h ) * minimap_texture.h );
       plot_line( xi, yi, xf, yf, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
     }
-
-    int isect_map_x = (int)ray_isect_pos.x;
-    int isect_map_y = (int)ray_isect_pos.y;
 
     // Then do the other axis intersect.
 
     // Then check the first wall tile. with another (int) conversion to map idx.
 
+#endif
     // Then alternative steps of 1.0. to subsequent intersections, along the same ray axis until a wall is hit or OOB.
   }
 
