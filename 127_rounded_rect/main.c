@@ -186,10 +186,7 @@ int main( void ) {
     glProgramUniform2i( shader_program, glGetUniformLocation( shader_program, "fb_dims" ), fb_w, fb_h );
     glBindVertexArray( vao );
 
-    glViewport( 0, 0, win_w / 2, win_h / 2 );
-    glDrawArrays( GL_TRIANGLES, 0, 3 );
-
-    glViewport( win_w / 2, win_h / 2, win_w / 2, win_h / 2 );
+    glViewport( 0, 0, win_w, win_h );
     glDrawArrays( GL_TRIANGLES, 0, 3 );
 
     // Put the stuff we've been drawing onto the visible area.
