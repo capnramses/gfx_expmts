@@ -205,6 +205,14 @@ void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_
   }
 }
 
+void mmap_plot_line( vec2_t i, vec2_t f, rgb_t rgb, uint8_t* img_ptr, texture_t tex ) {
+  int x_i = (int)( i.x / ( (float)map_w ) * tex.w );
+  int y_i = (int)( i.y / ( (float)map_h ) * tex.h );
+  int x_f = (int)( f.x / ( (float)map_w ) * tex.w );
+  int y_f = (int)( f.y / ( (float)map_h ) * tex.h );
+  plot_line( x_i, y_i, x_f, y_f, &rgb.r, img_ptr, tex.w, tex.h, 3 );
+}
+
 void cast_rays( player_t player, uint8_t* minimap_img_ptr, texture_t minimap_texture, uint8_t* main_img_ptr, texture_t main_texture ) {
   /*
            viewplane_width
@@ -231,22 +239,18 @@ viewplane_dist      player_pos
   vec2_t viewplane_min_pos = sub_vec2( viewplane_mid_pos, mul_vec2_f( viewplane_dir, viewplane_width / 2 ) );
   vec2_t viewplane_max_pos = add_vec2( viewplane_min_pos, mul_vec2_f( viewplane_dir, viewplane_width ) );
 
-  uint8_t ray_rgb[]       = { 0x00, 0xFF, 0x00 };
-  uint8_t viewplane_rgb[] = { 0x66, 0x66, 0xFF };
+  rgb_t ray_rgb         = { 0x00, 0xFF, 0x00 };
+  rgb_t viewplane_rgb   = { 0x33, 0x33, 0xFF };
+  rgb_t viewplane_0_rgb = { 0x99, 0x99, 0xFF };
+  rgb_t isect_rgb       = { 0x00, 0xFF, 0xFF };
+  // Draw cone of view.
+  mmap_plot_line( player.pos, viewplane_min_pos, viewplane_0_rgb, minimap_img_ptr, minimap_texture );
+  mmap_plot_line( player.pos, viewplane_max_pos, viewplane_rgb, minimap_img_ptr, minimap_texture );
+  mmap_plot_line( viewplane_min_pos, viewplane_max_pos, viewplane_rgb, minimap_img_ptr, minimap_texture );
 
-  int xi = (int)( player.pos.x / ( (float)map_w ) * minimap_texture.w );
-  int yi = (int)( player.pos.y / ( (float)map_h ) * minimap_texture.h );
-  int xf = (int)( viewplane_min_pos.x / ( (float)map_w ) * minimap_texture.w );
-  int yf = (int)( viewplane_min_pos.y / ( (float)map_h ) * minimap_texture.h );
-  plot_line( xi, yi, xf, yf, viewplane_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
-  xf = (int)( viewplane_max_pos.x / ( (float)map_w ) * minimap_texture.w );
-  yf = (int)( viewplane_max_pos.y / ( (float)map_h ) * minimap_texture.h );
-  plot_line( xi, yi, xf, yf, viewplane_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
-  xi = (int)( viewplane_min_pos.x / ( (float)map_w ) * minimap_texture.w );
-  yi = (int)( viewplane_min_pos.y / ( (float)map_h ) * minimap_texture.h );
-  xf = (int)( viewplane_max_pos.x / ( (float)map_w ) * minimap_texture.w );
-  yf = (int)( viewplane_max_pos.y / ( (float)map_h ) * minimap_texture.h );
-  plot_line( xi, yi, xf, yf, viewplane_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+  // int player_map_x = (int)player.pos.x; // Just truncate to go from world->map because map cell width 1 is 1.0 real.
+  // int player_map_y = (int)player.pos.y;
+  // printf( "player map %i,%i\n", player_map_x, player_map_y );
 
   for ( int i = 0; i < main_texture.w; i++ ) {
     float fraction           = (float)i / main_texture.w;
@@ -254,127 +258,118 @@ viewplane_dist      player_pos
     vec2_t ray_dir           = sub_vec2( viewplane_inc_pos, player.pos );
     ray_dir                  = normalise_vec2( ray_dir ); // Needed?
 
-    int player_map_x = (int)player.pos.x; // Just truncate to go from world->map because map cell width 1 is 1.0 real.
-    int player_map_y = (int)player.pos.y;
-    if ( 0 == i ) { printf( "player map %i,%i\n", player_map_x, player_map_y ); }
-
     // 1. get dist to x and y sides by using remainder after truncation or floor().
     // 2. divide x by x gradient of ray_dir, same for y to get side_dists.
     //    biggest component or shortest side dist is first side hit
     // We already know which is pos ray dir so can ignore 2 distances here.
 
-    float dist_to_cell_x = ( player.pos.x - floorf( player.pos.x ) );
-    float dist_to_cell_y = ( player.pos.y - floorf( player.pos.y ) );
-    if ( ray_dir.x > 0 ) { dist_to_cell_x = 1.0f - dist_to_cell_x; }
-    if ( ray_dir.y > 0 ) { dist_to_cell_y = 1.0f - dist_to_cell_y; }
-    if ( 0 == i ) { printf( "dist to cell x,y %.2f,%.2f\n", dist_to_cell_x, dist_to_cell_y ); }
+    //
+    // loop here until hit, changing dist_to_cell_x ?
+    bool hit                         = false;
+    int hit_tile_type                = 0;
+    float perspective_corrected_dist = 0.0f;
+    vec2_t working_pos               = player.pos;
+    for ( int j = 0; j < 4; j++ ) {
+      float dist_to_cell_x = ( working_pos.x - floorf( working_pos.x ) );
+      float dist_to_cell_y = ( working_pos.y - floorf( working_pos.y ) );
+      if ( ray_dir.x > 0 ) { dist_to_cell_x = 1.0f - dist_to_cell_x; }
+      if ( ray_dir.y > 0 ) { dist_to_cell_y = 1.0f - dist_to_cell_y; }
+      if ( 0 == i ) { printf( "dist to cell x,y %.2f,%.2f\n", dist_to_cell_x, dist_to_cell_y ); }
+      // if ( 0 == i ) { mmap_plot_line( player.pos, add_vec2( player.pos, mul_vec2_f( ray_dir, 0.5f ) ), ray_rgb, minimap_img_ptr, minimap_texture ); }
 
-    if ( 0 == i ) {
-      xi = (int)( player.pos.x / ( (float)map_w ) * minimap_texture.w );
-      yi = (int)( player.pos.y / ( (float)map_h ) * minimap_texture.h );
+      float xs_per_y = ray_dir.x / ray_dir.y;
+      float ys_per_x = ray_dir.y / ray_dir.x;
+      float x_dash   = dist_to_cell_y * xs_per_y;
+      float y_dash   = dist_to_cell_x * ys_per_x;
+      vec2_t isect_x, isect_y;
+      float hypot_x, hypot_y;
+      { // x hit first
+        hypot_x       = sqrtf( y_dash * y_dash + dist_to_cell_x * dist_to_cell_x );
+        float reverse = ray_dir.x > 0.0f ? -1.0f : 1.0f;
 
-      // plot ray dir so its less confusing
-      xf = (int)( ( player.pos.x + ray_dir.x ) / ( (float)map_w ) * minimap_texture.w );
-      yf = (int)( ( player.pos.y + ray_dir.y ) / ( (float)map_w ) * minimap_texture.w );
-      plot_line( xi, yi, xf, yf, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+        isect_x = add_vec2( working_pos, mul_vec2_f( ray_dir, hypot_x ) );
 
-      if ( ray_dir.x > 0 ) {
-        xf = (int)( ( player.pos.x + dist_to_cell_x ) / ( (float)map_w ) * minimap_texture.w );
+        if ( 0 == i && 0 == j ) {
+          vec2_t pos_i = working_pos;
+          pos_i.x      = working_pos.x - dist_to_cell_x * reverse;
+          vec2_t pos_f = isect_x;
+          mmap_plot_line( pos_i, pos_f, isect_rgb, minimap_img_ptr, minimap_texture );
+        }
+      }
+      { // y hit first
+        hypot_y       = sqrtf( x_dash * x_dash + dist_to_cell_y * dist_to_cell_y );
+        float reverse = ray_dir.y > 0.0f ? -1.0f : 1.0f;
+
+        isect_y = add_vec2( working_pos, mul_vec2_f( ray_dir, hypot_y ) );
+
+        if ( 0 == i && 0 == j ) {
+          vec2_t pos_i = working_pos;
+          pos_i.y      = working_pos.y - dist_to_cell_y * reverse;
+          vec2_t pos_f = isect_y;
+          mmap_plot_line( pos_i, pos_f, isect_rgb, minimap_img_ptr, minimap_texture );
+        }
+        //  float corner_angle = atanf( x_dash / dist_to_cell_y );
+        // if ( 0 == i ) { printf( "corner_angle=%.2f\n", corner_angle ); }
+      }
+      int imap_x, imap_y, side_dist;
+      float direct_dist;
+      vec2_t isect_pos;
+      if ( fabsf( hypot_x ) < fabsf( hypot_y ) ) {
+        direct_dist = hypot_x;
+        imap_x      = (int)isect_x.x + ray_dir.x * 0.000001f;
+        imap_y      = (int)isect_x.y;
+        float dx    = isect_x.x - working_pos.x; // TODO move to a global single 'intersectxy' so that this can be called in a function continuously.
+        float dy    = isect_x.y - working_pos.y;
+        perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle ); // This is a bit of trig. See Black Book.
+        if ( 0 == i && 0 == j ) {
+          printf( "xintersect %i,%i\n", imap_x, imap_y );
+          printf( "dwd %.2f pcwd %.2f\n", direct_dist, perspective_corrected_dist );
+        }
+        isect_pos = isect_x;
       } else {
-        xf = (int)( ( player.pos.x - dist_to_cell_x ) / ( (float)map_w ) * minimap_texture.w );
+        direct_dist                = hypot_y;
+        imap_x                     = (int)isect_y.x;
+        imap_y                     = (int)isect_y.y + ray_dir.y * 0.000001f;
+        float dx                   = isect_y.x - working_pos.x;
+        float dy                   = isect_y.y - working_pos.y;
+        perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle );
+        if ( 0 == i && 0 == j ) {
+          printf( "yintersect %i,%i\n", imap_x, imap_y );
+          printf( "dwd %.2f pcwd %.2f\n", direct_dist, perspective_corrected_dist );
+        }
+        isect_pos = isect_y;
       }
-      yf = (int)( ( player.pos.y ) / ( (float)map_w ) * minimap_texture.w );
-      // if ( dist_to_cell_x <= dist_to_cell_y) { ray_rgb[0] = 0xFF;} else { ray_rgb[0] = 0x00;} // Note <= so starting angle chooses this.
-      plot_line( xi, yi, xf, yf, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
-      if ( ray_dir.y > 0 ) {
-        yf = (int)( ( player.pos.y + dist_to_cell_y ) / ( (float)map_w ) * minimap_texture.w );
-      } else {
-        yf = (int)( ( player.pos.y - dist_to_cell_y ) / ( (float)map_w ) * minimap_texture.w );
+
+      mmap_plot_line( working_pos, isect_pos, ray_rgb, minimap_img_ptr, minimap_texture );
+
+      hit = false;
+      if ( imap_y >= 0 && imap_y < map_h && imap_x >= 0 && imap_x < map_w ) {
+        int imap_idx  = imap_y * map_w + imap_x;
+        hit_tile_type = map[imap_idx];
+        if ( hit_tile_type > 0 && hit_tile_type <= 4 ) {
+          hit = true;
+          break;
+        }
       }
-      xf = (int)( ( player.pos.x ) / ( (float)map_w ) * minimap_texture.w );
-      // if ( dist_to_cell_y < dist_to_cell_x) { ray_rgb[0] = 0xFF;} else { ray_rgb[0] = 0x00;}
-      plot_line( xi, yi, xf, yf, ray_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
+
+      working_pos = isect_pos;
+    } // end loop to hit.
+
+    if ( hit ) {
+      rgb_t colour = { .r = 0xFF, .g = 0x00, .b = 0xFF };
+      switch ( hit_tile_type ) {
+      case 0: break;
+      case 1: colour = (rgb_t){ 0x11, 0x22, 0x88 }; break; // blue
+      case 2: colour = (rgb_t){ 0x11, 0x88, 0x22 }; break; // green
+      case 3: colour = (rgb_t){ 0x88, 0x22, 0x11 }; break; // red
+      case 4: colour = (rgb_t){ 0x88, 0x88, 0x88 }; break; // white
+      default: break;
+      } // endswitch
+      int line_height = (int)( ( main_texture.h ) / ( fabsf( perspective_corrected_dist ) ) );
+      if ( 0 != hit_tile_type ) { draw_main_col( i, line_height, colour, main_img_ptr, main_texture.w, main_texture.h ); }
+      if ( 0 == i ) { printf( "tile type =%i line_height=%i/%i\n", hit_tile_type, line_height, main_texture.h ); }
     }
 
-    float xs_per_y = ray_dir.x / ray_dir.y;
-    float ys_per_x = ray_dir.y / ray_dir.x;
-    float x_dash   = dist_to_cell_y * xs_per_y;
-    float y_dash   = dist_to_cell_x * ys_per_x;
-    vec2_t isect_x, isect_y;
-    float hypot_x, hypot_y;
-    { // x hit first
-      hypot_x       = sqrtf( y_dash * y_dash + dist_to_cell_x * dist_to_cell_x );
-      float reverse = ray_dir.x > 0.0f ? -1.0f : 1.0f;
-
-      isect_x = add_vec2( player.pos, mul_vec2_f( ray_dir, hypot_x ) );
-
-      if ( 0 == i ) {
-        uint8_t isect_rgb[] = { 0x00, 0xFF, 0xFF };
-        xi                  = (int)( ( player.pos.x - dist_to_cell_x * reverse ) / ( (float)map_w ) * minimap_texture.w );
-        yi                  = (int)( ( player.pos.y ) / ( (float)map_h ) * minimap_texture.h );
-        xf                  = (int)( ( isect_x.x ) / ( (float)map_w ) * minimap_texture.w );
-        yf                  = (int)( ( isect_x.y ) / ( (float)map_w ) * minimap_texture.w );
-        plot_line( xi, yi, xf, yf, isect_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
-      }
-    }
-    { // y hit first
-      hypot_y       = sqrtf( x_dash * x_dash + dist_to_cell_y * dist_to_cell_y );
-      float reverse = ray_dir.y > 0.0f ? -1.0f : 1.0f;
-
-      isect_y = add_vec2( player.pos, mul_vec2_f( ray_dir, hypot_y ) );
-
-      if ( 0 == i ) {
-        uint8_t isect_rgb[] = { 0x00, 0xFF, 0xFF };
-        xi                  = (int)( ( player.pos.x ) / ( (float)map_w ) * minimap_texture.w );
-        yi                  = (int)( ( player.pos.y - dist_to_cell_y * reverse ) / ( (float)map_h ) * minimap_texture.h );
-        xf                  = (int)( ( isect_y.x ) / ( (float)map_w ) * minimap_texture.w );
-        yf                  = (int)( ( isect_y.y ) / ( (float)map_w ) * minimap_texture.w );
-        plot_line( xi, yi, xf, yf, isect_rgb, minimap_img_ptr, minimap_texture.w, minimap_texture.h, 3 );
-      }
-      //  float corner_angle = atanf( x_dash / dist_to_cell_y );
-      // if ( 0 == i ) { printf( "corner_angle=%.2f\n", corner_angle ); }
-    }
-    int imap_x, imap_y, side_dist;
-    float direct_dist, perspective_corrected_dist;
-    if ( fabsf( hypot_x ) < fabsf( hypot_y ) ) {
-      direct_dist = hypot_x;
-      imap_x      = (int)isect_x.x + ray_dir.x * 0.000001f;
-      imap_y      = (int)isect_x.y;
-      float dx    = isect_x.x - player.pos.x; // TODO move to a global single 'intersectxy' so that this can be called in a function continuously.
-      float dy    = isect_x.y - player.pos.y;
-      perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle ); // This is a bit of trig. See Black Book.
-      if ( 0 == i ) {
-        printf( "xintersect %i,%i\n", imap_x, imap_y );
-        printf( "dwd %.2f pcwd %.2f\n", direct_dist, perspective_corrected_dist );
-      }
-    } else {
-      direct_dist                = hypot_y;
-      imap_x                     = (int)isect_y.x;
-      imap_y                     = (int)isect_y.y + ray_dir.y * 0.000001f;
-      float dx                   = isect_y.x - player.pos.x;
-      float dy                   = isect_y.y - player.pos.y;
-      perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle );
-      if ( 0 == i ) {
-        printf( "yintersect %i,%i\n", imap_x, imap_y );
-        printf( "dwd %.2f pcwd %.2f\n", direct_dist, perspective_corrected_dist );
-      }
-    }
-    int imap_idx  = imap_y * map_w + imap_x;
-    int tile_type = map[imap_idx];
-    rgb_t colour  = { 0xFF };
-    switch ( tile_type ) {
-    case 0: break;
-    case 1: colour = (rgb_t){ 0x11, 0x22, 0x88 }; break; // blue
-    case 2: colour = (rgb_t){ 0x11, 0x88, 0x22 }; break; // green
-    case 3: colour = (rgb_t){ 0x88, 0x22, 0x11 }; break; // red
-    case 4: colour = (rgb_t){ 0x88, 0x88, 0x88 }; break; // whit
-    default: colour = (rgb_t){ .r = 0xFF, .g = 0x00, .b = 0xFF };
-    } // endswitch
-
-    int line_height = (int)( (main_texture.h) / (fabsf(perspective_corrected_dist)) );
-
-    if ( 0 != tile_type ) { draw_main_col( i, line_height, colour, main_img_ptr, main_texture.w, main_texture.h ); }
-    if ( 0 == i ) { printf( "tile type =%i line_height=%i/%i\n", tile_type, line_height, main_texture.h ); }
   } // endfor res_w
 }
 
