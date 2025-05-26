@@ -233,7 +233,7 @@ viewplane_dist      player_pos
           = 45 degrees or 0.7854 radians
   */
 
-  const float viewplane_width = 1.0f, viewplane_dist = 0.5f; // Equiv. to near clip plane distance.
+  const float viewplane_width = 0.5f, viewplane_dist = 0.5f; // Equiv. to near clip plane distance.
   vec2_t viewplane_mid_pos = add_vec2( player.pos, mul_vec2_f( player.dir, viewplane_dist ) );
   vec2_t viewplane_dir     = rot_90_ccw_vec2( player.dir );
   vec2_t viewplane_min_pos = sub_vec2( viewplane_mid_pos, mul_vec2_f( viewplane_dir, viewplane_width / 2 ) );
@@ -323,10 +323,9 @@ viewplane_dist      player_pos
         float dy    = isect_x.y - player.pos.y;
 
         // TODO wrong
-         perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle ); // This is a bit of trig. See Black Book.
+        perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle ); // This is a bit of trig. See Black Book.
 
-
-          isect_pos = isect_x;
+        isect_pos = isect_x;
 
       } else {
         direct_dist = length_vec2( sub_vec2( isect_y, player.pos ) );
@@ -336,8 +335,7 @@ viewplane_dist      player_pos
         float dy    = isect_y.y - player.pos.y;
 
         // TODO wrong
-          perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle );
-
+        perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle );
 
         isect_pos = isect_y;
       }
@@ -373,9 +371,9 @@ viewplane_dist      player_pos
       } // endswitch
       // TODO this is crap
       // int line_height = (int)( ( main_texture.h ) / ( fabsf( perspective_corrected_dist ) ) );
-       float dist_fac = direct_dist / 20.0f;
-     // float dist_fac  = fabsf( perspective_corrected_dist ) / 1.0f;
-      int line_height = (int)( (float)main_texture.h * (1.0f-dist_fac) );
+      float dist_fac = direct_dist / 20.0f;
+      // float dist_fac  = fabsf( perspective_corrected_dist ) / 1.0f;
+      int line_height = (int)( (float)main_texture.h * ( 1.0f - dist_fac ) );
 
       if ( 0 != hit_tile_type ) { draw_main_col( px_col_i, line_height, colour, main_img_ptr, main_texture.w, main_texture.h ); }
       if ( 0 == px_col_i ) { printf( "tile type =%i line_height=%i/%i\n", hit_tile_type, line_height, main_texture.h ); }
