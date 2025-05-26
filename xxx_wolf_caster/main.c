@@ -269,6 +269,7 @@ viewplane_dist      player_pos
     int hit_tile_type                = 0;
     float perspective_corrected_dist = 0.0f;
     vec2_t working_pos               = player.pos;
+    float direct_dist;
     for ( int j = 0; j < 10; j++ ) {
       // TODO this calculation is incorrect when ray_dir.x or y < 0
       // --> fixed with a 0 -> 1 check
@@ -276,17 +277,10 @@ viewplane_dist      player_pos
 
       float dist_to_cell_x = ( working_pos.x - floorf( working_pos.x ) );
       float dist_to_cell_y = ( working_pos.y - floorf( working_pos.y ) );
-    
       if ( ray_dir.x > 0 ) { dist_to_cell_x = 1.0f - ( working_pos.x - floorf( working_pos.x ) ); }
       if ( ray_dir.y > 0 ) { dist_to_cell_y = 1.0f - ( working_pos.y - floorf( working_pos.y ) ); }
-
-
-      if ( 0.0f == dist_to_cell_x) { dist_to_cell_x = 1.0f;}
-      if ( 0.0f == dist_to_cell_y) { dist_to_cell_y = 1.0f;}
-
-      printf( "%i) dist to cell x,y = %f, %f\n", j, dist_to_cell_x, dist_to_cell_y );
-      // if ( 0 == px_col_i ) { printf( "(%i) dist to cell x,y %.2f,%.2f\n", j, dist_to_cell_x, dist_to_cell_y ); }
-      // if ( 0 == i ) { mmap_plot_line( player.pos, add_vec2( player.pos, mul_vec2_f( ray_dir, 0.5f ) ), ray_rgb, minimap_img_ptr, minimap_texture ); }
+      if ( 0.0f == dist_to_cell_x ) { dist_to_cell_x = 1.0f; }
+      if ( 0.0f == dist_to_cell_y ) { dist_to_cell_y = 1.0f; }
 
       float xs_per_y = ray_dir.x / ray_dir.y;
       float ys_per_x = ray_dir.y / ray_dir.x;
@@ -296,9 +290,7 @@ viewplane_dist      player_pos
       // x hit first
       float hypot_x   = sqrtf( y_dash * y_dash + dist_to_cell_x * dist_to_cell_x );
       float reverse_x = ray_dir.x > 0.0f ? -1.0f : 1.0f;
-
-      vec2_t isect_x = add_vec2( working_pos, mul_vec2_f( ray_dir, hypot_x ) );
-
+      vec2_t isect_x  = add_vec2( working_pos, mul_vec2_f( ray_dir, hypot_x ) );
       // Draw distances to first cell sides.
       if ( 0 == px_col_i ) {
         printf( "%i: working_pos is {%.2f,%.2f}\n", j, working_pos.x, working_pos.y );
@@ -312,9 +304,7 @@ viewplane_dist      player_pos
       // y hit first
       float hypot_y   = sqrtf( x_dash * x_dash + dist_to_cell_y * dist_to_cell_y );
       float reverse_y = ray_dir.y > 0.0f ? -1.0f : 1.0f;
-
-      vec2_t isect_y = add_vec2( working_pos, mul_vec2_f( ray_dir, hypot_y ) );
-
+      vec2_t isect_y  = add_vec2( working_pos, mul_vec2_f( ray_dir, hypot_y ) );
       if ( 0 == px_col_i ) {
         vec2_t pos_i = working_pos;
         pos_i.y      = working_pos.y - dist_to_cell_y * reverse_y;
@@ -322,47 +312,36 @@ viewplane_dist      player_pos
         mmap_plot_line( pos_i, pos_f, isect_rgb, minimap_img_ptr, minimap_texture );
         printf( "%i: isect_y would be {%.2f,%.2f}\n", j, isect_y.x, isect_y.y );
       }
-      //  float corner_angle = atanf( x_dash / dist_to_cell_y );
-      // if ( 0 == i ) { printf( "corner_angle=%.2f\n", corner_angle ); }
 
       int imap_x, imap_y, side_dist;
-      float direct_dist;
       vec2_t isect_pos;
       if ( fabsf( hypot_x ) < fabsf( hypot_y ) ) {
-        direct_dist = hypot_x;
-        imap_x      = (int)(isect_x.x + ray_dir.x * 0.000001f);
+        direct_dist = length_vec2( sub_vec2( isect_x, player.pos ) );
+        imap_x      = (int)( isect_x.x + ray_dir.x * 0.000001f );
         imap_y      = (int)isect_x.y;
-        float dx    = isect_x.x - working_pos.x; // TODO move to a global single 'intersectxy' so that this can be called in a function continuously.
-        float dy    = isect_x.y - working_pos.y;
-        perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle ); // This is a bit of trig. See Black Book.
-                                                                                           //   if ( 0 == px_col_i ) {
-        //     printf( "(%i) vertical gridline intersect %i,%i\n", j, imap_x, imap_y );
-        //     printf( "dwd %.2f pcwd %.2f\n", direct_dist, perspective_corrected_dist );
-        //   }
-        isect_pos = isect_x;
-        if ( 0 == px_col_i ) {
-          //    mmap_plot_line( working_pos, isect_pos, isect_rgb, minimap_img_ptr, minimap_texture );
-          printf( "xx2 wp={%.2f,%.2f} isect_x={%.2f,%.2f}\n", working_pos.x, working_pos.y, isect_x.x, isect_x.y );
-        }
+        float dx    = isect_x.x - player.pos.x; // TODO move to a global single 'intersectxy' so that this can be called in a function continuously.
+        float dy    = isect_x.y - player.pos.y;
+
+        // TODO wrong
+         perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle ); // This is a bit of trig. See Black Book.
+
+
+          isect_pos = isect_x;
+
       } else {
-        direct_dist                = hypot_y;
-        imap_x                     = (int)isect_y.x;
-        imap_y                     = (int)(isect_y.y + ray_dir.y * 0.000001f);
-        float dx                   = isect_y.x - working_pos.x;
-        float dy                   = isect_y.y - working_pos.y;
-        perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle );
-        //     if ( 0 == px_col_i ) {
-        //      printf( "(%i) horizontal gridline intersect %i,%i\n", j, imap_x, imap_y );
-        //      printf( "dwd %.2f pcwd %.2f\n", direct_dist, perspective_corrected_dist );
-        //    }
+        direct_dist = length_vec2( sub_vec2( isect_y, player.pos ) );
+        imap_x      = (int)isect_y.x;
+        imap_y      = (int)( isect_y.y + ray_dir.y * 0.000001f );
+        float dx    = isect_y.x - player.pos.x;
+        float dy    = isect_y.y - player.pos.y;
+
+        // TODO wrong
+          perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle );
+
+
         isect_pos = isect_y;
-        if ( 0 == px_col_i ) {
-          //    mmap_plot_line( working_pos, isect_pos, isect_rgb, minimap_img_ptr, minimap_texture );
-          printf( "yy2 wp={%.2f,%.2f} isecy={%.2f,%.2f}\n", working_pos.x, working_pos.y, isect_y.x, isect_y.y );
-        }
       }
 
-      //   if ( 0 == i ) { mmap_plot_line( working_pos, isect_pos, ray_rgb, minimap_img_ptr, minimap_texture ); }
       hit = false;
       if ( imap_y >= 0 && imap_y < map_h && imap_x >= 0 && imap_x < map_w ) {
         int imap_idx  = imap_y * map_w + imap_x;
@@ -393,7 +372,11 @@ viewplane_dist      player_pos
       default: break;
       } // endswitch
       // TODO this is crap
-      int line_height = (int)( ( main_texture.h ) / ( fabsf( perspective_corrected_dist ) ) );
+      // int line_height = (int)( ( main_texture.h ) / ( fabsf( perspective_corrected_dist ) ) );
+       float dist_fac = direct_dist / 20.0f;
+     // float dist_fac  = fabsf( perspective_corrected_dist ) / 1.0f;
+      int line_height = (int)( (float)main_texture.h * (1.0f-dist_fac) );
+
       if ( 0 != hit_tile_type ) { draw_main_col( px_col_i, line_height, colour, main_img_ptr, main_texture.w, main_texture.h ); }
       if ( 0 == px_col_i ) { printf( "tile type =%i line_height=%i/%i\n", hit_tile_type, line_height, main_texture.h ); }
     }
