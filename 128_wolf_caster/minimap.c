@@ -10,7 +10,7 @@ minimap_t mmap_init( int w, int h ) {
   uint8_t colour[] = { 0x22, 0x22, 0x22 };
   for ( int i = 0; i < w * h * 3; i += 3 ) { memcpy( &map.img_ptr[i], colour, 3 ); }
 
-  map.tex = gfx_create_texture_from_mem( w, h, map.img_ptr );
+  map.tex = gfx_create_texture_from_mem( w, h, 3, map.img_ptr );
 
   return map;
 }
@@ -23,12 +23,14 @@ void mmap_free( minimap_t* map_ptr ) {
 }
 
 void mmap_plot_line( vec2_t ori, vec2_t dest, rgb_t rgb ) {
+  if ( !minimap_draw_rays ) { return; }
   int tile_px_w = mmap.tex.w / TILES_W;
   int tile_px_h = mmap.tex.h / TILES_H;
   plot_line( ori.x * tile_px_w, ori.y * tile_px_h, dest.x * tile_px_w, dest.y * tile_px_h, &rgb.r, mmap.img_ptr, mmap.tex.w, mmap.tex.h, 3 );
 }
 
 void mmap_plot_cross( vec2_t pos, rgb_t rgb ) {
+  if ( !minimap_draw_rays ) { return; }
   int tile_px_w = mmap.tex.w / TILES_W;
   int tile_px_h = mmap.tex.h / TILES_H;
   plot_t_cross( pos.x * tile_px_w, pos.y * tile_px_h, 2, mmap.img_ptr, mmap.tex.w, mmap.tex.h, 3, &rgb.r );
@@ -78,7 +80,7 @@ void mmap_update_image( minimap_t map, const uint8_t* tiles_ptr, int tiles_w, in
   int px_x = player.pos.x * tile_px_w;
   int px_y = player.pos.y * tile_px_h;
   {
-    plot_t_cross( px_x, px_y, 2, map.img_ptr, map.tex.w, map.tex.h, 3, &player_colour.r );
+    // plot_t_cross( px_x, px_y, 2, map.img_ptr, map.tex.w, map.tex.h, 3, &player_colour.r );
     plot_circle( px_x, px_y, 4, map.img_ptr, map.tex.w, map.tex.h, 3, &player_colour.r );
 
     // Dir line

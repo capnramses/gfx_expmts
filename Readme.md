@@ -143,7 +143,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 125     | `simd_math`                 | Experiments with SIMD extensions.                                              | started             |
 | 126     | `vulkan_hello_triangle`     | Another Vulkan starter.                                                        | working             |
 | 127     | `rounded_rect         `     | One method of drawing rounded corners on a 2D box.                             | working             |
-| xxx     | `wolf_caster`               | Ray caster _a la_ Wolfenstein 3-D.                                             | started            |
+| 128     | `wolf_caster`               | Ray caster _a la_ Wolfenstein 3-D.                                             | working            |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                        | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                                 | proposed            |

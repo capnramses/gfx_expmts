@@ -16,7 +16,7 @@ typedef struct shader_t {
 
 typedef struct texture_t {
   GLuint handle;
-  int w, h;
+  int w, h, n;
 } texture_t;
 
 typedef struct rgb_t {
@@ -29,7 +29,7 @@ mesh_t gfx_create_mesh_from_mem( float* points, int n_comps, int n_points, GLenu
 
 shader_t gfx_create_shader_from_strings( const char* vert_str, const char* frag_str );
 
-texture_t gfx_create_texture_from_mem( int w, int h, void* pixels );
+texture_t gfx_create_texture_from_mem( int w, int h, int n, void* pixels );
 
 void gfx_update_texture_from_mem( texture_t* texture_ptr, void* pixels );
 

@@ -10,19 +10,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-// TODO consider stretching display pixels vertically to match dims of an old beige monitor.
 #define FPS_W 320
 #define FPS_H 200
-#define FPS_VERTICAL_STRETCH 1.2f
-#define FPS_VIEWPORT_W 320 * 3
-#define FPS_VIEWPORT_H 200 * 3
+#define FPS_VERTICAL_STRETCH 1.2f // stretching display pixels vertically to match dims of an old beige monitor.
+#define FPS_VIEWPORT_W 320 * 4
+#define FPS_VIEWPORT_H 200 * 4
 #define FOV_DEGS 60.0f
 #define FOV_HALF_DEGS ( FOV_DEGS * 0.5f )
 #define DEGS_PER_RAY ( FOV_DEGS / FPS_W )
 #define MINIMAP_W 512
 #define MINIMAP_H 512
 #define WIN_W 1200
-#define WIN_H 1300
+#define WIN_H FPS_VIEWPORT_H * FPS_VERTICAL_STRETCH
 #define TILES_W 8
 #define TILES_H 8
 #define RAY_STEPS_MAX 16

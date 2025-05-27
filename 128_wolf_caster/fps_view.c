@@ -7,7 +7,7 @@ fps_view_t fps_view_init( int w, int h ) {
   uint8_t colour[] = { 0x22, 0x22, 0x22 };
   for ( int i = 0; i < w * h * 3; i += 3 ) { memcpy( &fps_view.img_ptr[i], colour, 3 ); }
 
-  fps_view.tex = gfx_create_texture_from_mem( w, h, fps_view.img_ptr );
+  fps_view.tex = gfx_create_texture_from_mem( w, h, 3, fps_view.img_ptr );
   return fps_view;
 }
 
@@ -88,15 +88,14 @@ void fps_view_update_image( fps_view_t fps_view, const uint8_t* tiles_ptr, int t
       }
 
       { // Work out if hit a wall.// Continue to next horiz and vert intersections.
-        vec2_t next_horiz = curr_pos_is_horiz ? (vec2_t){ curr_pos.x - xs_per_y * ray_dir_mod.x, curr_pos.y - 1.0f * ray_dir_mod.y } : curr_horiz;
-        vec2_t next_vert  = curr_pos_is_horiz ? curr_vert : (vec2_t){ curr_pos.x - 1.0f * ray_dir_mod.x, curr_pos.y - ys_per_x * ray_dir_mod.y };
-        int curr_tile_x   = floorf( curr_pos.x - 0.0001f * ray_dir_mod.x );
-        int curr_tile_y   = floorf( curr_pos.y - 0.0001f * ray_dir_mod.y );
+        int curr_tile_x = floorf( curr_pos.x - 0.0001f * ray_dir_mod.x );
+        int curr_tile_y = floorf( curr_pos.y - 0.0001f * ray_dir_mod.y );
         if ( curr_tile_x < 0 || curr_tile_x >= TILES_W || curr_tile_y < 0 || curr_tile_y >= TILES_H ) { break; }
         int curr_tile_idx  = curr_tile_y * TILES_W + curr_tile_x;
         int curr_tile_type = tiles_ptr[curr_tile_idx];
-        bool hit           = true;
-        rgb_t wall_colour  = error_colour;
+
+        bool hit          = true;
+        rgb_t wall_colour = error_colour;
         switch ( curr_tile_type ) {
         case 0: hit = false; break;
         case 1: wall_colour = blue_tile_colour; break;
@@ -105,11 +104,28 @@ void fps_view_update_image( fps_view_t fps_view, const uint8_t* tiles_ptr, int t
         default: break;
         } // endswith
         if ( hit ) {
-          for ( int row_y = 0; row_y < fps_view.tex.h; row_y++ ) {
+          float dist_player_to_viewplane = 0.5f;
+          float wall_height              = fps_view.tex.h;
+          vec2_t vec_to_hit              = sub_vec2( curr_pos, player.pos );
+          // Using ray_dist_to_hit directly gives a fish-eye effect.
+          float ray_dist_to_hit  = length_vec2( vec_to_hit );
+          float proj_wall_height = ( wall_height / ray_dist_to_hit ); // * dist_player_to_viewplane
+
+          // correct fish-eye
+          {
+            vec2_t projected = project_vec2( vec_to_hit, normalise_vec2( player.dir ) );
+            float corrected  = length_vec2( projected );
+            proj_wall_height = ( wall_height / corrected ); // * dist_player_to_viewplane
+          }
+
+          int line_height = APG_CLAMP( proj_wall_height, 0, fps_view.tex.h );
+          int half_gap    = ( fps_view.tex.h - line_height ) / 2;
+          for ( int row_y = half_gap; row_y < fps_view.tex.h - half_gap; row_y++ ) {
             int mem_idx = ( row_y * fps_view.tex.w + col_x ) * 3;
             memcpy( &fps_view.img_ptr[mem_idx], &wall_colour.r, 3 );
           }
           if ( do_plot ) { mmap_plot_line( player.pos, curr_pos, intersect_hit_colour ); }
+
           continue;
         }
       } // endblock hit

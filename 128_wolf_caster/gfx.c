@@ -64,12 +64,17 @@ shader_t gfx_create_shader_from_strings( const char* vert_str, const char* frag_
   return shader;
 }
 
-texture_t gfx_create_texture_from_mem( int w, int h, void* pixels ) {
-  texture_t texture = { .handle = 0, .w = w, .h = h };
+texture_t gfx_create_texture_from_mem( int w, int h, int n, void* pixels ) {
+  texture_t texture = { .handle = 0, .w = w, .h = h, .n = n };
   glActiveTexture( GL_TEXTURE0 );
   glGenTextures( 1, &texture.handle );
   glBindTexture( GL_TEXTURE_2D, texture.handle );
-  glTexImage2D( GL_TEXTURE_2D, 0, GL_SRGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels );
+  if ( 3 == n ) {
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_SRGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels );
+  } else if ( 4 == n ) {
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels );
+  }
+  assert( n == 3 || n == 4 );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
@@ -81,7 +86,12 @@ texture_t gfx_create_texture_from_mem( int w, int h, void* pixels ) {
 void gfx_update_texture_from_mem( texture_t* texture_ptr, void* pixels ) {
   glActiveTexture( GL_TEXTURE0 );
   glBindTexture( GL_TEXTURE_2D, texture_ptr->handle );
-  glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, texture_ptr->w, texture_ptr->h, GL_RGB, GL_UNSIGNED_BYTE, pixels );
+  if ( texture_ptr->n == 3 ) {
+    glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, texture_ptr->w, texture_ptr->h, GL_RGB, GL_UNSIGNED_BYTE, pixels );
+  } else if ( texture_ptr->n == 4 ) {
+    glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, texture_ptr->w, texture_ptr->h, GL_RGBA, GL_UNSIGNED_BYTE, pixels );
+  }
+  assert( texture_ptr->n == 3 || texture_ptr->n == 4 );
   glBindTexture( GL_TEXTURE_2D, 0 );
 }
 
@@ -126,7 +136,7 @@ GLFWwindow* gfx_start( int win_w, int win_h, const char* title ) {
       "out vec4 frag_colour;"
       "void main() {"
       "  vec4 texel = texture( u_tex, st );"
-      "  frag_colour = vec4( pow(texel.rgb, vec3( 1.0 / 2.2 ) ), 1.0 );"
+      "  frag_colour = vec4( pow(texel.rgb, vec3( 1.0 / 2.2 ) ), texel.a );"
       "}";
     textured_shader = gfx_create_shader_from_strings( vertex_shader, fragment_shader );
     if ( 0 == textured_shader.program ) {
