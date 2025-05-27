@@ -233,7 +233,7 @@ viewplane_dist      player_pos
           = 45 degrees or 0.7854 radians
   */
 
-  const float viewplane_width = 0.5f, viewplane_dist = 0.5f; // Equiv. to near clip plane distance.
+  const float viewplane_width = 1.0f, viewplane_dist = 0.5f; // Equiv. to near clip plane distance.
   vec2_t viewplane_mid_pos = add_vec2( player.pos, mul_vec2_f( player.dir, viewplane_dist ) );
   vec2_t viewplane_dir     = rot_90_ccw_vec2( player.dir );
   vec2_t viewplane_min_pos = sub_vec2( viewplane_mid_pos, mul_vec2_f( viewplane_dir, viewplane_width / 2 ) );
@@ -258,6 +258,8 @@ viewplane_dist      player_pos
     vec2_t ray_dir           = sub_vec2( viewplane_inc_pos, player.pos );
     ray_dir                  = normalise_vec2( ray_dir ); // Needed?
 
+    float curr_px_col_angle = -0.7854 * main_texture.w * 0.5f + 0.7854f * px_col_i;
+
     // 1. get dist to x and y sides by using remainder after truncation or floor().
     // 2. divide x by x gradient of ray_dir, same for y to get side_dists.
     //    biggest component or shortest side dist is first side hit
@@ -266,6 +268,7 @@ viewplane_dist      player_pos
     //
     // loop here until hit, changing dist_to_cell_x ?
     bool hit                         = false;
+    bool hit_darkside = false;
     int hit_tile_type                = 0;
     float perspective_corrected_dist = 0.0f;
     vec2_t working_pos               = player.pos;
@@ -323,9 +326,11 @@ viewplane_dist      player_pos
         float dy    = isect_x.y - player.pos.y;
 
         // TODO wrong
-        perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle ); // This is a bit of trig. See Black Book.
+        perspective_corrected_dist = dx * cosf( curr_px_col_angle ) - dy * sin( curr_px_col_angle ); // This is a bit of trig. See Black Book.
 
         isect_pos = isect_x;
+      
+       hit_darkside = true; 
 
       } else {
         direct_dist = length_vec2( sub_vec2( isect_y, player.pos ) );
@@ -335,9 +340,10 @@ viewplane_dist      player_pos
         float dy    = isect_y.y - player.pos.y;
 
         // TODO wrong
-        perspective_corrected_dist = dx * cosf( player.angle ) - dy * sin( player.angle );
+        perspective_corrected_dist = dx * cosf( curr_px_col_angle ) - dy * sin( curr_px_col_angle );
 
         isect_pos = isect_y;
+       hit_darkside = false; 
       }
 
       hit = false;
@@ -369,11 +375,22 @@ viewplane_dist      player_pos
       case 4: colour = (rgb_t){ 0x88, 0x88, 0x88 }; break; // white
       default: break;
       } // endswitch
+
+      // make one side darker
+      if ( hit_darkside ) {
+        colour.r -= 0x11;
+        colour.g -= 0x11;
+        colour.b -= 0x11;
+      }
+
       // TODO this is crap
       // int line_height = (int)( ( main_texture.h ) / ( fabsf( perspective_corrected_dist ) ) );
       float dist_fac = direct_dist / 20.0f;
       // float dist_fac  = fabsf( perspective_corrected_dist ) / 1.0f;
+      
+      
       int line_height = (int)( (float)main_texture.h * ( 1.0f - dist_fac ) );
+     //  int line_height = (int)( ( main_texture.h ) / ( fabsf( perspective_corrected_dist ) ) );
 
       if ( 0 != hit_tile_type ) { draw_main_col( px_col_i, line_height, colour, main_img_ptr, main_texture.w, main_texture.h ); }
       if ( 0 == px_col_i ) { printf( "tile type =%i line_height=%i/%i\n", hit_tile_type, line_height, main_texture.h ); }
