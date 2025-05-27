@@ -25,6 +25,8 @@
 #define TILES_W 8
 #define TILES_H 8
 #define RAY_STEPS_MAX 16
+#define DEBUG_W 64
+#define DEBUG_H 16
 
 typedef struct minimap_t {
   texture_t tex;

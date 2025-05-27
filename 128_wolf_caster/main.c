@@ -38,7 +38,7 @@ rgb_t blue_tile_colour            = { 0x00, 0x00, 0x99 };
 rgb_t error_colour                = { 0xFF, 0x00, 0xFF };
 rgb_t grid_line_colour            = { 0x29, 0x29, 0x29 };
 rgb_t player_colour               = { 0xFF, 0xFF, 0xFF };
-rgb_t fov_colour                  = { 0x88, 0x88, 0xFF };
+rgb_t fov_colour                  = { 0x88, 0x88, 0x88 };
 rgb_t to_nearest_gridlines_colour = { 0xAA, 0xAA, 0xAA };
 rgb_t intersect_point_colour_a    = { 0x55, 0xAA, 0x55 };
 rgb_t intersect_point_colour_b    = { 0x55, 0x55, 0xAA };
@@ -55,7 +55,20 @@ const uint8_t tiles_ptr[TILES_W * TILES_H] = {
   2, 0, 0, 0, 0, 0, 0, 1, // 3
   3, 0, 0, 0, 1, 1, 1, 1, // 4
   3, 0, 0, 1, 1, 0, 0, 1, // 5
-  1, 1, 0, 0, 0, 0, 0, 1, // 6gfx.c.
+  1, 1, 0, 0, 0, 0, 0, 1, // 6
+  1, 1, 1, 1, 1, 1, 1, 1  // 7
+};
+
+uint8_t* debug_img_ptr;
+
+void move_player( GLFWwindow* window, player_t* p_ptr, double elapsed_s ) {
+  const float speed = 1.0f, rot_speed = 2.0f;
+  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_LEFT ) ) { p_ptr->heading -= rot_speed * elapsed_s; }
+  if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_RIGHT ) ) { p_ptr->heading += rot_speed * elapsed_s; }
+  p_ptr->heading = fmodf( p_ptr->heading, 2.0 * PI );
+  p_ptr->heading = p_ptr->heading >= 0.0f ? p_ptr->heading : p_ptr->heading + 2.0 * PI;
+  p_ptr->dir.x   = cosf( p_ptr->heading );
+  p_ptr->dir.y   = sinf( p_ptr->heading );
   if ( GLFW_PRESS == glfwGetKey( window, GLFW_KEY_UP ) ) {
     // epsilon here prevents player getting into invalid tile coords when pos is truncated.
     p_ptr->pos.x = APG_CLAMP( p_ptr->pos.x + p_ptr->dir.x * speed * elapsed_s, 0.0f, (float)TILES_W - 0.00001f );
@@ -66,10 +79,6 @@ const uint8_t tiles_ptr[TILES_W * TILES_H] = {
     p_ptr->pos.y = APG_CLAMP( p_ptr->pos.y - p_ptr->dir.y * speed * elapsed_s, 0.0f, (float)TILES_H - 0.00001f );
   }
 }
-
-#define DEBUG_W 64
-#define DEBUG_H 16
-uint8_t* debug_img_ptr;
 
 int main() {
   printf( "Wolfcaster 3-D\n" );
@@ -87,7 +96,7 @@ int main() {
   double fps_cd        = 0.1;
   double accum_s       = 0.0;
   double timestep_s    = 1.0 / 60.0;
-  //glfwSwapInterval(0) ;
+  // glfwSwapInterval(0) ;
   while ( !glfwWindowShouldClose( window ) ) {
     double curr_s    = glfwGetTime();
     double elapsed_s = curr_s - _prev_s;
@@ -114,13 +123,13 @@ int main() {
 
     // Wipes minimap. Call before FPS drawing as it adds lines.
     if ( do_minimap_draw ) { mmap_update_image( mmap, tiles_ptr, TILES_W, TILES_H, player ); }
-    
+
     accum_s += elapsed_s;
     while ( accum_s >= timestep_s ) {
       accum_s -= timestep_s;
       move_player( window, &player, timestep_s );
     }
-      fps_view_update_image( fps_view, tiles_ptr, TILES_W, TILES_H, player );
+    fps_view_update_image( fps_view, tiles_ptr, TILES_W, TILES_H, player );
 
     glClearColor( 0.2, 0.0, 0.2, 1.0 );
     glClear( GL_COLOR_BUFFER_BIT );

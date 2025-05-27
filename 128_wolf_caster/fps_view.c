@@ -70,7 +70,7 @@ void fps_view_update_image( fps_view_t fps_view, const uint8_t* tiles_ptr, int t
     float ys_to_vert  = player_to_vert * ys_per_x;
     vec2_t curr_vert  = { .x = curr_pos.x - player_to_vert * ray_dir_mod.x, .y = curr_pos.y - ys_to_vert * ray_dir_mod.y };
 
-    for ( int step = 0; step < 12; step++ ) {
+    for ( int step = 0; step < RAY_STEPS_MAX; step++ ) {
       if ( do_plot ) {
         mmap_plot_cross( curr_horiz, intersect_point_colour_a );
         mmap_plot_cross( curr_vert, intersect_point_colour_b );
