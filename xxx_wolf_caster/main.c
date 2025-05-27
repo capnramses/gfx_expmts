@@ -16,6 +16,28 @@
 #include <stdlib.h>
 #include <string.h>
 
+/*
+          viewplane_width
+        |-------------------|
+
+  +    min--------+-------max  --> viewplane_dir
+  |      \        |        /
+  |        \      |      /
+  |          \    |    /
+  |           \   |   /
+  |             \ | /
+  +               +
+viewplane_dist      player_pos
+
+
+  angle = tan^-1( (0.5*w) / d ) == (tOa)
+        = tan^-1( 0.5 / 0.5 )
+        = 45 degrees or 0.7854 radians
+*/
+
+#define VIEWPLANE_W 1.0f
+#define VIEWPLANE_D 0.75f;
+
 typedef struct player_t {
   vec2_t pos, dir;
   float angle;
@@ -63,112 +85,6 @@ void reset_main_image( uint8_t* main_img_ptr, int w, int h ) {
       memcpy( &main_img_ptr[img_idx], floor_colour, 3 );
     }
   }
-#if 0
-  // Which box of the map we're in. Assumes boxes are 1.0 wide.
-  int map_x = (int)player.pos.x;
-  int map_y = (int)player.pos.y;
-
-  float dir_x = player.dir.x, dir_y = player.dir.y;
-  float plane_x = 0.0f, plane_y = 0.0f;
-
-  for ( int x = 0; x < w; x++ ) {
-    float angle_max       = 0.7854f;
-    float angle_per_pixel = angle_max / ( w / 2 );
-    const int ray_dist    = 1000;
-    int xxx               = x;
-    if ( x >= w / 2 ) { xxx = w / 2 - x; }
-    float angle_a  = xxx * angle_per_pixel + player.angle;
-    vec2_t ray_dir = { cosf( angle_a ), sinf( angle_a ) };
-
-    // float camera_x  = 2 * x / (float)w - 1; // x-coordinate in camera space
-    // float ray_dir.x = dir.x + plane_x * camera_x;
-    //  float ray_dir.y = dir.y + plane_y * camera_x;
-
-    // Length of ray from current position to next x or y-side.
-    float side_dist_x;
-    float side_dist_y;
-
-    // Length of ray from one x or y-side to next x or y-side.
-    float delta_dist_x = ( ray_dir.x == 0 ) ? FLT_MAX : fabsf( 1 / ray_dir.x );
-    float delta_dist_y = ( ray_dir.y == 0 ) ? FLT_MAX : fabsf( 1 / ray_dir.y );
-    float perpWallDist;
-
-    // what direction to step in x or y-direction (either +1 or -1)
-    int stepX;
-    int stepY;
-
-    int hit = 0; // was there a wall hit?
-    int side;    // was a NS or a EW wall hit?
-
-    // calculate step and initial sideDist
-    if ( ray_dir.x < 0 ) {
-      stepX       = -1;
-      side_dist_x = ( player.pos.x - map_x ) * delta_dist_x;
-    } else {
-      stepX       = 1;
-      side_dist_x = ( map_x + 1.0 - player.pos.x ) * delta_dist_x;
-    }
-    if ( ray_dir.y < 0 ) {
-      stepY       = -1;
-      side_dist_y = ( player.pos.y - map_y ) * delta_dist_y;
-    } else {
-      stepY       = 1;
-      side_dist_y = ( map_y + 1.0 - player.pos.y ) * delta_dist_y;
-    }
-
-    // perform DDA
-    while ( hit == 0 ) {
-      // jump to next map square, either in x-direction, or in y-direction
-      if ( side_dist_x < side_dist_y ) {
-        side_dist_x += delta_dist_x;
-        map_x += stepX;
-        side = 0;
-      } else {
-        side_dist_y += delta_dist_y;
-        map_y += stepY;
-        side = 1;
-      }
-      // Check if ray has hit a wall
-      if ( map[map_y * map_w + map_x] > 0 ) hit = 1;
-    }
-
-    // Calculate distance projected on camera direction (Euclidean distance would give fisheye effect!)
-    if ( side == 0 )
-      perpWallDist = ( side_dist_x - delta_dist_x );
-    else
-      perpWallDist = ( side_dist_y - delta_dist_y );
-
-    // Calculate height of line to draw on screen
-    int lineHeight = (int)( h / perpWallDist );
-
-    // calculate lowest and highest pixel to fill in current stripe
-    int drawStart = -lineHeight / 2 + h / 2;
-    if ( drawStart < 0 ) drawStart = 0;
-    int drawEnd = lineHeight / 2 + h / 2;
-    if ( drawEnd >= h ) drawEnd = h - 1;
-
-    // choose wall color
-    rgb_t colour;
-    switch ( map[map_y * map_w + map_x] ) {
-    case 1: colour = (rgb_t){ 0x11, 0x22, 0x88 }; break;  // blue
-    case 2: colour = (rgb_t){ 0x11, 0x88, 0x22 }; break;  // green
-    case 3: colour = (rgb_t){ 0x88, 0x22, 0x11 }; break;  // red
-    case 4: colour = (rgb_t){ 0x88, 0x88, 0x88 }; break;  // white
-    case 0: colour = (rgb_t){ 0x00, 0x00, 0x00 }; break;  // white
-    default: colour = (rgb_t){ 0x88, 0x88, 0x11 }; break; // yellow
-    }
-
-    // give x and y sides different brightness
-    if ( side == 1 ) { colour = (rgb_t){ colour.r / 2, colour.g / 2, colour.b / 2 }; }
-
-    // draw the pixels of the stripe as a vertical line
-    for ( int y = drawStart; y < drawEnd; y++ ) {
-      // Draw a column of texture here.
-      int img_idx = ( y * w + x ) * 3;
-      memcpy( &main_img_ptr[img_idx], &colour, 3 );
-    }
-  }
-#endif
 }
 
 void draw_minimap( uint8_t* minimap_img_ptr, texture_t* minimap_texture, player_t player ) {
@@ -214,26 +130,7 @@ void mmap_plot_line( vec2_t i, vec2_t f, rgb_t rgb, uint8_t* img_ptr, texture_t 
 }
 
 void cast_rays( player_t player, uint8_t* minimap_img_ptr, texture_t minimap_texture, uint8_t* main_img_ptr, texture_t main_texture ) {
-  /*
-           viewplane_width
-         |-------------------|
-
-    +    min--------+-------max  --> viewplane_dir
-    |      \        |        /
-    |        \      |      /
-    |          \    |    /
-    |           \   |   /
-    |             \ | /
-    +               +
-viewplane_dist      player_pos
-
-
-    angle = tan^-1( (0.5*w) / d ) == (tOa)
-          = tan^-1( 0.5 / 0.5 )
-          = 45 degrees or 0.7854 radians
-  */
-
-  const float viewplane_width = 1.0f, viewplane_dist = 0.5f; // Equiv. to near clip plane distance.
+  const float viewplane_width = VIEWPLANE_W, viewplane_dist = VIEWPLANE_D; // Equiv. to near clip plane distance.
   vec2_t viewplane_mid_pos = add_vec2( player.pos, mul_vec2_f( player.dir, viewplane_dist ) );
   vec2_t viewplane_dir     = rot_90_ccw_vec2( player.dir );
   vec2_t viewplane_min_pos = sub_vec2( viewplane_mid_pos, mul_vec2_f( viewplane_dir, viewplane_width / 2 ) );
@@ -258,8 +155,6 @@ viewplane_dist      player_pos
     vec2_t ray_dir           = sub_vec2( viewplane_inc_pos, player.pos );
     ray_dir                  = normalise_vec2( ray_dir ); // Needed?
 
-    float curr_px_col_angle = -0.7854 * main_texture.w * 0.5f + 0.7854f * px_col_i;
-
     // 1. get dist to x and y sides by using remainder after truncation or floor().
     // 2. divide x by x gradient of ray_dir, same for y to get side_dists.
     //    biggest component or shortest side dist is first side hit
@@ -268,10 +163,11 @@ viewplane_dist      player_pos
     //
     // loop here until hit, changing dist_to_cell_x ?
     bool hit                         = false;
-    bool hit_darkside = false;
+    bool hit_darkside                = false;
     int hit_tile_type                = 0;
     float perspective_corrected_dist = 0.0f;
     vec2_t working_pos               = player.pos;
+    vec2_t isect_pos;
     float direct_dist;
     for ( int j = 0; j < 10; j++ ) {
       // TODO this calculation is incorrect when ray_dir.x or y < 0
@@ -317,7 +213,6 @@ viewplane_dist      player_pos
       }
 
       int imap_x, imap_y, side_dist;
-      vec2_t isect_pos;
       if ( fabsf( hypot_x ) < fabsf( hypot_y ) ) {
         direct_dist = length_vec2( sub_vec2( isect_x, player.pos ) );
         imap_x      = (int)( isect_x.x + ray_dir.x * 0.000001f );
@@ -325,12 +220,9 @@ viewplane_dist      player_pos
         float dx    = isect_x.x - player.pos.x; // TODO move to a global single 'intersectxy' so that this can be called in a function continuously.
         float dy    = isect_x.y - player.pos.y;
 
-        // TODO wrong
-        perspective_corrected_dist = dx * cosf( curr_px_col_angle ) - dy * sin( curr_px_col_angle ); // This is a bit of trig. See Black Book.
-
         isect_pos = isect_x;
-      
-       hit_darkside = true; 
+
+        hit_darkside = true;
 
       } else {
         direct_dist = length_vec2( sub_vec2( isect_y, player.pos ) );
@@ -339,11 +231,8 @@ viewplane_dist      player_pos
         float dx    = isect_y.x - player.pos.x;
         float dy    = isect_y.y - player.pos.y;
 
-        // TODO wrong
-        perspective_corrected_dist = dx * cosf( curr_px_col_angle ) - dy * sin( curr_px_col_angle );
-
-        isect_pos = isect_y;
-       hit_darkside = false; 
+        isect_pos    = isect_y;
+        hit_darkside = false;
       }
 
       hit = false;
@@ -385,12 +274,22 @@ viewplane_dist      player_pos
 
       // TODO this is crap
       // int line_height = (int)( ( main_texture.h ) / ( fabsf( perspective_corrected_dist ) ) );
-      float dist_fac = direct_dist / 20.0f;
       // float dist_fac  = fabsf( perspective_corrected_dist ) / 1.0f;
-      
-      
-      int line_height = (int)( (float)main_texture.h * ( 1.0f - dist_fac ) );
-     //  int line_height = (int)( ( main_texture.h ) / ( fabsf( perspective_corrected_dist ) ) );
+
+      vec2_t cam_to_wall   = sub_vec2( isect_pos, viewplane_inc_pos );
+      vec2_t perp_vec      = project_vec2( cam_to_wall, player.dir );
+      float corrected_dist = length_vec2( cam_to_wall );
+
+      float a = player.angle;
+      float z = fabsf(cam_to_wall.x * cosf(a) - cam_to_wall.y * sinf(a));
+
+      printf("book z = %f, and proj vec d =%f\n", z, corrected_dist);
+
+     // float dist_fac       = APG_CLAMP( z / 10.0f, 0.1f, 1.0f );
+     // int line_height      = (int)( (float)main_texture.h * ( 1.0f - dist_fac ) );
+      //  int line_height = (int)( ( main_texture.h ) / ( fabsf( perspective_corrected_dist ) ) );
+
+      int line_height = (int)(main_texture.h / corrected_dist);
 
       if ( 0 != hit_tile_type ) { draw_main_col( px_col_i, line_height, colour, main_img_ptr, main_texture.w, main_texture.h ); }
       if ( 0 == px_col_i ) { printf( "tile type =%i line_height=%i/%i\n", hit_tile_type, line_height, main_texture.h ); }
@@ -420,7 +319,7 @@ void move_player( GLFWwindow* window, player_t* p_ptr, double elapsed_s ) {
 int main() {
   int rt_res_w = 320, rt_res_h = 200;
   int minimap_res_w = 512, minimap_res_h = 512;
-  int win_w = 1024, win_h = 1024;
+  int win_w = rt_res_w * 4, win_h = rt_res_h * 4;
   GLFWwindow* window = gfx_start( win_w, win_h, "Antolf 3-D" );
   if ( !window ) { return 1; }
 

@@ -35,5 +35,9 @@ void gfx_update_texture_from_mem( texture_t* texture_ptr, void* pixels );
 
 void plot_line( int x_i, int y_i, int x_f, int y_f, uint8_t* rgb, uint8_t* img_ptr, int w, int h, int n_chans );
 
+void plot_circle( int c_x, int c_y, int r, uint8_t* img_ptr, int w, int h, int n, uint8_t* rgb_ptr );
+
+void plot_t_cross( int c_x, int c_y, int r, uint8_t* img_ptr, int w, int h, int n, uint8_t* rgb_ptr );
+
 extern mesh_t quad_mesh;
 extern shader_t textured_shader;

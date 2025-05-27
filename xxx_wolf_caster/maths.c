@@ -20,3 +20,9 @@ vec2_t normalise_vec2( vec2_t v ) { return div_vec2_f( v, length_vec2( v ) ); }
 vec2_t rot_90_cw_vec2( vec2_t v ) { return (vec2_t){ v.y, -v.x }; }
 
 vec2_t rot_90_ccw_vec2( vec2_t v ) { return (vec2_t){ -v.y, v.x }; }
+
+float dot_vec2( vec2_t a, vec2_t b ) { return a.x * b.x + a.y * b.y; }
+
+vec2_t project_vec2( vec2_t a, vec2_t b ) { return mul_vec2_f( a, dot_vec2( a, b ) / dot_vec2( b, b ) ); }
+
+vec2_t rotate_vec2( vec2_t v, float rads ) { return (vec2_t){ .x = v.x * cosf( rads ) - v.y * sinf( rads ), .y = v.x * sinf( rads ) + v.y * cosf( rads ) }; }

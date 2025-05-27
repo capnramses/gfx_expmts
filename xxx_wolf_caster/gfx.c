@@ -1,7 +1,9 @@
 #include "gfx.h"
+#include "maths.h"
+#include <assert.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 mesh_t gfx_create_mesh_from_mem( float* points, int n_comps, int n_points, GLenum primitive ) {
@@ -70,8 +72,8 @@ texture_t gfx_create_texture_from_mem( int w, int h, void* pixels ) {
   glTexImage2D( GL_TEXTURE_2D, 0, GL_SRGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
   glBindTexture( GL_TEXTURE_2D, 0 );
   return texture;
 }
@@ -180,3 +182,44 @@ void plot_line( int x_i, int y_i, int x_f, int y_f, uint8_t* rgb, uint8_t* img_p
     } // endfor
   } // endif
 } // endfunc
+
+void _put_circle_px( int c_x, int c_y, int x, int y, uint8_t* img_ptr, int w, int h, int n, uint8_t* rgb_ptr ) {
+  int ys[] = { c_y + y, c_y + y, c_y - y, c_y - y, c_y + x, c_y + x, c_y - x, c_y - x };
+  int xs[] = { c_x + x, c_x - x, c_x + x, c_x - x, c_x + y, c_x - y, c_x + y, c_x - y };
+  for ( int i = 0; i < 8; i++ ) {
+    if ( ys[i] < 0 || ys[i] >= h || xs[i] < 0 || xs[i] >= w ) { continue; }
+    int idx = ( ys[i] * w + xs[i] ) * n;
+    memcpy( &img_ptr[idx], rgb_ptr, n );
+  }
+}
+
+// Bresenham
+void plot_circle( int c_x, int c_y, int r, uint8_t* img_ptr, int w, int h, int n, uint8_t* rgb_ptr ) {
+  assert( img_ptr && rgb_ptr );
+  int x = 0, y = r;
+  int d = 3 - 2 * r;
+  _put_circle_px( c_x, c_y, x, y, img_ptr, w, h, n, rgb_ptr );
+  while ( y >= x ) {
+    if ( d > 0 ) {
+      y--;
+      d = d + 4 * ( x - y ) + 10;
+    } else {
+      d = d + 4 * x + 6;
+    }
+    x++;
+    _put_circle_px( c_x, c_y, x, y, img_ptr, w, h, n, rgb_ptr );
+  }
+}
+
+void plot_t_cross( int c_x, int c_y, int r, uint8_t* img_ptr, int w, int h, int n, uint8_t* rgb_ptr ) {
+  for ( int y = APG_CLAMP( c_y - r, 0, h - 1 ); y <= APG_CLAMP( c_y + r, 0, h - 1 ); y++ ) {
+    if ( c_y < 0 || c_y >= h || c_x < 0 || c_x >= w ) { continue; }
+    int mem_idx = ( y * w + c_x ) * n;
+    memcpy( &img_ptr[mem_idx], rgb_ptr, n );
+  }
+  for ( int x = APG_CLAMP( c_x - r, 0, w - 1 ); x <= APG_CLAMP( c_x + r, 0, w - 1 ); x++ ) {
+    if ( c_y < 0 || c_y >= h || c_x < 0 || c_x >= w ) { continue; }
+    int mem_idx = ( c_y * w + x ) * n;
+    memcpy( &img_ptr[mem_idx], rgb_ptr, n );
+  }
+}
