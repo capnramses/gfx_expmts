@@ -30,6 +30,7 @@ To do that you'd need to convert fps_view_update_image() into a fragment shader 
 */
 
 #include "game.h"
+#include "stb/stb_image.h"
 
 rgb_t empty_tile_colour           = { 0x22, 0x22, 0x22 };
 rgb_t red_tile_colour             = { 0x99, 0x00, 0x00 };
@@ -43,10 +44,12 @@ rgb_t to_nearest_gridlines_colour = { 0xAA, 0xAA, 0xAA };
 rgb_t intersect_point_colour_a    = { 0x55, 0xAA, 0x55 };
 rgb_t intersect_point_colour_b    = { 0x55, 0x55, 0xAA };
 rgb_t intersect_hit_colour        = { 0xFF, 0x00, 0x00 };
-rgb_t ceiling_colour              = { 0x27, 0x27, 0x27 };
-rgb_t floor_colour                = { 0x33, 0x33, 0x33 };
+rgb_t ceiling_colour              = { 0x05, 0x05, 0x05 };
+rgb_t floor_colour                = { 0x33, 0x22, 0x11 };
 float dir_line_length_tiles       = 0.25f;
 minimap_t mmap;
+uint8_t* wall_images[16];
+int wall_img_w = 0, wall_img_h = 0, wall_img_n = 0;
 
 const uint8_t tiles_ptr[TILES_W * TILES_H] = {
   1, 1, 1, 1, 1, 1, 1, 1, // 0
@@ -89,6 +92,10 @@ int main() {
   player_t player     = (player_t){ .pos = (vec2_t){ 1.5f, 1.5f }, .heading = 0.0f, .dir = (vec2_t){ 1.0f, 0.0f } };
   debug_img_ptr       = calloc( DEBUG_W * DEBUG_H * 4, 1 );
   texture_t debug_tex = gfx_create_texture_from_mem( DEBUG_W, DEBUG_H, 4, debug_img_ptr );
+
+  // wall_textures[0] = gfx_create_texture_from_file( "data/greenwall.png" );
+  wall_images[0] = stbi_load( "data/greenwall.png", &wall_img_w, &wall_img_h, &wall_img_n, 0 );
+  wall_images[1] = stbi_load( "data/greenwall_secret.png", &wall_img_w, &wall_img_h, &wall_img_n, 0 );
 
   bool tab_down = false, r_down = false;
   bool do_minimap_draw = true;
@@ -135,7 +142,7 @@ int main() {
     glClear( GL_COLOR_BUFFER_BIT );
 
     // 3D FPS viewport
-    glViewport( 0, 0, FPS_VIEWPORT_W, FPS_VIEWPORT_H * FPS_VERTICAL_STRETCH );
+    glViewport( 0, WIN_H -FPS_VIEWPORT_H * FPS_VERTICAL_STRETCH , FPS_VIEWPORT_W, FPS_VIEWPORT_H * FPS_VERTICAL_STRETCH );
     fps_view_draw( fps_view );
 
     // 2D minimap viewport
@@ -169,6 +176,13 @@ int main() {
   free( debug_img_ptr );
   fps_view_free( &fps_view );
   mmap_free( &mmap );
+  for ( int i = 0; i < 16; i++ ) {
+    //   if ( wall_textures->handle ) { glDeleteTextures( 1, &wall_textures->handle ); }
+    if ( wall_images[i] ) {
+      free( wall_images[i] );
+      wall_images[i] = NULL;
+    }
+  }
   glfwTerminate();
   printf( "normal exit.\n" );
   return 0;

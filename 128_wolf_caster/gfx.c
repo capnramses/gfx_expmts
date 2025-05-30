@@ -1,5 +1,7 @@
 #include "gfx.h"
 #include "maths.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb/stb_image.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -81,6 +83,14 @@ texture_t gfx_create_texture_from_mem( int w, int h, int n, void* pixels ) {
   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
   glBindTexture( GL_TEXTURE_2D, 0 );
   return texture;
+}
+
+texture_t gfx_create_texture_from_file( const char* filename ) {
+  int x = 0, y = 0, n = 0;
+  unsigned char* data = stbi_load( filename, &x, &y, &n, 0 );
+  texture_t tex       = gfx_create_texture_from_mem( x, y, n, data );
+  free( data );
+  return tex;
 }
 
 void gfx_update_texture_from_mem( texture_t* texture_ptr, void* pixels ) {

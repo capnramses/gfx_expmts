@@ -104,9 +104,8 @@ void fps_view_update_image( fps_view_t fps_view, const uint8_t* tiles_ptr, int t
         default: break;
         } // endswith
         if ( hit ) {
-          float dist_player_to_viewplane = 0.5f;
-          float wall_height              = fps_view.tex.h;
-          vec2_t vec_to_hit              = sub_vec2( curr_pos, player.pos );
+          float wall_height = fps_view.tex.h;
+          vec2_t vec_to_hit = sub_vec2( curr_pos, player.pos );
           // Using ray_dist_to_hit directly gives a fish-eye effect.
           float ray_dist_to_hit  = length_vec2( vec_to_hit );
           float proj_wall_height = ( wall_height / ray_dist_to_hit ); // * dist_player_to_viewplane
@@ -119,10 +118,44 @@ void fps_view_update_image( fps_view_t fps_view, const uint8_t* tiles_ptr, int t
           }
 
           int line_height = APG_CLAMP( proj_wall_height, 0, fps_view.tex.h );
-          int half_gap    = ( fps_view.tex.h - line_height ) / 2;
+
+          // TODO magnification correction when top and bottom of wall are out of shot.
+        
+          float prop_of_height_on_screen = fps_view.tex.h / proj_wall_height;
+          int actual_img_h = APG_CLAMP( prop_of_height_on_screen, 0.0f, 1.0f ) * wall_img_h;
+          int actual_first_row_idx = (wall_img_h - actual_img_h) / 2;
+        //  printf( "%f %f\n", proj_wall_height, prop_of_height_on_screen );
+
+          int half_gap = ( fps_view.tex.h - line_height ) / 2;
+
           for ( int row_y = half_gap; row_y < fps_view.tex.h - half_gap; row_y++ ) {
+            // Texture coords based on intersection point on tile.
+            float row_fac = (float)( row_y - half_gap)  / (float)( line_height);
+
+            float prop_x  = curr_pos.x - floorf( curr_pos.x );
+            float prop_y  = curr_pos.y - floorf( curr_pos.y );
+            int img_col = img_col = (int)( prop_y * (float)( wall_img_w - 1 ) );
+            int img_row           = (int)( row_fac * (float)( actual_img_h - 1 ) ) + actual_first_row_idx;
+            bool hit_horiz        = false;
+            if ( prop_x > prop_y ) {
+              img_col   = (int)( prop_x * (float)( wall_img_w - 1 ) );
+              hit_horiz = true;
+            }
+            // pick image a/b side based on intersection side.
+            uint8_t wall_rgb[3];
+            int img_idx       = ( img_row * wall_img_h + img_col ) * wall_img_n;
+            uint8_t* wall_img = hit_horiz ? wall_images[0] : wall_images[1];
+            memcpy( wall_rgb, &wall_img[img_idx], 3 );
+            // darken
+            if ( !hit_horiz ) {
+              wall_rgb[0] *= 0.66;
+              wall_rgb[1] *= 0.66;
+              wall_rgb[2] *= 0.66;
+            }
+
             int mem_idx = ( row_y * fps_view.tex.w + col_x ) * 3;
-            memcpy( &fps_view.img_ptr[mem_idx], &wall_colour.r, 3 );
+            memcpy( &fps_view.img_ptr[mem_idx], wall_rgb, 3 );
+            // memcpy( &fps_view.img_ptr[mem_idx], &wall_colour.r, 3 );
           }
           if ( do_plot ) { mmap_plot_line( player.pos, curr_pos, intersect_hit_colour ); }
 

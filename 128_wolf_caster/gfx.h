@@ -31,6 +31,8 @@ shader_t gfx_create_shader_from_strings( const char* vert_str, const char* frag_
 
 texture_t gfx_create_texture_from_mem( int w, int h, int n, void* pixels );
 
+texture_t gfx_create_texture_from_file( const char* filename );
+
 void gfx_update_texture_from_mem( texture_t* texture_ptr, void* pixels );
 
 void plot_line( int x_i, int y_i, int x_f, int y_f, uint8_t* rgb, uint8_t* img_ptr, int w, int h, int n_chans );

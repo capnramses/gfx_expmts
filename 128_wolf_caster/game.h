@@ -11,17 +11,18 @@
 #include <string.h>
 
 #define FPS_W 320
-#define FPS_H 200
+#define FPS_H (200-32)
 #define FPS_VERTICAL_STRETCH 1.2f // stretching display pixels vertically to match dims of an old beige monitor.
-#define FPS_VIEWPORT_W 320 * 4
-#define FPS_VIEWPORT_H 200 * 4
+#define FPS_VIEWPORT_W FPS_W * 4
+#define FPS_VIEWPORT_H FPS_H * 4
+#define VIEWPLANE_DIST 0.5
 #define FOV_DEGS 60.0f
 #define FOV_HALF_DEGS ( FOV_DEGS * 0.5f )
 #define DEGS_PER_RAY ( FOV_DEGS / FPS_W )
 #define MINIMAP_W 512
 #define MINIMAP_H 512
 #define WIN_W 1200
-#define WIN_H FPS_VIEWPORT_H * FPS_VERTICAL_STRETCH
+#define WIN_H 200*4* FPS_VERTICAL_STRETCH
 #define TILES_W 8
 #define TILES_H 8
 #define RAY_STEPS_MAX 16
@@ -46,7 +47,7 @@ typedef struct fps_view_t {
 minimap_t mmap_init( int w, int h );
 void mmap_free( minimap_t* map_ptr );
 void mmap_update_image( minimap_t map, const uint8_t* tiles_ptr, int tiles_w, int tiles_h, player_t player );
-// Helper functions - wrap pixel plotting functions but do all the conversion from game/world coords to pixel coords. 
+// Helper functions - wrap pixel plotting functions but do all the conversion from game/world coords to pixel coords.
 void mmap_plot_line( vec2_t ori, vec2_t dest, rgb_t rgb );
 void mmap_plot_cross( vec2_t pos, rgb_t rgb );
 void mmap_draw( minimap_t map );
@@ -75,3 +76,5 @@ extern rgb_t ceiling_colour;
 extern rgb_t floor_colour;
 extern float dir_line_length_tiles;
 extern bool minimap_draw_rays;
+extern uint8_t* wall_images[16];
+extern int wall_img_w, wall_img_h, wall_img_n;
