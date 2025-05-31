@@ -49,6 +49,7 @@ rgb_t floor_colour                = { 0x33, 0x22, 0x11 };
 float dir_line_length_tiles       = 0.25f;
 minimap_t mmap;
 uint8_t* wall_images[16];
+texture_t portrait_tex[2];
 int wall_img_w = 0, wall_img_h = 0, wall_img_n = 0;
 
 const uint8_t tiles_ptr[TILES_W * TILES_H] = {
@@ -94,8 +95,10 @@ int main() {
   texture_t debug_tex = gfx_create_texture_from_mem( DEBUG_W, DEBUG_H, 4, debug_img_ptr );
 
   // wall_textures[0] = gfx_create_texture_from_file( "data/greenwall.png" );
-  wall_images[0] = stbi_load( "data/greenwall.png", &wall_img_w, &wall_img_h, &wall_img_n, 0 );
-  wall_images[1] = stbi_load( "data/greenwall_secret.png", &wall_img_w, &wall_img_h, &wall_img_n, 0 );
+  wall_images[0]  = stbi_load( "data/greenwall.png", &wall_img_w, &wall_img_h, &wall_img_n, 0 );
+  wall_images[1]  = stbi_load( "data/greenwall_secret.png", &wall_img_w, &wall_img_h, &wall_img_n, 0 );
+  portrait_tex[0] = gfx_create_texture_from_file( "data/tim.png" );
+  portrait_tex[1] = gfx_create_texture_from_file( "data/tim2.png" );
 
   bool tab_down = false, r_down = false;
   bool do_minimap_draw = true;
@@ -142,7 +145,7 @@ int main() {
     glClear( GL_COLOR_BUFFER_BIT );
 
     // 3D FPS viewport
-    glViewport( 0, WIN_H -FPS_VIEWPORT_H * FPS_VERTICAL_STRETCH , FPS_VIEWPORT_W, FPS_VIEWPORT_H * FPS_VERTICAL_STRETCH );
+    glViewport( 0, WIN_H - FPS_VIEWPORT_H * FPS_VERTICAL_STRETCH, FPS_VIEWPORT_W, FPS_VIEWPORT_H * FPS_VERTICAL_STRETCH );
     fps_view_draw( fps_view );
 
     // 2D minimap viewport
@@ -150,6 +153,15 @@ int main() {
       glViewport( WIN_W - MINIMAP_W, WIN_H - MINIMAP_H, MINIMAP_W, MINIMAP_H );
       mmap_draw( mmap );
     }
+
+    // User GUI on the bottom of the screen
+
+    // display portrait on bottom bar
+    glViewport( WIN_W / 2 - 16 * 4, 0, 32 * 4, 32 * 4 * FPS_VERTICAL_STRETCH );
+    glActiveTexture( GL_TEXTURE0 );
+    int p_idx = cosf( curr_s * 2.0f ) > 0.0f;
+    glBindTexture( GL_TEXTURE_2D, portrait_tex[p_idx].handle );
+    glDrawArrays( quad_mesh.primitive, 0, quad_mesh.n_points );
 
     // Debugging stuff
     glViewport( 0, WIN_H - debug_tex.h * 2, debug_tex.w * 2, debug_tex.h * 2 );
@@ -176,6 +188,8 @@ int main() {
   free( debug_img_ptr );
   fps_view_free( &fps_view );
   mmap_free( &mmap );
+  glDeleteTextures( 1, &portrait_tex[0].handle );
+  glDeleteTextures( 1, &portrait_tex[1].handle );
   for ( int i = 0; i < 16; i++ ) {
     //   if ( wall_textures->handle ) { glDeleteTextures( 1, &wall_textures->handle ); }
     if ( wall_images[i] ) {
