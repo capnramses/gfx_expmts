@@ -137,13 +137,13 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 119     | `cuda_quickstart`           | CUDA Quickstart and Windows build.bat.                                         | working             |
 | 120     | `hip_quickstart`            | Same as 119 but with AMD's ROCm HIP.                                           | working             |
 | 121     | `hip_imagegen`              | Generating an image with AMD's ROCm HIP.                                       | working             |
-| 122     | `hip_raytracer`             | Port of compute shader ray tracer 006 to AMD's ROCM HIP.                       | working             |
+| 122     | `hip_raytracer`             | Port of compute shader ray tracer 006 to AMD's ROCm HIP.                       | working             |
 | 123     | `voxel_terrain_sw`          | voxel terrain rendering _a la_ Pikuma                                          | working             |
 | 124     | `geo_mipmap`                | Heightmap terrain sampled in vertex shader, scrolling camera mesh.             | working             |
 | 125     | `simd_math`                 | Experiments with SIMD extensions.                                              | started             |
 | 126     | `vulkan_hello_triangle`     | Another Vulkan starter.                                                        | working             |
-| 127     | `rounded_rect         `     | One method of drawing rounded corners on a 2D box.                             | working             |
-| 128     | `wolf_caster`               | Ray caster _a la_ Wolfenstein 3-D.                                             | working            |
+| 127     | `rounded_rect`              | One method of drawing rounded corners on a 2D box.                             | working             |
+| 128     | `wolf_caster`               | Ray caster _a la_ Wolfenstein 3-D.                                             | working             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `fire`                      | Shader effect using multi-texturing for fire animation.                        | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                                 | proposed            |
