@@ -144,7 +144,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 126     | `vulkan_hello_triangle`     | Another Vulkan starter.                                                        | working             |
 | 127     | `rounded_rect`              | One method of drawing rounded corners on a 2D box.                             | working             |
 | 128     | `wolf_caster`               | Ray caster _a la_ Wolfenstein 3-D.                                             | working             |
-| 129     | `fire`                      | Shader effect using multi-texturing for fire animation.                        | working             |
+| 129     | `fire`                      | Shader effect for fire animation.                                              | working             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                                 | proposed            |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                                | proposed            |
