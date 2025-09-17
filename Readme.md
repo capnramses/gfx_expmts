@@ -145,6 +145,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 127     | `rounded_rect`              | One method of drawing rounded corners on a 2D box.                             | working             |
 | 128     | `wolf_caster`               | Ray caster _a la_ Wolfenstein 3-D.                                             | working             |
 | 129     | `fire`                      | Shader effect for fire animation.                                              | working             |
+| 130     | `vulkan_vertex_buffer`      | Vertex buffer example, and memory management.                                  | working / ongoing   |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                                 | proposed            |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                                | proposed            |
