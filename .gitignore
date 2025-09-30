@@ -10,6 +10,7 @@ vs2017/
 build/
 .vscode/
 Debug/
+*.swp
 
 # security
 *.pem
