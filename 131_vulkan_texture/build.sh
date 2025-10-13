@@ -11,4 +11,4 @@ if [[ -v NDEBUG ]]; then
   DEFS=-DNDEBUG
 fi
 
-gcc -O2 main.c apg_bmp.c -lglfw -lvulkan $DEFS
+gcc -O2 main.c apg_bmp.c apg_maths.c -lglfw -lvulkan $DEFS -g -lm

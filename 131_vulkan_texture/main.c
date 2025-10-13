@@ -11,6 +11,7 @@
 */
 
 #include "apg_bmp.h"
+#include "apg_maths.h"
 
 #define GLFW_INCLUDE_VULKAN // Includes #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
@@ -35,8 +36,13 @@ typedef struct img_t {
   int w, h, n;
 } img_t;
 
+typedef struct ubo_t {
+  mat4 model, view, proj;
+} ubo_t;
+
 #define WIN_W 1024 // In screen coordinates (not necessarily pixels).
 #define WIN_H 768  // In screen coordinates (not necessarily pixels).
+#define MAX_FRAMES_IN_FLIGHT 2
 #define MAX_EXTENSION_STR 2048
 #define N_REQUIRED_EXTENSIONS 1
 #define N_REQUIRED_VALIDATION_LAYERS 1
@@ -44,27 +50,30 @@ const char* required_extensions[N_REQUIRED_EXTENSIONS]               = { VK_KHR_
 const char* required_validation_layers[N_REQUIRED_VALIDATION_LAYERS] = { "VK_LAYER_KHRONOS_validation" };
 
 typedef struct gfx_vul_t {
-  GLFWwindow* window_ptr;                   //
-  VkApplicationInfo app_info;               //
-  VkInstance instance;                      //
-  VkPhysicalDevice physical_device;         //
-  VkDevice device;                          // "Logical" device.
-  VkSurfaceKHR surface;                     // "KHR" suffix implies it's from an extension.
-  VkSwapchainKHR swapchain;                 // Collection of render targets. e.g. front & back.
-  VkImage swapchain_images[16];             // NB: Typical 1 image view and 1 framebuffer per swapchain image.
-  uint32_t n_swapchain_images;              //
-  VkFormat swapchain_image_format;          //
-  VkExtent2D swapchain_extent;              //
-  VkImageView swapchain_image_views[16];    // 1 per swapchain image. Required to draw any part of an image from swapchain.
-  VkRenderPass render_pass;                 //
-  VkPipelineLayout pipeline_layout;         //
-  VkPipeline pipeline;                      // Graphics pipeline. All render state. One per shader/render set up.
-  VkFramebuffer swapchain_framebuffers[16]; // Image views used for colour, depth, stencil targets.
-  VkCommandPool command_pool;               //
-  VkCommandBuffer command_buffer;           //
-  VkSemaphore image_available_semaphore;    //
-  VkSemaphore render_finished_semaphore;    //
-  VkFence in_flight_fence;                  //
+  GLFWwindow* window_ptr;                                //
+  VkApplicationInfo app_info;                            //
+  VkInstance instance;                                   //
+  VkPhysicalDevice physical_device;                      //
+  VkDevice device;                                       // "Logical" device.
+  VkSurfaceKHR surface;                                  // "KHR" suffix implies it's from an extension.
+  VkSwapchainKHR swapchain;                              // Collection of render targets. e.g. front & back.
+  VkImage swapchain_images[16];                          // NB: Typical 1 image view and 1 framebuffer per swapchain image.
+  uint32_t n_swapchain_images;                           //
+  VkFormat swapchain_image_format;                       //
+  VkExtent2D swapchain_extent;                           //
+  VkImageView swapchain_image_views[16];                 // 1 per swapchain image. Required to draw any part of an image from swapchain.
+  VkRenderPass render_pass;                              //
+  VkDescriptorPool descriptor_pool;                      //
+  VkDescriptorSet descriptor_sets[MAX_FRAMES_IN_FLIGHT]; //
+  VkDescriptorSetLayout descriptor_set_layout;           //
+  VkPipelineLayout pipeline_layout;                      //
+  VkPipeline pipeline;                                   // Graphics pipeline. All render state. One per shader/render set up.
+  VkFramebuffer swapchain_framebuffers[16];              // Image views used for colour, depth, stencil targets.
+  VkCommandPool command_pool;                            //
+  VkCommandBuffer command_buffer;                        //
+  VkSemaphore image_available_semaphore;                 //
+  VkSemaphore render_finished_semaphore;                 //
+  VkFence in_flight_fence;                               //
   VkQueue present_queue;
   VkQueue graphics_queue;
 } gfx_vul_t;
@@ -89,8 +98,15 @@ gfx_vul_t gfx;
 VkBuffer vertex_buffer;
 VkDeviceMemory vertex_buffer_memory;
 
+// We have multiple buffers ( 1 for each frame in flight - update one while other is being read ).
+VkBuffer uniform_buffers[MAX_FRAMES_IN_FLIGHT];
+VkDeviceMemory uniform_buffers_memory[MAX_FRAMES_IN_FLIGHT];
+void* uniform_buffers_mapped[MAX_FRAMES_IN_FLIGHT];
+
 static VkImage texture_image;
 static VkDeviceMemory texture_image_memory;
+static VkImageView texture_image_view;
+static VkSampler texture_sampler;
 
 #define MAX_VALIDATION_LAYERS 1024
 bool check_validation_layer_support( void ) {
@@ -255,7 +271,8 @@ bool is_device_suitable( VkPhysicalDevice physical_device ) {
     swapchain_support_t details = query_swapchain_support( physical_device );
     swap_chain_adequate         = details.n_present_modes > 0 && details.n_surface_formats > 0;
   }
-  return indices.has_gfx && indices.has_present && got_extensions && swap_chain_adequate;
+  // Check for optional features like device anisotropy.
+  return indices.has_gfx && indices.has_present && got_extensions && swap_chain_adequate && device_feats.samplerAnisotropy;
 }
 
 bool pick_physical_device() {
@@ -304,7 +321,9 @@ bool create_logical_device( void ) {
     };
   }
 
-  VkPhysicalDeviceFeatures device_feats = (VkPhysicalDeviceFeatures){ .alphaToOne = VK_FALSE }; // Just to set everything to 0 for now.
+  // Request optional device features like anisotripic sampler filtering, or we'll get a validation error about it.
+  // Note: also checked for these features in is_device_suitable().
+  VkPhysicalDeviceFeatures device_feats = (VkPhysicalDeviceFeatures){ .samplerAnisotropy = VK_TRUE };
 
   VkDeviceCreateInfo create_info = (VkDeviceCreateInfo){
     .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, //
@@ -425,28 +444,32 @@ bool create_swap_chain( void ) {
   return true;
 }
 
+bool image_view_create( VkImage image, VkFormat format, VkImageView* img_view_ptr ) {
+  *img_view_ptr                   = NULL;
+  VkImageViewCreateInfo view_info = (VkImageViewCreateInfo){
+    .sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+    .image                           = image,
+    .viewType                        = VK_IMAGE_VIEW_TYPE_2D,
+    .format                          = format,
+    .subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+    .subresourceRange.baseMipLevel   = 0,
+    .subresourceRange.levelCount     = 1,
+    .subresourceRange.baseArrayLayer = 0,
+    .subresourceRange.layerCount     = 1 //
+  };
+  // NOTE(Anton) can explicitly set .components channels to red for monochrome or a constant value (0 or 1) per channel. Default 0.
+
+  if ( vkCreateImageView( gfx.device, &view_info, NULL, img_view_ptr ) != VK_SUCCESS ) {
+    fprintf( stderr, "ERROR: Failed to create image view!\n" );
+    return false;
+  }
+
+  return true;
+}
+
 bool create_image_views( void ) {
   for ( size_t i = 0; i < gfx.n_swapchain_images; i++ ) {
-    VkImageViewCreateInfo create_info = (VkImageViewCreateInfo){
-      //
-      .sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, //
-      .image                           = gfx.swapchain_images[i],                  //
-      .viewType                        = VK_IMAGE_VIEW_TYPE_2D,                    //
-      .format                          = gfx.swapchain_image_format,               //
-      .components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY,            // Can e.g. map all chans to red for monochrome.
-      .components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY,            // Or set constant value e.g. 0 or 1 to a chan.
-      .components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY,            // But this is the default mapping.
-      .components.a                    = VK_COMPONENT_SWIZZLE_IDENTITY,            //
-      .subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,                //
-      .subresourceRange.baseMipLevel   = 0,                                        //
-      .subresourceRange.levelCount     = 1,                                        //
-      .subresourceRange.baseArrayLayer = 0,                                        //
-      .subresourceRange.layerCount     = 1                                         // Stereoscopic apps have multiple layers for left and right eyes.
-    };
-    if ( VK_SUCCESS != vkCreateImageView( gfx.device, &create_info, NULL, &gfx.swapchain_image_views[i] ) ) {
-      fprintf( stderr, "ERROR: Failed to create image view!\n" );
-      return false;
-    }
+    if ( !image_view_create( gfx.swapchain_images[i], gfx.swapchain_image_format, &gfx.swapchain_image_views[i] ) ) { return false; }
   }
   return true;
 }
@@ -500,6 +523,93 @@ VkShaderModule create_shader_module( apg_file_t file ) {
     assert( false );
   }
   return shader_module;
+}
+
+bool create_descriptor_pool() {
+  VkDescriptorPoolSize pool_sizes[2];
+  pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  pool_sizes[0].descriptorCount = (uint32_t)MAX_FRAMES_IN_FLIGHT;
+  pool_sizes[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  pool_sizes[1].descriptorCount = (uint32_t)MAX_FRAMES_IN_FLIGHT;
+
+  VkDescriptorPoolCreateInfo pool_info = (VkDescriptorPoolCreateInfo){
+    .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, //
+    .poolSizeCount = 2,                                             //
+    .pPoolSizes    = pool_sizes,                                    //
+    .maxSets       = (uint32_t)MAX_FRAMES_IN_FLIGHT                 //
+  };
+
+  if ( VK_SUCCESS != vkCreateDescriptorPool( gfx.device, &pool_info, NULL, &gfx.descriptor_pool ) ) {
+    fprintf( stderr, "ERROR: Failed to create descriptor pool!\n" );
+    return false;
+  }
+  return true;
+}
+
+#define N_DESCRIPTOR_SETS 2
+bool create_descriptor_sets() {
+  // one descriptor set for each frame in flight, all with the same layout.
+  // we do need all the copies of the layout because the next function expects an array matching the number of sets.
+  VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = { gfx.descriptor_set_layout, gfx.descriptor_set_layout };
+  VkDescriptorSetAllocateInfo alloc_info              = (VkDescriptorSetAllocateInfo){
+                 .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, .descriptorPool = gfx.descriptor_pool, .descriptorSetCount = MAX_FRAMES_IN_FLIGHT, .pSetLayouts = layouts
+  };
+
+  if ( VK_SUCCESS != vkAllocateDescriptorSets( gfx.device, &alloc_info, gfx.descriptor_sets ) ) {
+    fprintf( stderr, "ERROR: Failed to allocate descriptor sets!\n" );
+    return false;
+  }
+
+  for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ ) {
+    VkDescriptorImageInfo image_info =
+      (VkDescriptorImageInfo){ .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, .imageView = texture_image_view, .sampler = texture_sampler };
+
+    VkWriteDescriptorSet descriptor_writes[N_DESCRIPTOR_SETS];
+    memset( descriptor_writes, 0, sizeof( VkWriteDescriptorSet ) * N_DESCRIPTOR_SETS ); // Some extra params default to 0.
+
+    VkDescriptorBufferInfo buffer_info   = (VkDescriptorBufferInfo){ .buffer = uniform_buffers[i], .offset = 0, .range = sizeof( ubo_t ) };
+    descriptor_writes[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_writes[0].dstSet          = gfx.descriptor_sets[i];
+    descriptor_writes[0].dstBinding      = 0;
+    descriptor_writes[0].dstArrayElement = 0;
+    descriptor_writes[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_writes[0].descriptorCount = 1;
+    descriptor_writes[0].pBufferInfo     = &buffer_info;
+
+    VkDescriptorImageInfo image_info =  (VkDescriptorBufferInfo){ .buffer = uniform_buffers[i], .offset = 0, .range = sizeof( ubo_t ) };
+    descriptor_writes[1].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_writes[1].dstSet          = gfx.descriptor_sets[i];
+    descriptor_writes[1].dstBinding      = 1;
+    descriptor_writes[1].dstArrayElement = 0;
+    descriptor_writes[1].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_writes[1].descriptorCount = 1;
+    descriptor_writes[1].pImageInfo      = &image_info;
+
+    vkUpdateDescriptorSets( gfx.device, N_DESCRIPTOR_SETS, descriptor_writes, 0, NULL );
+  }
+  return true;
+}
+
+#define N_BINDINGS 2
+bool create_descriptor_set_layout( void ) {
+  VkDescriptorSetLayoutBinding ubo_layout_binding = (VkDescriptorSetLayoutBinding){
+    .binding = 0, .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .pImmutableSamplers = NULL, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+  };
+
+  VkDescriptorSetLayoutBinding sampler_layout_binding = (VkDescriptorSetLayoutBinding){
+    .binding = 1, .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImmutableSamplers = NULL, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+  };
+
+  VkDescriptorSetLayoutBinding bindings[N_BINDINGS] = { ubo_layout_binding, sampler_layout_binding };
+
+  VkDescriptorSetLayoutCreateInfo layout_info =
+    (VkDescriptorSetLayoutCreateInfo){ .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, .bindingCount = N_BINDINGS, .pBindings = bindings };
+
+  if ( VK_SUCCESS != vkCreateDescriptorSetLayout( gfx.device, &layout_info, NULL, &gfx.descriptor_set_layout ) ) {
+    fprintf( stderr, "ERROR: Failed to create descriptor set layout!\n" );
+    return false;
+  }
+  return true;
 }
 
 bool create_graphics_pipeline( void ) {
@@ -588,6 +698,10 @@ bool create_graphics_pipeline( void ) {
     .depthBiasSlopeFactor    = 0.0f                                                        // Optional
   };
 
+  // TODO - above
+//  rasteriser.cullMode = VK_CULL_MODE_BACK_BIT;
+//rasteriser.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
   VkPipelineMultisampleStateCreateInfo multisampling = (VkPipelineMultisampleStateCreateInfo){
     .sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
     .sampleShadingEnable   = VK_FALSE,
@@ -623,10 +737,10 @@ bool create_graphics_pipeline( void ) {
 
   VkPipelineLayoutCreateInfo pipeline_layout_create_info = (VkPipelineLayoutCreateInfo){
     .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-    .setLayoutCount         = 0,    // Optional
-    .pSetLayouts            = NULL, // Optional
-    .pushConstantRangeCount = 0,    // Optional
-    .pPushConstantRanges    = NULL  // Optional
+    .setLayoutCount         = 1,                         // 1=reference the layout for UBO and texture sampler. Default 0.
+    .pSetLayouts            = &gfx.descriptor_set_layout, // Default NULL.
+    .pushConstantRangeCount = 0,                         // Optional
+    .pPushConstantRanges    = NULL                       // Optional
   };
 
   if ( VK_SUCCESS != vkCreatePipelineLayout( gfx.device, &pipeline_layout_create_info, NULL, &gfx.pipeline_layout ) ) {
@@ -840,6 +954,21 @@ bool create_vertex_buffer( size_t sz ) {
   return true;
 }
 
+bool create_uniform_buffers( void ) {
+  VkDeviceSize buffer_sz = sizeof( ubo_t );
+
+  for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ ) {
+    if ( !create_buffer( buffer_sz, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+           &uniform_buffers[i], &uniform_buffers_memory[i] ) ) {
+      fprintf( stderr, "ERROR: failed to create UBO!\n" );
+      return false;
+    }
+    vkMapMemory( gfx.device, uniform_buffers_memory[i], 0, buffer_sz, 0, &uniform_buffers_mapped[i] );
+  }
+
+  return true;
+}
+
 bool create_command_buffer( void ) {
   VkCommandBufferAllocateInfo alloc_info = (VkCommandBufferAllocateInfo){
     .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, //
@@ -893,6 +1022,8 @@ bool record_command_buffer( VkCommandBuffer command_buffer, uint32_t image_idx )
   VkBuffer vbuffs[]      = { vertex_buffer };
   VkDeviceSize offsets[] = { 0 };
   vkCmdBindVertexBuffers( command_buffer, 0, 1, vbuffs, offsets );
+
+  vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gfx.pipeline_layout, 0, 1, &gfx.descriptor_sets[image_idx], 0, NULL );
 
   // Draw triangle! (cmd, n_verts, n_instances, first_vert, first_instance )
   uint32_t n_verts = 3;
@@ -949,6 +1080,10 @@ bool init_gfx( bool enable_validation ) {
     fprintf( stderr, "ERROR: Failed to create_render_passs.\n" );
     return false;
   }
+  if ( !create_descriptor_set_layout() ) {
+    fprintf( stderr, "ERROR: Failed to create_descriptor_set_layout.\n" );
+    return false;
+  }
   if ( !create_graphics_pipeline() ) {
     fprintf( stderr, "ERROR: Failed to create_graphics_pipeline.\n" );
     return false;
@@ -965,6 +1100,18 @@ bool init_gfx( bool enable_validation ) {
     fprintf( stderr, "ERROR: Failed to create_vertex_buffer.\n" );
     return false;
   }
+  if ( !create_uniform_buffers() ) {
+    fprintf( stderr, "ERROR: Failed to create_uniform_buffers.\n" );
+    return false;
+  }
+  if ( !create_descriptor_pool() ) {
+    fprintf( stderr, "ERROR: Failed to create_descriptor_pool.\n" );
+    return false;
+  }
+  if ( !create_descriptor_sets() ) {
+    fprintf( stderr, "ERROR: Failed to create_descriptor_sets.\n" );
+    return false;
+  }
   if ( !create_command_buffer() ) {
     fprintf( stderr, "ERROR: Failed to create_command_buffer.\n" );
     return false;
@@ -976,6 +1123,15 @@ bool init_gfx( bool enable_validation ) {
   return true;
 }
 
+void update_uniform_buffer( uint32_t current_image ) {
+  ubo_t u;
+  u.model = identity_mat4();
+  u.view  = identity_mat4();
+  u.proj  = identity_mat4();
+  memcpy( uniform_buffers_mapped[current_image], &u, sizeof( ubo_t ) );
+  // NOTE(anton) A more efficient way to pass a small buffer of data to shaders are "push constants".
+}
+
 bool draw_frame( void ) {
   vkWaitForFences( gfx.device, 1, &gfx.in_flight_fence, VK_TRUE, UINT64_MAX );
   vkResetFences( gfx.device, 1, &gfx.in_flight_fence );
@@ -983,6 +1139,8 @@ bool draw_frame( void ) {
   // Aquire next image from swapchain.
   uint32_t image_idx = 0;
   vkAcquireNextImageKHR( gfx.device, gfx.swapchain, UINT64_MAX, gfx.image_available_semaphore, VK_NULL_HANDLE, &image_idx );
+
+  update_uniform_buffer( image_idx );
 
   vkResetCommandBuffer( gfx.command_buffer, 0 );
   record_command_buffer( gfx.command_buffer, image_idx );
@@ -1051,10 +1209,23 @@ void free_gfx( void ) {
   vkDestroySemaphore( gfx.device, gfx.image_available_semaphore, NULL );
   vkDestroySemaphore( gfx.device, gfx.render_finished_semaphore, NULL );
   vkDestroyFence( gfx.device, gfx.in_flight_fence, NULL );
+
   vkDestroyImage( gfx.device, texture_image, NULL );
   vkFreeMemory( gfx.device, texture_image_memory, NULL );
+  vkDestroyImageView( gfx.device, texture_image_view, NULL );
+  vkDestroySampler( gfx.device, texture_sampler, NULL );
+
   vkDestroyBuffer( gfx.device, vertex_buffer, NULL );
   vkFreeMemory( gfx.device, vertex_buffer_memory, NULL );
+
+  for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ ) {
+    vkDestroyBuffer( gfx.device, uniform_buffers[i], NULL );
+    vkFreeMemory( gfx.device, uniform_buffers_memory[i], NULL );
+  }
+
+  vkDestroyDescriptorPool( gfx.device, gfx.descriptor_pool, NULL );
+  vkDestroyDescriptorSetLayout( gfx.device, gfx.descriptor_set_layout, NULL );
+
   vkDestroyCommandPool( gfx.device, gfx.command_pool, NULL );
   for ( int i = 0; i < gfx.n_swapchain_images; i++ ) { vkDestroyFramebuffer( gfx.device, gfx.swapchain_framebuffers[i], NULL ); }
   vkDestroyPipeline( gfx.device, gfx.pipeline, NULL );
@@ -1069,26 +1240,68 @@ void free_gfx( void ) {
   glfwTerminate();
 }
 
-void transition_image_layout( VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout ) {
+bool transition_image_layout( VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout ) {
   VkCommandBuffer command_buffer = begin_single_time_commands();
-  VkImageMemoryBarrier barrier   = (VkImageMemoryBarrier){
-      .sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, //
-      .oldLayout                       = old_layout,                             //
-      .newLayout                       = new_layout,                             //
-      .srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED,                //
-      .dstAccessMask                   = VK_QUEUE_FAMILY_IGNORED,                //
-      .image                           = image,                                  //
-      .srcAccessMask                   = 0,                                      // TODO
-      .dstAccessMask                   = 0,                                      // TODO
-      .subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,              //
-      .subresourceRange.baseMipLevel   = 0,                                      //
-      .subresourceRange.levelCount     = 1,                                      //
-      .subresourceRange.baseArrayLayer = 0,                                      //
-      .subresourceRange.layerCount     = 1                                       //
-  };
-  vkCmdPipelineBarrier( command_buffer, 0 /* TODO */, 0 /* TODO */, 0, 0, NULL, 0, NULL, 1, &barrier );
 
-  // UP to Copying buffer to image
+  VkImageMemoryBarrier barrier = (VkImageMemoryBarrier){
+    .sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, //
+    .oldLayout                       = old_layout,                             //
+    .newLayout                       = new_layout,                             //
+    .srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED,                //
+    .dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED,                //
+    .image                           = image,                                  //
+    .srcAccessMask                   = 0,                                      // Modified below.
+    .dstAccessMask                   = 0,                                      // Modified below.
+    .subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,              //
+    .subresourceRange.baseMipLevel   = 0,                                      //
+    .subresourceRange.levelCount     = 1,                                      //
+    .subresourceRange.baseArrayLayer = 0,                                      //
+    .subresourceRange.layerCount     = 1                                       //
+  };
+
+  VkPipelineStageFlags src_stage_flags;
+  VkPipelineStageFlags dst_stage_flags;
+
+  // Undefined → transfer destination: transfer writes that don't need to wait on anything.
+  // Transfer destination → shader reading: shader reads should wait on transfer writes, specifically the shader reads in the fragment shader, because that's
+  // where we're going to use the texture.
+  if ( old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    src_stage_flags       = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    dst_stage_flags       = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  } else if ( old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    src_stage_flags       = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    dst_stage_flags       = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  } else {
+    fprintf( stderr, "ERROR: Unsupported layout transition!\n" );
+    return false;
+  }
+
+  vkCmdPipelineBarrier( command_buffer, src_stage_flags, dst_stage_flags, 0, 0, NULL, 0, NULL, 1, &barrier );
+
+  end_single_time_commands( command_buffer );
+
+  return true;
+}
+
+void copy_buffer_to_image( VkBuffer buffer, VkImage image, uint32_t width, uint32_t height ) {
+  VkCommandBuffer command_buffer = begin_single_time_commands();
+
+  VkBufferImageCopy region = (VkBufferImageCopy){
+    .bufferOffset                    = 0,                         //
+    .bufferRowLength                 = 0,                         //
+    .bufferImageHeight               = 0,                         //
+    .imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, //
+    .imageSubresource.mipLevel       = 0,                         //
+    .imageSubresource.baseArrayLayer = 0,                         //
+    .imageSubresource.layerCount     = 1,                         //
+    .imageOffset                     = { 0, 0, 0 },               //
+    .imageExtent                     = { width, height, 1 }       //
+  };
+  vkCmdCopyBufferToImage( command_buffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
 
   end_single_time_commands( command_buffer );
 }
@@ -1118,7 +1331,7 @@ that name from this point on. Add the following new class members:
     .flags         = 0                                                             // Flags available for sparse images/voxels etc.
   };
   if ( VK_SUCCESS != vkCreateImage( gfx.device, &image_info, NULL, image_ptr ) ) {
-    fprintf( stderr, "ERROR: Failed to create image!" );
+    fprintf( stderr, "ERROR: Failed to create image!\n" );
     return false;
   }
 
@@ -1131,7 +1344,7 @@ that name from this point on. Add the following new class members:
     .memoryTypeIndex = find_memory_type( mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) //
   };
   if ( vkAllocateMemory( gfx.device, &alloc_info, NULL, image_memory_ptr ) != VK_SUCCESS ) {
-    fprintf( stderr, "ERROR: Failed to allocate image memory!" );
+    fprintf( stderr, "ERROR: Failed to allocate image memory!\n" );
     return false;
   }
 
@@ -1140,7 +1353,7 @@ that name from this point on. Add the following new class members:
   return true;
 }
 
-bool create_texture_image( img_t img ) {
+bool texture_image_create( img_t img ) {
   // create a "staging" buffer on the host side of memory to copy in pixels.
   VkBuffer host_buffer;
   VkDeviceMemory host_buffer_memory;
@@ -1162,9 +1375,46 @@ bool create_texture_image( img_t img ) {
     return false;
   }
 
+  if ( !transition_image_layout( texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ) ) { return false; }
+  copy_buffer_to_image( host_buffer, texture_image, (uint32_t)img.w, (uint32_t)img.h );
+  if ( !transition_image_layout( texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) ) {
+    return false;
+  }
 
   vkDestroyBuffer( gfx.device, host_buffer, NULL );
   vkFreeMemory( gfx.device, host_buffer_memory, NULL );
+
+  return true;
+}
+
+bool texture_sampler_create( void ) {
+  // Figure out max anisotropy with:
+  VkPhysicalDeviceProperties properties = (VkPhysicalDeviceProperties){ .apiVersion = 0 };
+  vkGetPhysicalDeviceProperties( gfx.physical_device, &properties );
+
+  VkSamplerCreateInfo sampler_info = (VkSamplerCreateInfo){
+    .sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,  //
+    .magFilter               = VK_FILTER_LINEAR,                       //
+    .minFilter               = VK_FILTER_LINEAR,                       //
+    .addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT,         //
+    .addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT,         //
+    .addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT,         //
+    .anisotropyEnable        = VK_TRUE,                                //
+    .maxAnisotropy           = properties.limits.maxSamplerAnisotropy, //
+    .borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+    .unnormalizedCoordinates = VK_FALSE,
+    .compareEnable           = VK_FALSE,
+    .compareOp               = VK_COMPARE_OP_ALWAYS,
+    .mipmapMode              = VK_FALSE,
+    .compareOp               = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+    .mipLodBias              = 0.0f,
+    .minLod                  = 0.0f,
+    .maxLod                  = 0.0f //
+  };
+  if ( VK_SUCCESS != vkCreateSampler( gfx.device, &sampler_info, NULL, &texture_sampler ) ) {
+    fprintf( stderr, "ERROR: Failed to create texture sampler!\n" );
+    return false;
+  }
 
   return true;
 }
@@ -1189,7 +1439,9 @@ int main() {
     fprintf( stderr, "FAILED to load image from file\n" );
     return 1;
   }
-  if ( !create_texture_image( img ) ) { return 1; }
+  if ( !texture_image_create( img ) ) { return 1; }
+  if ( !image_view_create( texture_image, VK_FORMAT_R8G8B8A8_SRGB, &texture_image_view ) ) { return 1; }
+  if ( !texture_sampler_create() ) { return 1; }
   apg_bmp_free( img.ptr );
 
   main_loop();
