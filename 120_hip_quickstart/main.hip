@@ -10,6 +10,7 @@
 
 #include <hip/hip_runtime.h>
 #include <stdio.h>
+#include <string.h>
 
 __global__ void hello_kernel( char* in, char* out ) {
   int num  = hipThreadIdx_x + hipBlockDim_x * hipBlockIdx_x;
