@@ -44,6 +44,8 @@ int main() {
   vec3 cam_pos    = (vec3){ 0, 0, 5 };
   float cam_speed = 10.0f;
 
+  bool space_lock = false, cull_back = false;
+
   double prev_s = glfwGetTime();
   while ( !glfwWindowShouldClose( gfx.window_ptr ) ) {
     double curr_s    = glfwGetTime();
@@ -54,6 +56,14 @@ int main() {
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_ESCAPE ) ) { glfwSetWindowShouldClose( gfx.window_ptr, 1 ); }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_W ) ) { cam_pos.z -= cam_speed * elapsed_s; }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_S ) ) { cam_pos.z += cam_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_SPACE ) ) {
+      if ( !space_lock ) {
+        cull_back  = !cull_back;
+        space_lock = true;
+      }
+    } else {
+      space_lock = false;
+    }
 
     uint32_t win_w, win_h, fb_w, fb_h;
     glfwGetWindowSize( gfx.window_ptr, &win_w, &win_h );
@@ -63,9 +73,9 @@ int main() {
     glClearColor( 0.6f, 0.6f, 0.8f, 1.0f );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    glEnable( GL_CULL_FACE ); //
-    glCullFace( GL_BACK );    // <--------- inside of cube is drawn
-    glFrontFace( GL_CCW );    //
+    glEnable( GL_CULL_FACE );
+    glCullFace( cull_back ? GL_BACK : GL_FRONT );
+    glFrontFace( GL_CCW );
 
     mat4 P = perspective( 66.6f, aspect, 0.1f, 100.0f );
     mat4 V = look_at( cam_pos, (vec3){ 0 }, (vec3){ 0, 1, 0 } );
