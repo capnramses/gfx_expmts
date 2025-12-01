@@ -32,6 +32,6 @@ texture_t gfx_texture_create( uint32_t w, uint32_t h, uint32_t d, uint32_t n, co
 
 mesh_t gfx_mesh_cube_create( void );
 
-shader_t gfx_shader_create_from_file( const char* vs_path, const char* fs_path );
+bool gfx_shader_create_from_file( const char* vs_path, const char* fs_path, shader_t* shader_ptr );
 
 void gfx_draw( mesh_t mesh, texture_t texture, shader_t shader );

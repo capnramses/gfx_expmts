@@ -38,7 +38,8 @@ int main() {
   }
   texture_t tex = gfx_texture_create( w, h, d, n, img_ptr );
 
-  shader_t shader = gfx_shader_create_from_file( "cube.vert", "cube.frag" );
+  shader_t shader = (shader_t){ .program = 0 };
+  if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
 
   vec3 cam_pos    = (vec3){ 0, 0, 5 };
   float cam_speed = 10.0f;
