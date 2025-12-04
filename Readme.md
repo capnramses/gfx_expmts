@@ -4,6 +4,9 @@ A repository to put play-around ideas (good, bad, and crazy), semi-finished
 projects, and volatile software. Mostly OpenGL but some other graphics-related stuff too.
 If a project turns into a reusable library it most likely ends up in the [apg](https://github.com/capnramses/apg) repository of mini libraries.
 
+
+![Cube of ray-cast voxels from 133](133_raytex/voxel_field.png)
+
 ## Building and Running
 
 There is no guaranty a demo here builds or runs.
