@@ -148,6 +148,7 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 130     | `vulkan_vertex_buffer`      | Vertex buffer example, and memory management.                                  | working             |
 | 131     | `vulkan_texture`            | Textures in Vulkan.                                                            | started             |
 | 132     | `3d_texture`                | 3D texture render test.                                                        | working             |
+| 133     | `raytex`                    | Amanatides Woo voxel ray cast using 3D texture.                                | working             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                                 | proposed            |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                                | proposed            |
