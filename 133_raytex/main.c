@@ -26,6 +26,7 @@ int main() {
     fprintf( stderr, "ERROR: allocating memory\n" );
     return 1;
   }
+  /** default positional colours
   for ( int z = 0; z < d; z++ ) {
     for ( int y = 0; y < h; y++ ) {
       for ( int x = 0; x < w; x++ ) {
@@ -35,13 +36,26 @@ int main() {
         img_ptr[idx * n + 2] = z * ( 256 / d );
       }
     }
+  } */
+  for ( int z = 0; z < d; z++ ) {
+    for ( int y = 0; y < h; y++ ) {
+      for ( int x = 0; x < w; x++ ) {
+        int pc = rand() % 100;
+        if ( pc > 90 ) {
+          int idx              = z * w * h + y * w + x;
+          img_ptr[idx * n + 0] = rand() % 255 + 1;
+          img_ptr[idx * n + 1] = rand() % 255 + 1;
+          img_ptr[idx * n + 2] = rand() % 255 + 1;
+        }
+      }
+    }
   }
   texture_t tex = gfx_texture_create( w, h, d, n, img_ptr );
 
-  shader_t shader = (shader_t){ .program = 0 };
+  shader_t shader = ( shader_t ){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
 
-  vec3 cam_pos    = (vec3){ 0, 0, 5 };
+  vec3 cam_pos    = ( vec3 ){ 0, 0, 5 };
   float cam_speed = 10.0f;
 
   bool space_lock = false, cull_back = false;
@@ -56,6 +70,10 @@ int main() {
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_ESCAPE ) ) { glfwSetWindowShouldClose( gfx.window_ptr, 1 ); }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_W ) ) { cam_pos.z -= cam_speed * elapsed_s; }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_S ) ) { cam_pos.z += cam_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_A ) ) { cam_pos.x -= cam_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_D ) ) { cam_pos.x += cam_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_Q ) ) { cam_pos.y -= cam_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_E ) ) { cam_pos.y += cam_speed * elapsed_s; }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_SPACE ) ) {
       if ( !space_lock ) {
         cull_back  = !cull_back;
@@ -78,7 +96,7 @@ int main() {
     glFrontFace( GL_CCW );
 
     mat4 P = perspective( 66.6f, aspect, 0.1f, 100.0f );
-    mat4 V = look_at( cam_pos, (vec3){ 0 }, (vec3){ 0, 1, 0 } );
+    mat4 V = look_at( cam_pos, ( vec3 ){ 0 }, ( vec3 ){ 0, 1, 0 } );
 
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_P" ), 1, GL_FALSE, P.m );
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_V" ), 1, GL_FALSE, V.m );
