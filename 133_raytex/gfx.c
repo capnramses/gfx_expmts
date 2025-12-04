@@ -91,8 +91,8 @@ mesh_t gfx_mesh_cube_create( void ) {
 }
 
 static bool _shader_create_from_file( const char* path_str, uint32_t shader_type, uint32_t* shader_ptr ) {
-  char shader_str[4096] = { 0 };
-  if ( !apg_file_to_str( path_str, 4096, shader_str ) ) {
+  char shader_str[102400] = { 0 };
+  if ( !apg_file_to_str( path_str, 102400, shader_str ) ) {
     fprintf( stderr, "ERROR: Could not read shader file `%s`.\n", path_str );
     return false;
   }
