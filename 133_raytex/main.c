@@ -1,6 +1,13 @@
 /**
  * 3D Texture with Raycast
  * Anton Gerdelan, 29 Nov 2025.
+ * 
+ * TODO
+ * 
+ * - better camera controls
+ * - correct render if ray starts inside the bounding cube
+ * - check if it still works with a model matrix / grid spinning.
+ * - think about lighting and shading. - the axis should inform which normal to use for shading.
  */
 
 #define APG_IMPLEMENTATION
@@ -14,14 +21,16 @@
 #include <stdint.h>
 #include <time.h>
 
+#define GRID_VOXELS_ACROSS 256
+
 int main() {
   gfx_t gfx = gfx_start( 800, 600, "3D Texture Demo" );
   if ( !gfx.started ) { return 1; }
 
   mesh_t cube = gfx_mesh_cube_create();
 
-  int w = 16, h = 16, d = 16, n = 3;
-  uint8_t* img_ptr = calloc( 1, w * h * d * n );
+  size_t grid_w = GRID_VOXELS_ACROSS, grid_h = GRID_VOXELS_ACROSS, grid_d = GRID_VOXELS_ACROSS, grid_n = 3;
+  uint8_t* img_ptr = calloc( 1, grid_w * grid_h * grid_d * grid_n );
   if ( !img_ptr ) {
     fprintf( stderr, "ERROR: allocating memory\n" );
     return 1;
@@ -37,20 +46,20 @@ int main() {
       }
     }
   } */
-  for ( int z = 0; z < d; z++ ) {
-    for ( int y = 0; y < h; y++ ) {
-      for ( int x = 0; x < w; x++ ) {
+  for ( int z = 0; z < grid_d; z++ ) {
+    for ( int y = 0; y < grid_h; y++ ) {
+      for ( int x = 0; x < grid_w; x++ ) {
         int pc = rand() % 100;
         if ( pc > 90 ) {
-          int idx              = z * w * h + y * w + x;
-          img_ptr[idx * n + 0] = rand() % 255 + 1;
-          img_ptr[idx * n + 1] = rand() % 255 + 1;
-          img_ptr[idx * n + 2] = rand() % 255 + 1;
+          int idx              = z * grid_w * grid_h + y * grid_w + x;
+          img_ptr[idx * grid_n + 0] = rand() % 255 + 1;
+          img_ptr[idx * grid_n + 1] = rand() % 255 + 1;
+          img_ptr[idx * grid_n + 2] = rand() % 255 + 1;
         }
       }
     }
   }
-  texture_t tex = gfx_texture_create( w, h, d, n, img_ptr );
+  texture_t tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, img_ptr );
 
   shader_t shader = ( shader_t ){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
@@ -60,12 +69,22 @@ int main() {
 
   bool space_lock = false, cull_back = false;
 
+  glfwSwapInterval( 0 );
+
   double prev_s = glfwGetTime();
+  double update_timer_s = 0.0;
   while ( !glfwWindowShouldClose( gfx.window_ptr ) ) {
     double curr_s    = glfwGetTime();
     double elapsed_s = curr_s - prev_s;
     prev_s           = curr_s;
-
+    update_timer_s += elapsed_s;
+    if ( update_timer_s > 0.2 ) {
+      update_timer_s = 0.0;
+      double fps = 1.0 / elapsed_s;
+      char title_str[512];
+      sprintf(title_str,"amanatides-woo @ %.2f FPS", fps );
+      glfwSetWindowTitle(gfx.window_ptr, title_str );
+    }
     glfwPollEvents();
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_ESCAPE ) ) { glfwSetWindowShouldClose( gfx.window_ptr, 1 ); }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_W ) ) { cam_pos.z -= cam_speed * elapsed_s; }
@@ -101,6 +120,7 @@ int main() {
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_P" ), 1, GL_FALSE, P.m );
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_V" ), 1, GL_FALSE, V.m );
     glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_cam_pos_wor" ), 1, &cam_pos.x );
+    glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), grid_w );
     gfx_draw( cube, tex, shader );
 
     glfwSwapBuffers( gfx.window_ptr );
