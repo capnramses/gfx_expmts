@@ -15,61 +15,11 @@ in vec3 v_pos_wor;
 uniform sampler3D tex;
 uniform vec3 u_cam_pos_wor;
 uniform int u_n_cells;
+uniform mat4 u_M;
 
 out vec4 frag_colour;
 
 const int MAX_STEPS = 128;
-
-vec3 find_nearest2( in vec3 xyz1, in vec3 xyz2 ) {
-  float grid_size = 16.0;
-  float cell_side = 2.0 / grid_size; // If this was 1.0 and scaled later it would remove a lot of issues.
-
-  ivec3 ijk = ivec3( floor( xyz1 / cell_side ) );
-  
-  ivec3 ijk_end = ivec3( floor( xyz2 / cell_side ) );
-
-  //ivec3 d_ijk = sign( ijk );
-  int d_i = ((xyz1.x < xyz2.x) ? 1 : ((xyz1.x > xyz2.x) ? -1 : 0));
-  int d_j = ((xyz1.y < xyz2.y) ? 1 : ((xyz1.y > xyz2.y) ? -1 : 0));
-  int d_k = ((xyz1.z < xyz2.z) ? 1 : ((xyz1.z > xyz2.z) ? -1 : 0));
-  
-  vec3 min_xyz = cell_side * floor( xyz1 / cell_side );
-  vec3 max_xyz = min_xyz + cell_side;
-  float t_x = ( ( xyz1.x > xyz2.x ) ? ( xyz1.x - min_xyz.x ) : ( max_xyz.x - xyz1.x ) ) / abs( xyz2.x - xyz1.x );
-  float t_y = ( ( xyz1.y > xyz2.y ) ? ( xyz1.y - min_xyz.y ) : ( max_xyz.y - xyz1.y ) ) / abs( xyz2.y - xyz1.y );
-  float t_z = ( ( xyz1.z > xyz2.z ) ? ( xyz1.z - min_xyz.z ) : ( max_xyz.z - xyz1.z ) ) / abs( xyz2.z - xyz1.z );
-  
-  vec3 delta_t_xyz = cell_side / abs( xyz2 - xyz1 );
-
-  for ( int steps = 0; steps < MAX_STEPS; ++steps ) {
-    // visit cell
-
-    // ijk == v_vp;
-    //vec3 rst = 
-
-    vec3 rst = ijk / grid_size ;
-    if ( rst.x >= 0.0 && rst.x < 1.0 && rst.y >= 0.0 && rst.y < 1.0 && rst.z >= 0.0 && rst.z < 1.0 ) {
-      vec4 texel = texture( tex, vec3( ijk / grid_size) );
-      if ( texel.r + texel.g + texel.b > 0.0 ) { return texel.rgb; }
-    }
-
-    if ( t_x <= t_y && t_x <= t_z ) {
-      if ( ijk.x == ijk_end.x ) { break; }
-      t_x += delta_t_xyz.x;
-      ijk.x += d_i;
-    } else if ( t_y <= t_x && t_y <= t_z ) {
-      if ( ijk.y == ijk_end.y ) { break; }
-      t_y += delta_t_xyz.y;
-      ijk.y += d_j;
-    } else {
-      if ( ijk.z == ijk_end.z ) { break; }
-      t_z += delta_t_xyz.z;
-      ijk.z += d_k;
-    } // endif
-  } // endfor
-
-  return vec3( 0.0 );
-}
 
 vec3 find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in vec3 grid_min, in vec3 grid_max, out float t_end ) {
   vec3 voxels_per_unit = float( n_cells ) / ( grid_max - grid_min );
@@ -142,7 +92,6 @@ void main() {
   vec3 grid_min   = vec3( -1.0 );
 
   vec3 nearest     = find_nearest( ray_o, ray_d, t_entry, u_n_cells, grid_min, grid_max, t_end );
-//  vec3 nearest = find_nearest2( v_pos_wor, v_pos_wor + ray_d * 3.0 );
   
   if ( nearest.x + nearest.y + nearest.z == 0.0 ) { discard; }
   frag_colour.rgb = nearest;
