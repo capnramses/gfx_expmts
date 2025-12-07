@@ -94,7 +94,7 @@ int main( int argc, char** argv ) {
 
   vec3 cam_pos    = (vec3){ 0, 0, 5 };
   float cam_speed = 10.0f;
-
+  float cam_dist = 5.0f, cam_height = 1.1f;
   bool space_lock = false, cull_back = false;
 
   glfwSwapInterval( 0 );
@@ -115,12 +115,10 @@ int main( int argc, char** argv ) {
     }
     glfwPollEvents();
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_ESCAPE ) ) { glfwSetWindowShouldClose( gfx.window_ptr, 1 ); }
-    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_W ) ) { cam_pos.z -= cam_speed * elapsed_s; }
-    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_S ) ) { cam_pos.z += cam_speed * elapsed_s; }
-    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_A ) ) { cam_pos.x -= cam_speed * elapsed_s; }
-    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_D ) ) { cam_pos.x += cam_speed * elapsed_s; }
-    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_Q ) ) { cam_pos.y -= cam_speed * elapsed_s; }
-    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_E ) ) { cam_pos.y += cam_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_W ) ) { cam_dist -= cam_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_S ) ) { cam_dist += cam_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_Q ) ) { cam_height -= cam_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_E ) ) { cam_height += cam_speed * elapsed_s; }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_SPACE ) ) {
       if ( !space_lock ) {
         cull_back  = !cull_back;
@@ -129,8 +127,11 @@ int main( int argc, char** argv ) {
     } else {
       space_lock = false;
     }
+    // Orbit camera.
+    cam_pos = (vec3){ cam_dist * cosf( curr_s * 0.51f ), cam_height, cam_dist * sinf( curr_s * 0.51f ) };
 
-    uint32_t win_w, win_h, fb_w, fb_h;
+      uint32_t win_w,
+    win_h, fb_w, fb_h;
     glfwGetWindowSize( gfx.window_ptr, &win_w, &win_h );
     glfwGetFramebufferSize( gfx.window_ptr, &fb_w, &fb_h );
     float aspect = (float)fb_w / (float)fb_h;
@@ -144,9 +145,11 @@ int main( int argc, char** argv ) {
 
     mat4 P = perspective( 66.6f, aspect, 0.1f, 100.0f );
     mat4 V = look_at( cam_pos, (vec3){ 0 }, (vec3){ 0, 1, 0 } );
+    mat4 M = rot_y_deg_mat4( curr_s * 100.0 );
 
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_P" ), 1, GL_FALSE, P.m );
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_V" ), 1, GL_FALSE, V.m );
+    glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
     glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_cam_pos_wor" ), 1, &cam_pos.x );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), grid_w );
     gfx_draw( cube, tex, shader );
