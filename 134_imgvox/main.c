@@ -4,16 +4,16 @@
  *
  * RUN
  *
- * ./a.out -iz sword.bmp 30 -iz sword2.bmp 31 -iz sword2.bmp 29
+ * ./a.out -iz sword2.bmp 14 -iz sword.bmp 15 -iz sword2.bmp 16
  *
  * TODO
  *
  * - save button -> vox format
  * - load vox format
- * - better camera controls
- * - correct render if ray starts inside the bounding cube
+ * SORTA - better camera controls
+ * DONE  - correct render if ray starts inside the bounding cube (needed inside detect & flip cull & change t origin + near clip for regular cam change.)
  * - check if it still works with a model matrix / grid spinning.
- * - think about lighting and shading. - the axis should inform which normal to use for shading.
+ * SORTA - think about lighting and shading. - the axis should inform which normal to use for shading.
  */
 
 #define APG_IMPLEMENTATION
@@ -95,7 +95,7 @@ int main( int argc, char** argv ) {
   vec3 cam_pos    = (vec3){ 0, 0, 5 };
   float cam_speed = 10.0f;
   float cam_dist = 5.0f, cam_height = 1.1f;
-  bool space_lock = false, cull_back = false;
+  bool space_lock = false, show_bounding_cube = false;
 
   glfwSwapInterval( 0 );
 
@@ -121,7 +121,7 @@ int main( int argc, char** argv ) {
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_E ) ) { cam_height += cam_speed * elapsed_s; }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_SPACE ) ) {
       if ( !space_lock ) {
-        cull_back  = !cull_back;
+        show_bounding_cube  = !show_bounding_cube;
         space_lock = true;
       }
     } else {
@@ -130,8 +130,7 @@ int main( int argc, char** argv ) {
     // Orbit camera.
     cam_pos = (vec3){ cam_dist * cosf( curr_s * 0.51f ), cam_height, cam_dist * sinf( curr_s * 0.51f ) };
 
-      uint32_t win_w,
-    win_h, fb_w, fb_h;
+    uint32_t win_w, win_h, fb_w, fb_h;
     glfwGetWindowSize( gfx.window_ptr, &win_w, &win_h );
     glfwGetFramebufferSize( gfx.window_ptr, &fb_w, &fb_h );
     float aspect = (float)fb_w / (float)fb_h;
@@ -139,19 +138,31 @@ int main( int argc, char** argv ) {
     glClearColor( 0.6f, 0.6f, 0.8f, 1.0f );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    glEnable( GL_CULL_FACE );
-    glCullFace( cull_back ? GL_BACK : GL_FRONT );
-    glFrontFace( GL_CCW );
-
-    mat4 P = perspective( 66.6f, aspect, 0.1f, 100.0f );
+    mat4 P = perspective( 66.6f, aspect, 0.0001f, 100.0f );
     mat4 V = look_at( cam_pos, (vec3){ 0 }, (vec3){ 0, 1, 0 } );
     mat4 M = rot_y_deg_mat4( curr_s * 100.0 );
+
+    vec3 grid_max = (vec3){ 1, 1, 1 };
+    vec3 grid_min = (vec3){ -1, -1, -1 };
+
+    glEnable( GL_CULL_FACE );
+    glFrontFace( GL_CW ); // NB Cube mesh used is inside-out.
+
+    // Still want to render when inside bounding cube area, so flip to rendering inside out. Can't do both at once or it will look wonky.
+    if ( cam_pos.x < grid_max.x && cam_pos.x > grid_min.x && cam_pos.y < grid_max.y && cam_pos.y > grid_min.y && cam_pos.z < grid_max.z && cam_pos.z > grid_min.x ) {
+      glCullFace( GL_FRONT );
+    } else {
+      glCullFace( GL_BACK );
+    }
 
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_P" ), 1, GL_FALSE, P.m );
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_V" ), 1, GL_FALSE, V.m );
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
     glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_cam_pos_wor" ), 1, &cam_pos.x );
+    glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_max" ), 1, &grid_max.x );
+    glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_min" ), 1, &grid_min.x );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), grid_w );
+    glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_show_bounding_cube" ), (int)!show_bounding_cube );
     gfx_draw( cube, tex, shader );
 
     glfwSwapBuffers( gfx.window_ptr );
