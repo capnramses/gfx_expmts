@@ -220,7 +220,7 @@ int main( int argc, char** argv ) {
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_max" ), 1, &grid_max.x );
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_min" ), 1, &grid_min.x );
-      gfx_draw( cube, tex, shader );
+  //    gfx_draw( cube, tex, shader );
     }
 
     glfwSwapBuffers( gfx.window_ptr );

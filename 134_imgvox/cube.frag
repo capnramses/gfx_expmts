@@ -102,7 +102,7 @@ void main() {
 
   vec3 nearest     = find_nearest( ray_o, ray_d, t_entry, u_n_cells, u_grid_min, u_grid_max, t_end );
   
-  frag_colour.rgb = nearest * 0.33 + nearest * 0.66 * ( 1.0 - clamp(abs(t_end) * 0.25, 0.0, 1.0 ) );
+  frag_colour.rgb = nearest;// * 0.33 + nearest * 0.66 * ( 1.0 - clamp(abs(t_end) * 0.25, 0.0, 1.0 ) );
   frag_colour.a   = 1.0;
 
 
