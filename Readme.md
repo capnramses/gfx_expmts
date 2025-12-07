@@ -6,7 +6,7 @@ projects, and volatile software. Mostly OpenGL but some other graphics-related s
 If a project turns into a reusable library it most likely ends up in the [apg](https://github.com/capnramses/apg) repository of mini libraries.
 
 
-![Cube of ray-cast voxels from 133](133_raytex/voxel_field.png)
+![Cube of ray-cast voxels from 133](134_imgvox/imgvox.png)
 
 ## Building and Running
 
