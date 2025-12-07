@@ -1,13 +1,15 @@
 /**
  * 3D Texture with Raycast
  * Anton Gerdelan, 29 Nov 2025.
- * 
+ *
  * RUN
- * 
+ *
  * ./a.out -iz sword.bmp 30 -iz sword2.bmp 31 -iz sword2.bmp 29
  *
  * TODO
  *
+ * - save button -> vox format
+ * - load vox format
  * - better camera controls
  * - correct render if ray starts inside the bounding cube
  * - check if it still works with a model matrix / grid spinning.
@@ -48,36 +50,13 @@ int main( int argc, char** argv ) {
     fprintf( stderr, "ERROR: allocating memory\n" );
     return 1;
   }
-  /** default positional colours
-  for ( int z = 0; z < d; z++ ) {
-    for ( int y = 0; y < h; y++ ) {
-      for ( int x = 0; x < w; x++ ) {
-        int idx              = z * w * h + y * w + x;
-        img_ptr[idx * n + 0] = x * ( 256 / w );
-        img_ptr[idx * n + 1] = y * ( 256 / h );
-        img_ptr[idx * n + 2] = z * ( 256 / d );
-      }
-    }
-  } */
-  for ( int z = 0; z < grid_d; z++ ) {
-    for ( int y = 0; y < grid_h; y++ ) {
-      for ( int x = 0; x < grid_w; x++ ) {
-        int pc = rand() % 100;
-        if ( pc > 90 ) {
-          int idx                   = z * grid_w * grid_h + y * grid_w + x;
-          img_ptr[idx * grid_n + 0] = rand() % 255 + 1;
-          img_ptr[idx * grid_n + 1] = rand() % 255 + 1;
-          img_ptr[idx * grid_n + 2] = rand() % 255 + 1;
-        }
-      }
-    }
-  }
+  bool created_voxels = false;
 
   // -iz sword.bmp 1     replaces z layer 1 with the image in sword.bmp
-  for ( int i = 1; i < argc - 2; i ++ ){
+  for ( int i = 1; i < argc - 2; i++ ) {
     if ( 0 == strcmp( "-iz", argv[i] ) && i < argc - 2 ) {
       const char* img_fn = argv[i + 1];
-      int z_layer = atoi( argv[i+2] );
+      int z_layer        = atoi( argv[i + 2] );
       int w = 0, h = 0, n = 0;
       unsigned char* fimg_ptr = apg_bmp_read( img_fn, &w, &h, &n );
       if ( !fimg_ptr ) {
@@ -87,6 +66,24 @@ int main( int argc, char** argv ) {
       printf( "loaded image `%s` %ix%i@x%i\n", img_fn, w, h, n );
       memcpy( &img_ptr[z_layer * grid_w * grid_h * grid_n], fimg_ptr, w * h * n );
       free( fimg_ptr );
+
+      created_voxels = true;
+    }
+  }
+
+  if ( !created_voxels ) {
+    for ( int z = 0; z < grid_d; z++ ) {
+      for ( int y = 0; y < grid_h; y++ ) {
+        for ( int x = 0; x < grid_w; x++ ) {
+          int pc = rand() % 100;
+          if ( pc > 90 ) {
+            int idx                   = z * grid_w * grid_h + y * grid_w + x;
+            img_ptr[idx * grid_n + 0] = rand() % 255 + 1;
+            img_ptr[idx * grid_n + 1] = rand() % 255 + 1;
+            img_ptr[idx * grid_n + 2] = rand() % 255 + 1;
+          }
+        }
+      }
     }
   }
 
