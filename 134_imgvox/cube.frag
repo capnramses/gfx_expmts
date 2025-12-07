@@ -41,7 +41,7 @@ vec3 find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in 
   int axis = 0;
   for ( int steps = 0; steps < MAX_STEPS; ++steps ) {
     /* Fetch the cell at our current position */
-    vec3 rst = vec3( pos ) / float( n_cells );
+    vec3 rst = vec3( pos ) / float( n_cells - 1 ); // BUGFIX: off by 1 was creating extra row on the bottom.
     rst = clamp( rst, vec3(0.0), vec3(1.0) );
     vec4 texel = texture( tex, vec3( rst.x, 1.0 - rst.y, rst.z ) );
 
@@ -83,18 +83,15 @@ vec3 find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in 
 }
 
 void main() {
-  vec3 grid_max   = vec3( 1.0 );
-  vec3 grid_min   = vec3( -1.0 );
-
   vec3 ray_o       = u_cam_pos_wor;
   vec3 ray_dist_3d = v_pos_wor - ray_o;
   float t_entry    = length( ray_dist_3d );
 
-float inside = 0.0;
+  float inside = 0.0;
   // If inside cube start ray t at camera position.
-  if ( u_cam_pos_wor.x < grid_max.x && u_cam_pos_wor.x > grid_min.x &&
-    u_cam_pos_wor.y < grid_max.y && u_cam_pos_wor.y > grid_min.y &&
-    u_cam_pos_wor.z < grid_max.z && u_cam_pos_wor.z > grid_min.z  ) {
+  if ( u_cam_pos_wor.x < u_grid_max.x && u_cam_pos_wor.x > u_grid_min.x &&
+    u_cam_pos_wor.y < u_grid_max.y && u_cam_pos_wor.y > u_grid_min.y &&
+    u_cam_pos_wor.z < u_grid_max.z && u_cam_pos_wor.z > u_grid_min.z  ) {
     t_entry = 0.0;
     inside = 1.0;
   }
