@@ -5,6 +5,7 @@
  * RUN
  *
  * ./a.out -iz sword2.bmp 14 -iz sword.bmp 15 -iz sword2.bmp 16
+ * ./a.out -iz fish3.bmp 10 -iz fish3.bmp 11 -iz fish3.bmp 12 -iz fish3.bmp 13 -iz fish3.bmp 14 -iz fish4.bmp 15 -iz fish4.bmp 16 -iz fish.bmp 17 -iz fish2.bmp 18 -iz fish2.bmp 19
  *
  * TODO
  *
