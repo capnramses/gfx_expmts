@@ -1,6 +1,10 @@
 /**
  * 3D Texture with Raycast
  * Anton Gerdelan, 29 Nov 2025.
+ * 
+ * RUN
+ * 
+ * ./a.out -iz sword.bmp 30 -iz sword2.bmp 31 -iz sword2.bmp 29
  *
  * TODO
  *
@@ -33,12 +37,6 @@ int arg_pos( const char* str, int argc, char** argv ) {
 }
 
 int main( int argc, char** argv ) {
-  int arg_i          = arg_pos( "-i", argc, argv );
-  int arg_z          = arg_pos( "-z", argc, argv );
-  int img_z          = 0;
-  char* img_filename = NULL;
-  if ( arg_z > 0 && arg_z < argc - 1 ) { img_z = atoi( argv[arg_z + 1] ); }
-
   gfx_t gfx = gfx_start( 800, 600, "3D Texture Demo" );
   if ( !gfx.started ) { return 1; }
 
@@ -75,18 +73,21 @@ int main( int argc, char** argv ) {
     }
   }
 
-  if ( arg_i > 0 && arg_i < argc - 1 ) {
-    img_filename = argv[arg_i + 1];
-    printf( "loading image `%s` to z %i\n", img_filename, img_z );
-    int w = 0, h = 0, n = 0;
-    unsigned char* fimg_ptr = apg_bmp_read( img_filename, &w, &h, &n );
-    if ( !fimg_ptr ) {
-      fprintf( stderr, "ERROR: loading image `%s`\n", img_filename );
-      return 1;
+  // -iz sword.bmp 1     replaces z layer 1 with the image in sword.bmp
+  for ( int i = 1; i < argc - 2; i ++ ){
+    if ( 0 == strcmp( "-iz", argv[i] ) && i < argc - 2 ) {
+      const char* img_fn = argv[i + 1];
+      int z_layer = atoi( argv[i+2] );
+      int w = 0, h = 0, n = 0;
+      unsigned char* fimg_ptr = apg_bmp_read( img_fn, &w, &h, &n );
+      if ( !fimg_ptr ) {
+        fprintf( stderr, "ERROR: loading image `%s`\n", img_fn );
+        return 1;
+      }
+      printf( "loaded image `%s` %ix%i@x%i\n", img_fn, w, h, n );
+      memcpy( &img_ptr[z_layer * grid_w * grid_h * grid_n], fimg_ptr, w * h * n );
+      free( fimg_ptr );
     }
-    printf( "loaded image `%s` %ix%i@x%i\n", img_filename, w, h, n );
-    memcpy( &img_ptr[img_z * grid_w * grid_h * grid_n], fimg_ptr, w * h * n );
-    free( fimg_ptr );
   }
 
   texture_t tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, img_ptr );
