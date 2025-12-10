@@ -43,7 +43,36 @@ int arg_pos( const char* str, int argc, char** argv ) {
   return -1;
 }
 
+int colour_dist_sq( const uint8_t* a, const uint8_t* b ) {
+  return ( a[0] * a[0] - b[0] * b[0] ) + ( a[1] * a[1] - b[1] * b[1] ) + ( a[2] * a[2] - b[2] * b[2] );
+}
+
+uint8_t closest_pal_idx( const uint8_t* pal, const uint8_t* rgb ) {
+  uint8_t closest_idx = 0;
+  int closest_dist = 255 * 255 * 3 + 1;
+  for ( int i = 0; i < 256; i++ ) {
+    int dist = colour_dist_sq( &pal[i * 3], rgb );
+    if ( dist < closest_dist ) {
+      closest_dist = dist;
+      closest_idx = i;
+    }
+  }
+  return closest_idx;
+}
+
 int main( int argc, char** argv ) {
+  uint8_t* pal_ptr = calloc( 256 * 3, 1 );
+  assert( pal_ptr );
+  FILE* f_ptr = fopen( "my.pal", "rb" );
+  assert( f_ptr );
+  fread( pal_ptr, 1, 256 * 3, f_ptr );
+  fclose( f_ptr );
+
+  TODO - load palette into 1D texture
+  TODO - change 3d texture to 1 byte per voxel
+  TODO - random byte per voxel and index into palette texture strip
+  TODO - for each loaded image slice, use colour distance to assign palette indices.
+
   gfx_t gfx = gfx_start( 800, 600, "3D Texture Demo" );
   if ( !gfx.started ) { return 1; }
 
@@ -102,10 +131,10 @@ int main( int argc, char** argv ) {
 
   texture_t tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, img_ptr );
 
-  shader_t shader = (shader_t){ .program = 0 };
+  shader_t shader = ( shader_t ){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
 
-  vec3 cam_pos    = (vec3){ 0, 0, 5 };
+  vec3 cam_pos    = ( vec3 ){ 0, 0, 5 };
   float cam_speed = 10.0f;
   float cam_dist = 5.0f, cam_height = 1.1f;
   bool space_lock = false, show_bounding_cube = false;
@@ -141,7 +170,7 @@ int main( int argc, char** argv ) {
       space_lock = false;
     }
     // Orbit camera.
-    cam_pos = (vec3){ cam_dist * cosf( curr_s * 0.5f ), cam_height, cam_dist * sinf( curr_s * 0.5f ) };
+    cam_pos = ( vec3 ){ cam_dist * cosf( curr_s * 0.5f ), cam_height, cam_dist * sinf( curr_s * 0.5f ) };
 
     uint32_t win_w, win_h, fb_w, fb_h;
     glfwGetWindowSize( gfx.window_ptr, &win_w, &win_h );
@@ -157,7 +186,7 @@ int main( int argc, char** argv ) {
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     mat4 P = perspective( 66.6f, aspect, 0.0001f, 100.0f );
-    mat4 V = look_at( cam_pos, (vec3){ 0 }, (vec3){ 0, 1, 0 } );
+    mat4 V = look_at( cam_pos, ( vec3 ){ 0 }, ( vec3 ){ 0, 1, 0 } );
 
     glEnable( GL_CULL_FACE );
     glFrontFace( GL_CW ); // NB Cube mesh used is inside-out.
@@ -170,8 +199,8 @@ int main( int argc, char** argv ) {
 
     {                                   // Draw first voxel cube.
       mat4 M         = identity_mat4(); //((vec3){.5,.5,.5});
-      vec3 grid_max  = (vec3){ 1, 1, 1 };
-      vec3 grid_min  = (vec3){ -1, -1, -1 };
+      vec3 grid_max  = ( vec3 ){ 1, 1, 1 };
+      vec3 grid_min  = ( vec3 ){ -1, -1, -1 };
       vec3 grid_maxb = vec3_from_vec4( mul_mat4_vec4( M, vec4_from_vec3f( grid_max, 1.0 ) ) );
       vec3 grid_minb = vec3_from_vec4( mul_mat4_vec4( M, vec4_from_vec3f( grid_min, 1.0 ) ) );
       // TODO - tidy this into a func.
@@ -196,10 +225,10 @@ int main( int argc, char** argv ) {
     }
 
     { // Draw second voxel cube.
-      mat4 T         = translate_mat4( (vec3){ 2.1, 0, 0 } );
+      mat4 T         = translate_mat4( ( vec3 ){ 2.1, 0, 0 } );
       mat4 M         = T;
-      vec3 grid_max  = (vec3){ 1, 1, 1 };
-      vec3 grid_min  = (vec3){ -1, -1, -1 };
+      vec3 grid_max  = ( vec3 ){ 1, 1, 1 };
+      vec3 grid_min  = ( vec3 ){ -1, -1, -1 };
       vec3 grid_maxb = vec3_from_vec4( mul_mat4_vec4( M, vec4_from_vec3f( grid_max, 1.0 ) ) );
       vec3 grid_minb = vec3_from_vec4( mul_mat4_vec4( M, vec4_from_vec3f( grid_min, 1.0 ) ) );
 
@@ -220,7 +249,7 @@ int main( int argc, char** argv ) {
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_max" ), 1, &grid_max.x );
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_min" ), 1, &grid_min.x );
-  //    gfx_draw( cube, tex, shader );
+      //    gfx_draw( cube, tex, shader );
     }
 
     glfwSwapBuffers( gfx.window_ptr );
@@ -228,6 +257,7 @@ int main( int argc, char** argv ) {
 
   gfx_stop();
   free( img_ptr );
+  free( pal_ptr );
 
   printf( "Normal exit.\n" );
 
