@@ -49,29 +49,21 @@ int colour_dist_sq( const uint8_t* a, const uint8_t* b ) {
 
 uint8_t closest_pal_idx( const uint8_t* pal, const uint8_t* rgb ) {
   uint8_t closest_idx = 0;
-  int closest_dist = 255 * 255 * 3 + 1;
+  int closest_dist    = 255 * 255 * 3 + 1;
   for ( int i = 0; i < 256; i++ ) {
     int dist = colour_dist_sq( &pal[i * 3], rgb );
     if ( dist < closest_dist ) {
       closest_dist = dist;
-      closest_idx = i;
+      closest_idx  = i;
     }
   }
   return closest_idx;
 }
 
 int main( int argc, char** argv ) {
-  uint8_t* pal_ptr = calloc( 256 * 3, 1 );
-  assert( pal_ptr );
-  FILE* f_ptr = fopen( "my.pal", "rb" );
-  assert( f_ptr );
-  fread( pal_ptr, 1, 256 * 3, f_ptr );
-  fclose( f_ptr );
-
-  TODO - load palette into 1D texture
-  TODO - change 3d texture to 1 byte per voxel
-  TODO - random byte per voxel and index into palette texture strip
-  TODO - for each loaded image slice, use colour distance to assign palette indices.
+//  TODO - change 3d texture to 1 byte per voxel
+//  TODO - random byte per voxel and index into palette texture strip
+//  TODO - for each loaded image slice, use colour distance to assign palette indices.
 
   gfx_t gfx = gfx_start( 800, 600, "3D Texture Demo" );
   if ( !gfx.started ) { return 1; }
@@ -129,7 +121,16 @@ int main( int argc, char** argv ) {
     }
   }
 
-  texture_t tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, img_ptr );
+  
+  uint8_t* pal_ptr = calloc( 256 * 3, 1 );
+  assert( pal_ptr );
+  FILE* f_ptr = fopen( "my.pal", "rb" );
+  assert( f_ptr );
+  fread( pal_ptr, 1, 256 * 3, f_ptr );
+  fclose( f_ptr );
+
+  texture_t tex     = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, img_ptr );
+  texture_t pal_tex = gfx_texture_create( 256, 1, 1, 3, pal_ptr );
 
   shader_t shader = ( shader_t ){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
@@ -196,6 +197,8 @@ int main( int argc, char** argv ) {
     glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_cam_pos_wor" ), 1, &cam_pos.x );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), grid_w );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_show_bounding_cube" ), (int)!show_bounding_cube );
+    glProgramUniform1ui( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
+    glProgramUniform1ui( shader.program, glGetUniformLocation( shader.program, "u_pal" ), 1 );
 
     {                                   // Draw first voxel cube.
       mat4 M         = identity_mat4(); //((vec3){.5,.5,.5});
@@ -221,7 +224,9 @@ int main( int argc, char** argv ) {
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_max" ), 1, &grid_max.x );
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_min" ), 1, &grid_min.x );
-      gfx_draw( cube, tex, shader );
+
+      const texture_t* textures[] = { &tex, &pal_tex };
+      gfx_draw( shader, cube, textures, 2 );
     }
 
     { // Draw second voxel cube.

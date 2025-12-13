@@ -8,7 +8,7 @@
 static void _glfw_error_callback( int error, const char* description ) { fprintf( stderr, "GLFW ERROR: code %i msg: %s.\n", error, description ); }
 
 gfx_t gfx_start( int w, int h, const char* title_str ) {
-  gfx_t gfx = (gfx_t){ .started = false };
+  gfx_t gfx = ( gfx_t ){ .started = false };
 
   printf( "Starting GLFW %s.\n", glfwGetVersionString() );
 
@@ -49,7 +49,7 @@ gfx_t gfx_start( int w, int h, const char* title_str ) {
 void gfx_stop( void ) { glfwTerminate(); }
 
 texture_t gfx_texture_create( uint32_t w, uint32_t h, uint32_t d, uint32_t n, const uint8_t* pixels_ptr ) {
-  texture_t tex         = (texture_t){ .w = w, .h = h, .d = d, .n = n };
+  texture_t tex         = ( texture_t ){ .w = w, .h = h, .d = d, .n = n };
   GLint internal_format = 4 == n ? GL_RGBA : 3 == n ? GL_RGB : 2 == n ? GL_RG : GL_RED;
   GLenum format         = 4 == n ? GL_RGBA : 3 == n ? GL_RGB : 2 == n ? GL_RG : GL_RED;
   if ( 3 == n || 1 == n ) { glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); }
@@ -57,7 +57,9 @@ texture_t gfx_texture_create( uint32_t w, uint32_t h, uint32_t d, uint32_t n, co
   glGenTextures( 1, &tex.texture );
   tex.target = 0 == d ? GL_TEXTURE_2D : GL_TEXTURE_3D;
   glBindTexture( tex.target, tex.texture );
-  if ( 0 == d ) {
+  if ( 0 == h && 0 == d ) {
+    glTexImage1D( tex.target, 0, internal_format, tex.w, 0, format, GL_UNSIGNED_BYTE, pixels_ptr );
+  } else if ( 0 == d ) {
     glTexImage2D( tex.target, 0, internal_format, tex.w, tex.h, 0, format, GL_UNSIGNED_BYTE, pixels_ptr );
   } else {
     glTexImage3D( tex.target, 0, internal_format, tex.w, tex.h, tex.d, 0, format, GL_UNSIGNED_BYTE, pixels_ptr );
@@ -73,7 +75,7 @@ texture_t gfx_texture_create( uint32_t w, uint32_t h, uint32_t d, uint32_t n, co
 }
 
 mesh_t gfx_mesh_cube_create( void ) {
-  mesh_t m       = (mesh_t){ .n_points = 36 };
+  mesh_t m       = ( mesh_t ){ .n_points = 36 };
   float points[] = { -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f,
     -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
     1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f,
@@ -140,15 +142,20 @@ bool gfx_shader_create_from_file( const char* vs_path, const char* fs_path, shad
   return true;
 }
 
-void gfx_draw( mesh_t mesh, texture_t texture, shader_t shader ) {
+void gfx_draw( shader_t shader, mesh_t mesh, const texture_t** textures_ptr, int n_textures ) {
   glUseProgram( shader.program );
   glBindVertexArray( mesh.vao );
-  glActiveTexture( GL_TEXTURE0 );
-  glBindTexture( texture.target, texture.texture );
+  for ( int i = 0; i < n_textures; i++ ) {
+    glActiveTexture( GL_TEXTURE0 + i );
+    glBindTexture( textures_ptr[i]->target, textures_ptr[i]->texture );
+  }
 
   glDrawArrays( GL_TRIANGLES, 0, mesh.n_points );
 
-  glBindTexture( texture.target, 0 );
+  for ( int i = 0; i < n_textures; i++ ) {
+    glActiveTexture( GL_TEXTURE0 + i );
+    glBindTexture( textures_ptr[i]->target, 0 );
+  }
   glBindVertexArray( 0 );
   glUseProgram( 0 );
 }

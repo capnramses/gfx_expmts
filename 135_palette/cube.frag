@@ -11,7 +11,8 @@ NOTES
 
 in vec3 v_pos_wor;
 
-uniform sampler3D tex;
+uniform sampler3D u_vol_tex;
+uniform sampler1D u_pal;
 uniform vec3 u_cam_pos_wor;
 uniform int u_n_cells;
 uniform int u_show_bounding_cube;
@@ -43,7 +44,7 @@ vec3 find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in 
     /* Fetch the cell at our current position */
     vec3 rst = vec3( pos ) / float( n_cells - 1 ); // BUGFIX: off by 1 was creating extra row on the bottom.
     rst = clamp( rst, vec3(0.0), vec3(1.0) );
-    vec4 texel = texture( tex, vec3( rst.x, 1.0 - rst.y, rst.z ) );
+    vec4 texel = texture( u_vol_tex, vec3( rst.x, 1.0 - rst.y, rst.z ) );
 
     /* Check if we hit a voxel which isn't 0 */
     if ( texel.r + texel.b + texel.g > 0.0 ) {
