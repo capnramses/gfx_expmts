@@ -48,14 +48,14 @@ gfx_t gfx_start( int w, int h, const char* title_str ) {
 
 void gfx_stop( void ) { glfwTerminate(); }
 
-texture_t gfx_texture_create( uint32_t w, uint32_t h, uint32_t d, uint32_t n, const uint8_t* pixels_ptr ) {
+texture_t gfx_texture_create( uint32_t w, uint32_t h, uint32_t d, uint32_t n, bool integer, const uint8_t* pixels_ptr ) {
   texture_t tex         = ( texture_t ){ .w = w, .h = h, .d = d, .n = n };
-  GLint internal_format = 4 == n ? GL_RGBA : 3 == n ? GL_RGB : 2 == n ? GL_RG : GL_RED;
-  GLenum format         = 4 == n ? GL_RGBA : 3 == n ? GL_RGB : 2 == n ? GL_RG : GL_RED;
+  GLint internal_format = integer ? GL_R8UI : 4 == n ? GL_RGBA : 3 == n ? GL_RGB : 2 == n ? GL_RG : GL_RED;
+  GLenum format         = integer ? GL_RED_INTEGER : 4 == n ? GL_RGBA : 3 == n ? GL_RGB : 2 == n ? GL_RG : GL_RED;
   if ( 3 == n || 1 == n ) { glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); }
   glActiveTexture( GL_TEXTURE0 );
   glGenTextures( 1, &tex.texture );
-  tex.target = 0 == d ? GL_TEXTURE_2D : GL_TEXTURE_3D;
+  tex.target = ( w > 0 && 0 == h && 0 == d ) ? GL_TEXTURE_1D : 0 == d ? GL_TEXTURE_2D : GL_TEXTURE_3D;
   glBindTexture( tex.target, tex.texture );
   if ( 0 == h && 0 == d ) {
     glTexImage1D( tex.target, 0, internal_format, tex.w, 0, format, GL_UNSIGNED_BYTE, pixels_ptr );

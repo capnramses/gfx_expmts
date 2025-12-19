@@ -28,7 +28,7 @@ gfx_t gfx_start( int w, int h, const char* title_str );
 
 void gfx_stop( void );
 
-texture_t gfx_texture_create( uint32_t w, uint32_t h, uint32_t d, uint32_t n, const uint8_t* pixels_ptr );
+texture_t gfx_texture_create( uint32_t w, uint32_t h, uint32_t d, uint32_t n, bool integer, const uint8_t* pixels_ptr );
 
 mesh_t gfx_mesh_cube_create( void );
 

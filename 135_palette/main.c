@@ -48,10 +48,12 @@ int colour_dist_sq( const uint8_t* a, const uint8_t* b ) {
 }
 
 uint8_t closest_pal_idx( const uint8_t* pal, const uint8_t* rgb ) {
+  int pal_n = 3;
   uint8_t closest_idx = 0;
-  int closest_dist    = 255 * 255 * 3 + 1;
+ // printf("rgb=%u,%u,%u\n",rgb[0],rgb[1],rgb[2]);
+  int closest_dist    = INT_MAX;
   for ( int i = 0; i < 256; i++ ) {
-    int dist = colour_dist_sq( &pal[i * 3], rgb );
+    int dist = colour_dist_sq( &pal[i * n], rgb );
     if ( dist < closest_dist ) {
       closest_dist = dist;
       closest_idx  = i;
@@ -61,9 +63,9 @@ uint8_t closest_pal_idx( const uint8_t* pal, const uint8_t* rgb ) {
 }
 
 int main( int argc, char** argv ) {
-//  TODO - change 3d texture to 1 byte per voxel
-//  TODO - random byte per voxel and index into palette texture strip
-//  TODO - for each loaded image slice, use colour distance to assign palette indices.
+  //  TODO - change 3d texture to 1 byte per voxel
+  //  TODO - random byte per voxel and index into palette texture strip
+  //  TODO - for each loaded image slice, use colour distance to assign palette indices.
 
   gfx_t gfx = gfx_start( 800, 600, "3D Texture Demo" );
   if ( !gfx.started ) { return 1; }
@@ -77,13 +79,21 @@ int main( int argc, char** argv ) {
 
   mesh_t cube = gfx_mesh_cube_create();
 
-  size_t grid_w = grid_dims, grid_h = grid_dims, grid_d = grid_dims, grid_n = 3;
+  size_t grid_w = grid_dims, grid_h = grid_dims, grid_d = grid_dims;
+  size_t grid_n    = 1;
   uint8_t* img_ptr = calloc( 1, grid_w * grid_h * grid_d * grid_n );
   if ( !img_ptr ) {
     fprintf( stderr, "ERROR: allocating memory\n" );
     return 1;
   }
   bool created_voxels = false;
+
+  uint8_t* pal_ptr = calloc( 256 * 3, 1 );
+  assert( pal_ptr );
+  FILE* f_ptr = fopen( "my.pal", "rb" );
+  assert( f_ptr );
+  fread( pal_ptr, 1, 256 * 3, f_ptr );
+  fclose( f_ptr );
 
   // -iz sword.bmp 1     replaces z layer 1 with the image in sword.bmp
   for ( int i = 1; i < argc - 2; i++ ) {
@@ -98,7 +108,19 @@ int main( int argc, char** argv ) {
       }
       printf( "loaded image `%s` %ix%i@x%i\n", img_fn, w, h, n );
       assert( w == h && h == grid_dims );
-      memcpy( &img_ptr[z_layer * grid_w * grid_h * grid_n], fimg_ptr, w * h * n );
+      //      memcpy( &img_ptr[z_layer * grid_w * grid_h * grid_n], fimg_ptr, w * h * n );
+
+      for ( int y = 0; y < h; y++ ) {
+        for ( int x = 0; x < w; x++ ) {
+          int ii = ( y * w + x ) * n;
+          uint8_t rgb_ptr[3];
+          memcpy( rgb_ptr,   &fimg_ptr[ii], 3 );
+          uint8_t idx                                                  = closest_pal_idx( pal_ptr, rgb_ptr );
+        //  printf("ii=%i idx=%i\n",ii, idx);
+          img_ptr[z_layer * grid_w * grid_h + y * grid_w + x] = idx;
+        }
+      }
+
       free( fimg_ptr );
 
       created_voxels = true;
@@ -112,25 +134,21 @@ int main( int argc, char** argv ) {
           int pc = rand() % 100;
           if ( pc >= 90 ) {
             int idx                   = z * grid_w * grid_h + y * grid_w + x;
-            img_ptr[idx * grid_n + 0] = rand() % 255 + 1;
-            img_ptr[idx * grid_n + 1] = rand() % 255 + 1;
-            img_ptr[idx * grid_n + 2] = rand() % 255 + 1;
+            uint8_t rgb[3];
+            rgb[0]=rand() % 255 + 1;
+            rgb[1] = rand() % 255 + 1;
+            rgb[2] = rand() % 255 + 1;
+            img_ptr[idx * grid_n + 0] = closest_pal_idx( pal_ptr, rgb );
+         //   img_ptr[idx * grid_n + 1] = rand() % 255 + 1;
+          //  img_ptr[idx * grid_n + 2] = rand() % 255 + 1;
           }
         }
       }
     }
   }
 
-  
-  uint8_t* pal_ptr = calloc( 256 * 3, 1 );
-  assert( pal_ptr );
-  FILE* f_ptr = fopen( "my.pal", "rb" );
-  assert( f_ptr );
-  fread( pal_ptr, 1, 256 * 3, f_ptr );
-  fclose( f_ptr );
-
-  texture_t tex     = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, img_ptr );
-  texture_t pal_tex = gfx_texture_create( 256, 1, 1, 3, pal_ptr );
+  texture_t tex     = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, true, img_ptr );
+  texture_t pal_tex = gfx_texture_create( 256, 0, 0, 3, false, pal_ptr ); // 256x0x0 == 1d texture, not 256x1x1
 
   shader_t shader = ( shader_t ){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
@@ -197,8 +215,8 @@ int main( int argc, char** argv ) {
     glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_cam_pos_wor" ), 1, &cam_pos.x );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), grid_w );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_show_bounding_cube" ), (int)!show_bounding_cube );
-    glProgramUniform1ui( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
-    glProgramUniform1ui( shader.program, glGetUniformLocation( shader.program, "u_pal" ), 1 );
+    glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
+    glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_pal_tex" ), 1 );
 
     {                                   // Draw first voxel cube.
       mat4 M         = identity_mat4(); //((vec3){.5,.5,.5});
