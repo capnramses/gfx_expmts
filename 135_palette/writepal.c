@@ -1,6 +1,8 @@
 // Generate some default palettes.
 
 #include "apg_bmp.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -33,18 +35,30 @@ int main() {
 
   apg_bmp_write( "mypal.bmp", pal_ptr, 16, 16, 3 );
 
-  for ( int i = 0; i < 256; i++ ) {
-    pal_ptr[i * 3 + 0] = i;
-    pal_ptr[i * 3 + 1] = 0;
-    pal_ptr[i * 3 + 2] = 0;
+  {
+    for ( int i = 0; i < 256; i++ ) {
+      pal_ptr[i * 3 + 0] = i;
+      pal_ptr[i * 3 + 1] = 0;
+      pal_ptr[i * 3 + 2] = 0;
+    }
+
+    f_ptr = fopen( "reds.pal", "wb" );
+    assert( f_ptr );
+    fwrite( pal_ptr, 1, 256 * 3, f_ptr );
+    fclose( f_ptr );
+    apg_bmp_write( "reds.bmp", pal_ptr, 16, 16, 3 );
   }
-
-  f_ptr = fopen( "reds.pal", "wb" );
-  assert( f_ptr );
-  fwrite( pal_ptr, 1, 256 * 3, f_ptr );
-  fclose( f_ptr );
-  apg_bmp_write( "reds.bmp", pal_ptr, 16, 16, 3 );
-
+  {
+    int w, h, n;
+    uint8_t* bpal = stbi_load( "blood-1x.png", &w, &h, &n, 3 );
+    printf("loaded blood pal %ix%i @ %i\n", w,h,n);
+    f_ptr = fopen( "blood.pal", "wb" );
+    assert( f_ptr );
+    fwrite( bpal, 1, 256 * 3, f_ptr );
+    fclose( f_ptr );
+    apg_bmp_write( "blood.bmp", bpal, 16, 16, 3 );
+    free( bpal );
+  }
   free( pal_ptr );
 
   return 0;

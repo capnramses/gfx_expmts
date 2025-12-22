@@ -111,11 +111,14 @@ int main( int argc, char** argv ) {
   uint8_t* my_pal_ptr   = _pal_tex_from_file( "my.pal" );
   uint8_t* reds_pal_ptr = _pal_tex_from_file( "reds.pal" );
   uint8_t* doom_pal_ptr = _pal_tex_from_file( "doom.pal" );
-  int n_palettes        = 3;
-  texture_t palettes[3];
+  uint8_t* blood_pal_ptr = _pal_tex_from_file( "blood.pal" );
+  int palette_idx = 3;
+  int n_palettes        = 4;
+  texture_t palettes[4];
   palettes[0] = gfx_texture_create( 256, 0, 0, 3, false, my_pal_ptr ); // 256x0x0 == 1d texture, not 256x1x1
   palettes[1] = gfx_texture_create( 256, 0, 0, 3, false, reds_pal_ptr );
   palettes[2] = gfx_texture_create( 256, 0, 0, 3, false, doom_pal_ptr );
+  palettes[3] = gfx_texture_create( 256, 0, 0, 3, false, blood_pal_ptr );
 
   // -iz sword.bmp 1     replaces z layer 1 with the image in sword.bmp
   for ( int i = 1; i < argc - 2; i++ ) {
@@ -137,7 +140,7 @@ int main( int argc, char** argv ) {
           int ii = ( y * w + x ) * n;
           uint8_t rgb_ptr[3];
           memcpy( rgb_ptr, &fimg_ptr[ii], 3 );
-          uint8_t idx = closest_pal_idx( doom_pal_ptr, rgb_ptr );
+          uint8_t idx = closest_pal_idx( blood_pal_ptr, rgb_ptr );
           //  printf("ii=%i idx=%i\n",ii, idx);
           img_ptr[z_layer * grid_w * grid_h + y * grid_w + x] = idx;
         }
@@ -160,7 +163,7 @@ int main( int argc, char** argv ) {
             rgb[0]                    = rand() % 255 + 1;
             rgb[1]                    = rand() % 255 + 1;
             rgb[2]                    = rand() % 255 + 1;
-            img_ptr[idx * grid_n + 0] = closest_pal_idx( doom_pal_ptr, rgb );
+            img_ptr[idx * grid_n + 0] = closest_pal_idx( blood_pal_ptr, rgb );
             //   img_ptr[idx * grid_n + 1] = rand() % 255 + 1;
             //  img_ptr[idx * grid_n + 2] = rand() % 255 + 1;
           }
@@ -178,7 +181,6 @@ int main( int argc, char** argv ) {
   float cam_speed = 10.0f;
   float cam_dist = 5.0f, cam_height = 1.1f;
   bool space_lock = false, show_bounding_cube = false, palette_swap_lock = false;
-  int palette_idx = 0;
 
   glfwSwapInterval( 0 );
 
@@ -312,7 +314,7 @@ int main( int argc, char** argv ) {
   free( img_ptr );
   free( my_pal_ptr );
   free( reds_pal_ptr );
-  free( doom_pal_ptr );
+  free( blood_pal_ptr );
 
   printf( "Normal exit.\n" );
 
