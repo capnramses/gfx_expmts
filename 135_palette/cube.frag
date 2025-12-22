@@ -25,7 +25,6 @@ out vec4 frag_colour;
 
 const int MAX_STEPS = 128;
 
-
 vec3 find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in vec3 grid_min, in vec3 grid_max, out float t_end ) {
   vec3 voxels_per_unit = float( n_cells ) / ( grid_max - grid_min );
   vec3 entry_pos       = ( ( ro + rd * t_entry ) - grid_min ) * voxels_per_unit; // BUGFIX: +0.001 was introducing an artifact (line on corners).
@@ -47,7 +46,7 @@ vec3 find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in 
     rst = clamp( rst, vec3(0.0), vec3(1.0) );
     uvec4 itexel = texture( u_vol_tex, vec3( rst.x, 1.0 - rst.y, rst.z ) );
 //    vec4 texel = texture( u_pal_tex, float(itexel.r) / 255.0 );
-    vec4 texel= texelFetch( u_pal_tex, int( itexel.r ), 0 ); // Note had to convert uvec to int type (uint not okay).
+    vec4 texel = texelFetch( u_pal_tex, int( itexel.r ), 0 ); // Note had to convert uvec to int type (uint not okay).
 
     /* Check if we hit a voxel which isn't 0 */
     if ( texel.r + texel.b + texel.g > 0.0 ) {
@@ -102,7 +101,6 @@ void main() {
 
   vec3 ray_d       = normalize( ray_dist_3d );
   float t_end      = 0.0;
-
 
   vec3 nearest     = find_nearest( ray_o, ray_d, t_entry, u_n_cells, u_grid_min, u_grid_max, t_end );
   

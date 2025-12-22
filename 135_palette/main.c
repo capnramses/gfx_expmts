@@ -1,7 +1,7 @@
 /* clang-format off
 
- * 3D Texture with Raycast
- * Anton Gerdelan, 29 Nov 2025.
+ * Voxel Raycast with Colour Palette
+ * Anton Gerdelan, 22 Dec 2025.
  *
  * RUN
  *
@@ -9,6 +9,13 @@
  * ./a.out -iz fish3.bmp 10 -iz fish3.bmp 11 -iz fish3.bmp 12 -iz fish3.bmp 13 -iz fish3.bmp 14 -iz fish4.bmp 15 -iz fish4.bmp 16 -iz fish.bmp 17 -iz fish2.bmp 18 -iz fish2.bmp 19
  * ./a.out -d 16 -iz cobble0.bmp 1 -d 16 -iz cobble1.bmp 0 0 -iz cobble1.bmp 2 -iz 
  *
+ * KEYS
+ * 
+ * P        switch between colour palettes.
+ * space    show bounding box
+ * WASDQE   move camera
+ * Esc      quit
+ * 
  * TODO
  *
  * - save button -> vox format
@@ -29,6 +36,7 @@
 #include "apg_bmp.h"
 #include "apg_maths.h"
 #include "gfx.h"
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,16 +52,16 @@ int arg_pos( const char* str, int argc, char** argv ) {
 }
 
 int colour_dist_sq( const uint8_t* a, const uint8_t* b ) {
-  return ( a[0] * a[0] - b[0] * b[0] ) + ( a[1] * a[1] - b[1] * b[1] ) + ( a[2] * a[2] - b[2] * b[2] );
+  return ( a[0] - b[0] ) * ( a[0] - b[0] ) + ( a[1] - b[1] ) * ( a[1] - b[1] ) + ( a[2] - b[2] ) * ( a[2] - b[2] );
 }
 
 uint8_t closest_pal_idx( const uint8_t* pal, const uint8_t* rgb ) {
-  int pal_n = 3;
+  const int pal_n     = 3;
   uint8_t closest_idx = 0;
- // printf("rgb=%u,%u,%u\n",rgb[0],rgb[1],rgb[2]);
-  int closest_dist    = INT_MAX;
-  for ( int i = 0; i < 256; i++ ) {
-    int dist = colour_dist_sq( &pal[i * n], rgb );
+  // printf("rgb=%u,%u,%u\n",rgb[0],rgb[1],rgb[2]);
+  int closest_dist = colour_dist_sq( &pal[0], rgb );
+  for ( int i = 1; i < 256; i++ ) {
+    int dist = colour_dist_sq( &pal[i * pal_n], rgb );
     if ( dist < closest_dist ) {
       closest_dist = dist;
       closest_idx  = i;
@@ -62,11 +70,23 @@ uint8_t closest_pal_idx( const uint8_t* pal, const uint8_t* rgb ) {
   return closest_idx;
 }
 
-int main( int argc, char** argv ) {
-  //  TODO - change 3d texture to 1 byte per voxel
-  //  TODO - random byte per voxel and index into palette texture strip
-  //  TODO - for each loaded image slice, use colour distance to assign palette indices.
+static uint8_t* _pal_tex_from_file( const char* filename ) {
+  assert( filename );
 
+  uint8_t* pal_ptr = calloc( 256 * 3, 1 );
+  assert( pal_ptr );
+
+  FILE* f_ptr = fopen( filename, "rb" );
+  assert( f_ptr );
+
+  size_t n = fread( pal_ptr, 1, 256 * 3, f_ptr );
+  assert( 256 * 3 == n );
+  fclose( f_ptr );
+
+  return pal_ptr;
+}
+
+int main( int argc, char** argv ) {
   gfx_t gfx = gfx_start( 800, 600, "3D Texture Demo" );
   if ( !gfx.started ) { return 1; }
 
@@ -88,12 +108,14 @@ int main( int argc, char** argv ) {
   }
   bool created_voxels = false;
 
-  uint8_t* pal_ptr = calloc( 256 * 3, 1 );
-  assert( pal_ptr );
-  FILE* f_ptr = fopen( "my.pal", "rb" );
-  assert( f_ptr );
-  fread( pal_ptr, 1, 256 * 3, f_ptr );
-  fclose( f_ptr );
+  uint8_t* my_pal_ptr   = _pal_tex_from_file( "my.pal" );
+  uint8_t* reds_pal_ptr = _pal_tex_from_file( "reds.pal" );
+  uint8_t* doom_pal_ptr = _pal_tex_from_file( "doom.pal" );
+  int n_palettes        = 3;
+  texture_t palettes[3];
+  palettes[0] = gfx_texture_create( 256, 0, 0, 3, false, my_pal_ptr ); // 256x0x0 == 1d texture, not 256x1x1
+  palettes[1] = gfx_texture_create( 256, 0, 0, 3, false, reds_pal_ptr );
+  palettes[2] = gfx_texture_create( 256, 0, 0, 3, false, doom_pal_ptr );
 
   // -iz sword.bmp 1     replaces z layer 1 with the image in sword.bmp
   for ( int i = 1; i < argc - 2; i++ ) {
@@ -114,9 +136,9 @@ int main( int argc, char** argv ) {
         for ( int x = 0; x < w; x++ ) {
           int ii = ( y * w + x ) * n;
           uint8_t rgb_ptr[3];
-          memcpy( rgb_ptr,   &fimg_ptr[ii], 3 );
-          uint8_t idx                                                  = closest_pal_idx( pal_ptr, rgb_ptr );
-        //  printf("ii=%i idx=%i\n",ii, idx);
+          memcpy( rgb_ptr, &fimg_ptr[ii], 3 );
+          uint8_t idx = closest_pal_idx( doom_pal_ptr, rgb_ptr );
+          //  printf("ii=%i idx=%i\n",ii, idx);
           img_ptr[z_layer * grid_w * grid_h + y * grid_w + x] = idx;
         }
       }
@@ -133,30 +155,30 @@ int main( int argc, char** argv ) {
         for ( int x = 0; x < grid_w; x++ ) {
           int pc = rand() % 100;
           if ( pc >= 90 ) {
-            int idx                   = z * grid_w * grid_h + y * grid_w + x;
+            int idx = z * grid_w * grid_h + y * grid_w + x;
             uint8_t rgb[3];
-            rgb[0]=rand() % 255 + 1;
-            rgb[1] = rand() % 255 + 1;
-            rgb[2] = rand() % 255 + 1;
-            img_ptr[idx * grid_n + 0] = closest_pal_idx( pal_ptr, rgb );
-         //   img_ptr[idx * grid_n + 1] = rand() % 255 + 1;
-          //  img_ptr[idx * grid_n + 2] = rand() % 255 + 1;
+            rgb[0]                    = rand() % 255 + 1;
+            rgb[1]                    = rand() % 255 + 1;
+            rgb[2]                    = rand() % 255 + 1;
+            img_ptr[idx * grid_n + 0] = closest_pal_idx( doom_pal_ptr, rgb );
+            //   img_ptr[idx * grid_n + 1] = rand() % 255 + 1;
+            //  img_ptr[idx * grid_n + 2] = rand() % 255 + 1;
           }
         }
       }
     }
   }
 
-  texture_t tex     = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, true, img_ptr );
-  texture_t pal_tex = gfx_texture_create( 256, 0, 0, 3, false, pal_ptr ); // 256x0x0 == 1d texture, not 256x1x1
+  texture_t tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, true, img_ptr );
 
-  shader_t shader = ( shader_t ){ .program = 0 };
+  shader_t shader = (shader_t){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
 
-  vec3 cam_pos    = ( vec3 ){ 0, 0, 5 };
+  vec3 cam_pos    = (vec3){ 0, 0, 5 };
   float cam_speed = 10.0f;
   float cam_dist = 5.0f, cam_height = 1.1f;
-  bool space_lock = false, show_bounding_cube = false;
+  bool space_lock = false, show_bounding_cube = false, palette_swap_lock = false;
+  int palette_idx = 0;
 
   glfwSwapInterval( 0 );
 
@@ -188,8 +210,16 @@ int main( int argc, char** argv ) {
     } else {
       space_lock = false;
     }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_P ) ) {
+      if ( !palette_swap_lock ) {
+        palette_idx       = ( palette_idx + 1 ) % n_palettes;
+        palette_swap_lock = true;
+      }
+    } else {
+      palette_swap_lock = false;
+    }
     // Orbit camera.
-    cam_pos = ( vec3 ){ cam_dist * cosf( curr_s * 0.5f ), cam_height, cam_dist * sinf( curr_s * 0.5f ) };
+    cam_pos = (vec3){ cam_dist * cosf( curr_s * 0.5f ), cam_height, cam_dist * sinf( curr_s * 0.5f ) };
 
     uint32_t win_w, win_h, fb_w, fb_h;
     glfwGetWindowSize( gfx.window_ptr, &win_w, &win_h );
@@ -205,7 +235,7 @@ int main( int argc, char** argv ) {
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     mat4 P = perspective( 66.6f, aspect, 0.0001f, 100.0f );
-    mat4 V = look_at( cam_pos, ( vec3 ){ 0 }, ( vec3 ){ 0, 1, 0 } );
+    mat4 V = look_at( cam_pos, (vec3){ 0 }, (vec3){ 0, 1, 0 } );
 
     glEnable( GL_CULL_FACE );
     glFrontFace( GL_CW ); // NB Cube mesh used is inside-out.
@@ -220,8 +250,8 @@ int main( int argc, char** argv ) {
 
     {                                   // Draw first voxel cube.
       mat4 M         = identity_mat4(); //((vec3){.5,.5,.5});
-      vec3 grid_max  = ( vec3 ){ 1, 1, 1 };
-      vec3 grid_min  = ( vec3 ){ -1, -1, -1 };
+      vec3 grid_max  = (vec3){ 1, 1, 1 };
+      vec3 grid_min  = (vec3){ -1, -1, -1 };
       vec3 grid_maxb = vec3_from_vec4( mul_mat4_vec4( M, vec4_from_vec3f( grid_max, 1.0 ) ) );
       vec3 grid_minb = vec3_from_vec4( mul_mat4_vec4( M, vec4_from_vec3f( grid_min, 1.0 ) ) );
       // TODO - tidy this into a func.
@@ -243,15 +273,15 @@ int main( int argc, char** argv ) {
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_max" ), 1, &grid_max.x );
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_min" ), 1, &grid_min.x );
 
-      const texture_t* textures[] = { &tex, &pal_tex };
+      const texture_t* textures[] = { &tex, &palettes[palette_idx] };
       gfx_draw( shader, cube, textures, 2 );
     }
 
     { // Draw second voxel cube.
-      mat4 T         = translate_mat4( ( vec3 ){ 2.1, 0, 0 } );
+      mat4 T         = translate_mat4( (vec3){ 2.1, 0, 0 } );
       mat4 M         = T;
-      vec3 grid_max  = ( vec3 ){ 1, 1, 1 };
-      vec3 grid_min  = ( vec3 ){ -1, -1, -1 };
+      vec3 grid_max  = (vec3){ 1, 1, 1 };
+      vec3 grid_min  = (vec3){ -1, -1, -1 };
       vec3 grid_maxb = vec3_from_vec4( mul_mat4_vec4( M, vec4_from_vec3f( grid_max, 1.0 ) ) );
       vec3 grid_minb = vec3_from_vec4( mul_mat4_vec4( M, vec4_from_vec3f( grid_min, 1.0 ) ) );
 
@@ -280,7 +310,9 @@ int main( int argc, char** argv ) {
 
   gfx_stop();
   free( img_ptr );
-  free( pal_ptr );
+  free( my_pal_ptr );
+  free( reds_pal_ptr );
+  free( doom_pal_ptr );
 
   printf( "Normal exit.\n" );
 
