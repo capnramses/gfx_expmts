@@ -10,16 +10,14 @@ NOTES
 #version 410 core
 
 in vec3 v_pos_loc;
+in vec3 v_ray_o_loc;
+in vec3 v_ray_dist_3d_loc;
 
 uniform usampler3D u_vol_tex;
 uniform sampler1D u_pal_tex;
 
-uniform vec3 u_cam_pos_wor;
 uniform int u_n_cells;
 uniform int u_show_bounding_cube;
-uniform vec3 u_grid_max;           // in local grid space
-uniform vec3 u_grid_min;           // in local grid space
-uniform mat4 u_M, u_M_inv;
 
 out vec4 frag_colour;
 
@@ -85,24 +83,46 @@ vec3 find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in 
   return vec3( 0.0 );
 }
 
-void main() {
-  vec3 ray_o_loc       = ( u_M_inv * vec4( u_cam_pos_wor, 1.0 ) ).xyz;
-  vec3 ray_dist_3d_loc = v_pos_loc- ray_o_loc;
-  float t_entry        = length( ray_dist_3d_loc );
+// From https://stackoverflow.com/questions/12751080/glsl-point-inside-box-test
+// I think step() does still do branching, and this isn't any faster in testing than a big if-clause.
+float insideBox3D(vec3 v, vec3 bottomLeft, vec3 topRight) {
+    vec3 s = step( bottomLeft, v ) - step( topRight, v );
+    return s.x * s.y * s.z; 
+}
 
-  float inside = 0.0;
-  // If inside cube start ray t at camera position.
-  if ( ray_o_loc.x < u_grid_max.x && ray_o_loc.x > u_grid_min.x &&
-    ray_o_loc.y < u_grid_max.y && ray_o_loc.y > u_grid_min.y &&
-    ray_o_loc.z < u_grid_max.z && ray_o_loc.z > u_grid_min.z  ) {
-    t_entry = 0.0;
-    inside = 1.0;
+float insideBoxOriginal( vec3 v, vec3 bottomLeft, vec3 topRight) {
+  if ( v.x < topRight.x && v.x > bottomLeft.x &&
+    v.y < topRight.y && v.y > bottomLeft.y &&
+    v.z < topRight.z && v.z > bottomLeft.z  ) {
+    return 1.0;
   }
+  return 0.0;
+}
+
+// Also just another fooling-yourself becasue all() does the branching I suspect.
+float inBox( vec3 p, vec3 lo, vec3 hi ) {
+    bvec4 b = bvec4( greaterThan(p, lo), lessThan(p, hi) );
+    if( all(b) ) {
+      return 1.0;
+    }
+    return 0.0;
+}
+
+void main() {
+  const vec3 grid_max_loc = vec3( 1.0 );
+  const vec3 grid_min_loc = vec3( -1.0 );
+  vec3 ray_o_loc          = v_ray_o_loc;
+  vec3 ray_dist_3d_loc    = v_ray_dist_3d_loc; // v_pos_loc - ray_o_loc;
+  float t_entry           = length( ray_dist_3d_loc );
+
+  // TODO simplify point in box:
+  float inside = insideBoxOriginal(ray_o_loc, grid_min_loc, grid_max_loc );
+  t_entry *= ( 1.0 - inside );
 
   vec3 ray_d_loc       = normalize( ray_dist_3d_loc );
   float t_end      = 0.0;
 
-  vec3 nearest     = find_nearest( ray_o_loc, ray_d_loc, t_entry, u_n_cells, u_grid_min, u_grid_max, t_end );
+  vec3 nearest     = find_nearest( ray_o_loc, ray_d_loc, t_entry, u_n_cells, grid_min_loc, grid_max_loc, t_end );
   
   frag_colour.rgb = nearest;// * 0.33 + nearest * 0.66 * ( 1.0 - clamp(abs(t_end) * 0.25, 0.0, 1.0 ) );
   frag_colour.a   = 1.0;

@@ -34,7 +34,7 @@
  * DONE  - support voxel bounding box rotation. does this break the "uniform grid" idea?
  * TODO  - write voxel depth into depth map, not cube sides. and preview depth in a subwindow (otherwise intersections/z fight occur on bounding cube sides).
  * TODO  - mouse click to add/remove voxels.
- * 
+ *
  */
 
 #define APG_IMPLEMENTATION
@@ -301,15 +301,15 @@ int main( int argc, char** argv ) {
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_pal_tex" ), 1 );
 
-    {                                                  // Draw first voxel cube.
-      mat4 S        = scale_mat4( (vec3){ 1, 1, 1 } ); //((vec3){.5,.5,.5});
-      mat4 T        = translate_mat4( (vec3){ sinf( curr_s * .5 ), 0, 3 + sinf( curr_s * 2.5 ) } );
-      mat4 R        = rot_y_deg_mat4( curr_s * 50.0 );
-      mat4 M        = mul_mat4_mat4( T, mul_mat4_mat4( R, S ) ); // Local grid coord space->world coords.
-      mat4 M_inv    = inverse_mat4( M );                         // World coords->local grid coord space.
-      vec3 grid_max = (vec3){ 1, 1, 1 };                         // In local grid coord space.
-      vec3 grid_min = (vec3){ -1, -1, -1 };                      // In local grid coord space.
-      vec4 cp_loc   = mul_mat4_vec4( M_inv, vec4_from_vec3f( cam_pos, 1.0f ) );
+    const vec3 grid_max = (vec3){ 1, 1, 1 };         // In local grid coord space.
+    const vec3 grid_min = (vec3){ -1, -1, -1 };      // In local grid coord space.
+    {                                                // Draw first voxel cube.
+      mat4 S      = scale_mat4( (vec3){ 1, 1, 1 } ); //((vec3){.5,.5,.5});
+      mat4 T      = translate_mat4( (vec3){ sinf( curr_s * .5 ), 0, 3 + sinf( curr_s * 2.5 ) } );
+      mat4 R      = rot_y_deg_mat4( curr_s * 50.0 );
+      mat4 M      = mul_mat4_mat4( T, mul_mat4_mat4( R, S ) ); // Local grid coord space->world coords.
+      mat4 M_inv  = inverse_mat4( M );                         // World coords->local grid coord space.
+      vec4 cp_loc = mul_mat4_vec4( M_inv, vec4_from_vec3f( cam_pos, 1.0f ) );
       // Still want to render when inside bounding cube area, so flip to rendering inside out. Can't do both at once or it will look wonky.
       if ( cp_loc.x < grid_max.x && cp_loc.x > grid_min.x && cp_loc.y < grid_max.y && cp_loc.y > grid_min.y && cp_loc.z < grid_max.z && cp_loc.z > grid_min.z ) {
         glCullFace( GL_FRONT );
@@ -319,20 +319,16 @@ int main( int argc, char** argv ) {
 
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M_inv" ), 1, GL_FALSE, M_inv.m );
-      glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_max" ), 1, &grid_max.x );
-      glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_min" ), 1, &grid_min.x );
 
       const texture_t* textures[] = { &voxels_tex, &palettes[palette_idx] };
       gfx_draw( shader, cube, textures, 2 );
     } /////////////////////////////////////////////////////
 
     { // Draw second voxel cube.
-      mat4 T        = translate_mat4( (vec3){ 2.1, 0, 0 } );
-      mat4 M        = T;
-      mat4 M_inv    = inverse_mat4( M );
-      vec3 grid_max = (vec3){ 1, 1, 1 };
-      vec3 grid_min = (vec3){ -1, -1, -1 };
-      vec4 cp_loc   = mul_mat4_vec4( M_inv, vec4_from_vec3f( cam_pos, 1.0f ) );
+      mat4 T      = translate_mat4( (vec3){ 2.1, 0, 0 } );
+      mat4 M      = T;
+      mat4 M_inv  = inverse_mat4( M );
+      vec4 cp_loc = mul_mat4_vec4( M_inv, vec4_from_vec3f( cam_pos, 1.0f ) );
 
       // Still want to render when inside bounding cube area, so flip to rendering inside out. Can't do both at once or it will look wonky.
       if ( cp_loc.x < grid_max.x && cp_loc.x > grid_min.x && cp_loc.y < grid_max.y && cp_loc.y > grid_min.y && cp_loc.z < grid_max.z && cp_loc.z > grid_min.z ) {
@@ -342,8 +338,6 @@ int main( int argc, char** argv ) {
       }
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M_inv" ), 1, GL_FALSE, M_inv.m );
-      glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_max" ), 1, &grid_max.x );
-      glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_min" ), 1, &grid_min.x );
       //    gfx_draw( cube, tex, shader );
     }
 
