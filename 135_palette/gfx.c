@@ -48,29 +48,37 @@ gfx_t gfx_start( int w, int h, const char* title_str ) {
 
 void gfx_stop( void ) { glfwTerminate(); }
 
-texture_t gfx_texture_create( uint32_t w, uint32_t h, uint32_t d, uint32_t n, bool integer, const uint8_t* pixels_ptr ) {
-  texture_t tex         = ( texture_t ){ .w = w, .h = h, .d = d, .n = n };
+void gfx_texture_update( uint32_t w, uint32_t h, uint32_t d, uint32_t n, bool integer, const uint8_t* pixels_ptr, texture_t* tex_ptr ) {
+  assert( tex_ptr && tex_ptr->texture > 0 );
+  tex_ptr->w = w;
+  tex_ptr->h = h;
+  tex_ptr->d = d;
+  tex_ptr->n = n;
   GLint internal_format = integer ? GL_R8UI : 4 == n ? GL_RGBA : 3 == n ? GL_RGB : 2 == n ? GL_RG : GL_RED;
   GLenum format         = integer ? GL_RED_INTEGER : 4 == n ? GL_RGBA : 3 == n ? GL_RGB : 2 == n ? GL_RG : GL_RED;
   if ( 3 == n || 1 == n ) { glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); }
+  tex_ptr->target = ( w > 0 && 0 == h && 0 == d ) ? GL_TEXTURE_1D : 0 == d ? GL_TEXTURE_2D : GL_TEXTURE_3D;
   glActiveTexture( GL_TEXTURE0 );
-  glGenTextures( 1, &tex.texture );
-  tex.target = ( w > 0 && 0 == h && 0 == d ) ? GL_TEXTURE_1D : 0 == d ? GL_TEXTURE_2D : GL_TEXTURE_3D;
-  glBindTexture( tex.target, tex.texture );
+  glBindTexture( tex_ptr->target, tex_ptr->texture );
   if ( 0 == h && 0 == d ) {
-    glTexImage1D( tex.target, 0, internal_format, tex.w, 0, format, GL_UNSIGNED_BYTE, pixels_ptr );
+    glTexImage1D( tex_ptr->target, 0, internal_format, tex_ptr->w, 0, format, GL_UNSIGNED_BYTE, pixels_ptr );
   } else if ( 0 == d ) {
-    glTexImage2D( tex.target, 0, internal_format, tex.w, tex.h, 0, format, GL_UNSIGNED_BYTE, pixels_ptr );
+    glTexImage2D( tex_ptr->target, 0, internal_format, tex_ptr->w, tex_ptr->h, 0, format, GL_UNSIGNED_BYTE, pixels_ptr );
   } else {
-    glTexImage3D( tex.target, 0, internal_format, tex.w, tex.h, tex.d, 0, format, GL_UNSIGNED_BYTE, pixels_ptr );
-    glTexParameteri( tex.target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
+    glTexImage3D( tex_ptr->target, 0, internal_format, tex_ptr->w, tex_ptr->h, tex_ptr->d, 0, format, GL_UNSIGNED_BYTE, pixels_ptr );
+    glTexParameteri( tex_ptr->target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
   }
-  glTexParameteri( tex.target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-  glTexParameteri( tex.target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-  glTexParameteri( tex.target, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-  glTexParameteri( tex.target, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-  glBindTexture( tex.target, 0 );
+  glTexParameteri( tex_ptr->target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+  glTexParameteri( tex_ptr->target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+  glTexParameteri( tex_ptr->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+  glTexParameteri( tex_ptr->target, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+  glBindTexture( tex_ptr->target, 0 );
+}
 
+texture_t gfx_texture_create( uint32_t w, uint32_t h, uint32_t d, uint32_t n, bool integer, const uint8_t* pixels_ptr ) {
+  texture_t tex         = ( texture_t ){ .texture = 0 };
+  glGenTextures( 1, &tex.texture );
+  gfx_texture_update( w, h, d, n, integer, pixels_ptr, &tex );
   return tex;
 }
 

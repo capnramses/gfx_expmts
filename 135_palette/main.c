@@ -12,14 +12,16 @@
  * KEYS
  * 
  * P        switch between colour palettes.
+ * F2       save model as model.vox (uncompressed 8-bit raw voxel data).
+ * F3       load model from model.vox.
  * space    show bounding box
  * WASDQE   move camera
  * Esc      quit
  * 
  * TODO
  *
- * - save button -> vox format
- * - load vox format
+ * DONE - save button -> vox format
+ * DONE - load vox format
  * SORTA - better camera controls
  * DONE  - correct render if ray starts inside the bounding cube (needed inside detect & flip cull & change t origin + near clip for regular cam change.)
  * DONE  - support scale/translate matrix so >1 voxel mesh can exist in scene.
@@ -108,12 +110,12 @@ int main( int argc, char** argv ) {
   }
   bool created_voxels = false;
 
-  uint8_t* my_pal_ptr   = _pal_tex_from_file( "my.pal" );
-  uint8_t* reds_pal_ptr = _pal_tex_from_file( "reds.pal" );
-  uint8_t* doom_pal_ptr = _pal_tex_from_file( "doom.pal" );
+  uint8_t* my_pal_ptr    = _pal_tex_from_file( "my.pal" );
+  uint8_t* reds_pal_ptr  = _pal_tex_from_file( "reds.pal" );
+  uint8_t* doom_pal_ptr  = _pal_tex_from_file( "doom.pal" );
   uint8_t* blood_pal_ptr = _pal_tex_from_file( "blood.pal" );
-  int palette_idx = 3;
-  int n_palettes        = 4;
+  int palette_idx        = 3;
+  int n_palettes         = 4;
   texture_t palettes[4];
   palettes[0] = gfx_texture_create( 256, 0, 0, 3, false, my_pal_ptr ); // 256x0x0 == 1d texture, not 256x1x1
   palettes[1] = gfx_texture_create( 256, 0, 0, 3, false, reds_pal_ptr );
@@ -172,7 +174,7 @@ int main( int argc, char** argv ) {
     }
   }
 
-  texture_t tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, true, img_ptr );
+  texture_t voxels_tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, true, img_ptr );
 
   shader_t shader = (shader_t){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
@@ -180,7 +182,7 @@ int main( int argc, char** argv ) {
   vec3 cam_pos    = (vec3){ 0, 0, 5 };
   float cam_speed = 10.0f;
   float cam_dist = 5.0f, cam_height = 1.1f;
-  bool space_lock = false, show_bounding_cube = false, palette_swap_lock = false;
+  bool space_lock = false, show_bounding_cube = false, palette_swap_lock = false, f2_lock = false, f3_lock = false;
 
   glfwSwapInterval( 0 );
 
@@ -219,6 +221,51 @@ int main( int argc, char** argv ) {
       }
     } else {
       palette_swap_lock = false;
+    }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_F2 ) ) {
+      if ( !f2_lock ) {
+        printf( "Saving model.vox...\n" );
+        f2_lock = true;
+
+        FILE* f_ptr = fopen( "model.vox", "wb" );
+        assert( f_ptr );
+        char magic[4] = "VOX"; // VOX0 (include null term).
+        fwrite( magic, 1, 4, f_ptr );
+        uint32_t w = grid_w, h = grid_h, d = grid_d, bpp = 256;
+        fwrite( &w, 4, 1, f_ptr );
+        fwrite( &h, 4, 1, f_ptr );
+        fwrite( &d, 4, 1, f_ptr );
+        fwrite( &bpp, 4, 1, f_ptr );
+        fwrite( img_ptr, 1, w * h * d, f_ptr );
+        fclose( f_ptr );
+      }
+    } else {
+      f2_lock = false;
+    }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_F3 ) ) {
+      if ( !f3_lock ) {
+        printf( "Loading model.vox...\n" );
+        f3_lock = true;
+
+        FILE* f_ptr = fopen( "model.vox", "rb" );
+        assert( f_ptr );
+        char magic[4]; // VOX0 (include null term).
+        fread( magic, 1, 4, f_ptr );
+        assert( magic[0] == 'V' && magic[1] == 'O' && magic[2] == 'X' && magic[3] == 0 );
+        uint32_t w = 0, h = 0, d = 0, bpp = 0;
+        fread( &w, 4, 1, f_ptr );
+        fread( &h, 4, 1, f_ptr );
+        fread( &d, 4, 1, f_ptr );
+        fread( &bpp, 4, 1, f_ptr );
+        assert( w == grid_w && h == grid_h && d == grid_d && 256 == bpp );
+        fread( img_ptr, 1, w * h * d, f_ptr );
+        fclose( f_ptr );
+
+        gfx_texture_update( w,h,d,1, true, img_ptr, &voxels_tex );
+
+      }
+    } else {
+      f3_lock = false;
     }
     // Orbit camera.
     cam_pos = (vec3){ cam_dist * cosf( curr_s * 0.5f ), cam_height, cam_dist * sinf( curr_s * 0.5f ) };
@@ -275,7 +322,7 @@ int main( int argc, char** argv ) {
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_max" ), 1, &grid_max.x );
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_min" ), 1, &grid_min.x );
 
-      const texture_t* textures[] = { &tex, &palettes[palette_idx] };
+      const texture_t* textures[] = { &voxels_tex, &palettes[palette_idx] };
       gfx_draw( shader, cube, textures, 2 );
     }
 
