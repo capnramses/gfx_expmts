@@ -23,7 +23,7 @@ out vec4 frag_colour;
 
 const int MAX_STEPS = 128;
 
-vec3 find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in vec3 grid_min, in vec3 grid_max, out float t_end ) {
+int find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in vec3 grid_min, in vec3 grid_max, out float t_end ) {
   vec3 voxels_per_unit = float( n_cells ) / ( grid_max - grid_min );
   vec3 entry_pos       = ( ( ro + rd * t_entry ) - grid_min ) * voxels_per_unit; // BUGFIX: +0.001 was introducing an artifact (line on corners).
 
@@ -43,19 +43,17 @@ vec3 find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in 
     vec3 rst = vec3( pos ) / float( n_cells - 1 ); // BUGFIX: off by 1 was creating extra row on the bottom.
     rst = clamp( rst, vec3(0.0), vec3(1.0) );
     uvec4 itexel = texture( u_vol_tex, vec3( rst.x, 1.0 - rst.y, rst.z ) );
-//    vec4 texel = texture( u_pal_tex, float(itexel.r) / 255.0 );
-    vec4 texel = texelFetch( u_pal_tex, int( itexel.r ), 0 ); // Note had to convert uvec to int type (uint not okay).
 
     /* Check if we hit a voxel which isn't 0 */
-    if ( texel.r + texel.b + texel.g > 0.0 ) {
+    if ( itexel.r > 0 ) {                         // Palette index 0 treated as air.
       if ( steps == 0 ) {
         t_end = t_entry;
-        return texel.rgb;
+        return int( itexel.r );
       }
 
       /* Return the time of intersection! */
       t_end = t_entry + ( t[axis] - t_delta[axis] ) / voxels_per_unit[axis];
-      return texel.rgb;
+      return  int( itexel.r );
     }
 
     /* Step on the axis where `tmax` is the smallest */
@@ -80,7 +78,7 @@ vec3 find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in 
 
  // discard;
   t_end = 100000.0;
-  return vec3( 0.0 );
+  return 0;
 }
 
 // From https://stackoverflow.com/questions/12751080/glsl-point-inside-box-test
@@ -122,15 +120,12 @@ void main() {
   vec3 ray_d_loc       = normalize( ray_dist_3d_loc );
   float t_end      = 0.0;
 
-  vec3 nearest     = find_nearest( ray_o_loc, ray_d_loc, t_entry, u_n_cells, grid_min_loc, grid_max_loc, t_end );
+  int pal_idx_of_nearest = find_nearest( ray_o_loc, ray_d_loc, t_entry, u_n_cells, grid_min_loc, grid_max_loc, t_end );
+  int vis = pal_idx_of_nearest + abs( u_show_bounding_cube );
+  if ( 0 == vis ) { discard; }
+
+  vec4 texel = texelFetch( u_pal_tex, pal_idx_of_nearest, 0 ); // Note had to convert uvec to int type (uint not okay).
   
-  frag_colour.rgb = nearest;// * 0.33 + nearest * 0.66 * ( 1.0 - clamp(abs(t_end) * 0.25, 0.0, 1.0 ) );
+  frag_colour.rgb = texel.rgb;// * 0.33 + nearest * 0.66 * ( 1.0 - clamp(abs(t_end) * 0.25, 0.0, 1.0 ) );
   frag_colour.a   = 1.0;
-
-
-  if ( nearest.x + nearest.y + nearest.z == 0.0 ) {
-  
-    frag_colour = vec4(inside * 0.2,0.2,0.2,1.0);
-    if ( u_show_bounding_cube > 0 ) { discard; }
-  }
 }
