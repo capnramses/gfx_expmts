@@ -126,6 +126,11 @@ void main() {
 
   vec4 texel = texelFetch( u_pal_tex, pal_idx_of_nearest, 0 ); // Note had to convert uvec to int type (uint not okay).
   
+  // TODO - note that normal will depend on which face of the _interior voxel_ is intersected, not on e.g. v_pos_loc,
+  // which is just the bounding cube faces. A ray can hide local side +Z and go through the top (+y) of a voxel inside. 
+
+
   frag_colour.rgb = texel.rgb;// * 0.33 + nearest * 0.66 * ( 1.0 - clamp(abs(t_end) * 0.25, 0.0, 1.0 ) );
+  //frag_colour.rgb = normal_loc;
   frag_colour.a   = 1.0;
 }
