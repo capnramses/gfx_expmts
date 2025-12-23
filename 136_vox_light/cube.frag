@@ -9,6 +9,8 @@ NOTES
 
 #version 410 core
 
+#define DEBUG_DDA
+
 in vec3 v_pos_loc;
 in vec3 v_n_loc;
 in vec3 v_ray_o_loc;
@@ -16,6 +18,8 @@ in vec3 v_ray_dist_3d_loc;
 
 uniform usampler3D u_vol_tex;
 uniform sampler1D u_pal_tex;
+
+uniform mat4 u_P, u_V, u_M, u_M_inv;
 
 uniform int u_n_cells;
 uniform int u_show_bounding_cube;
@@ -112,6 +116,22 @@ float inBox( vec3 p, vec3 lo, vec3 hi ) {
     return 0.0;
 }
 
+vec3 lighting( in vec3 p_loc, in vec3 n_loc, in vec3 k_diffuse ) {
+
+  vec3 i_ambient = vec3( 0.1 );
+
+  vec3 l_pos_wor = vec3( 0.0, 5.0, 10.0 );
+  vec3 l_pos_loc = ( u_M_inv * vec4( l_pos_wor, 1.0 ) ).xyz;
+  vec3 l_diffuse = vec3( 0.8 );
+  vec3 dist_p_to_l_pos_loc = l_pos_loc - p_loc;
+	vec3 dir_p_to_l_pos_loc = normalize( dist_p_to_l_pos_loc );
+  vec3 i_diffuse = l_diffuse * k_diffuse * max( dot( dir_p_to_l_pos_loc, n_loc ), 0.0 );
+
+  return i_diffuse + i_ambient;
+}
+
+int fullbrights[256];
+
 void main() {
   const vec3 grid_max_loc = vec3( 1.0 );
   const vec3 grid_min_loc = vec3( -1.0 );
@@ -119,8 +139,7 @@ void main() {
   vec3 ray_dist_3d_loc    = v_ray_dist_3d_loc; // v_pos_loc - ray_o_loc;
   float t_entry           = length( ray_dist_3d_loc );
 
-  // TODO simplify point in box:
-  float inside = insideBoxOriginal(ray_o_loc, grid_min_loc, grid_max_loc );
+  float inside = insideBoxOriginal( ray_o_loc, grid_min_loc, grid_max_loc );
   t_entry *= ( 1.0 - inside );
 
   vec3 ray_d_loc       = normalize( ray_dist_3d_loc );
@@ -134,15 +153,18 @@ void main() {
 
   vec4 texel = texelFetch( u_pal_tex, pal_idx_of_nearest, 0 ); // Note had to convert uvec to int type (uint not okay).
 
+  fullbrights[16*9+8] = 1; // Test concept with rubies on sword.
+  vec3 lit_rgb = lighting( ray_o_loc + ray_d_loc * t_end, vox_n, texel.rgb );
+
+  vec3 rgb = lit_rgb * ( 1 - fullbrights[pal_idx_of_nearest] ) + texel.rgb * ( fullbrights[pal_idx_of_nearest] );
+
+#ifdef DEBUG_DDA
   if ( 0 == pal_idx_of_nearest && u_show_bounding_cube > 0 ) {
-    texel.rgb = inside * vec3( 0.2,0.2,0.2 ) + (1.0 - inside) * vec3( 0.2,0.5,0.2 );
+    rgb = inside * vec3( 0.2,0.2,0.2 ) + (1.0 - inside) * vec3( 0.2,0.5,0.2 );
   }
-  
-  // TODO - note that normal will depend on which face of the _interior voxel_ is intersected, not on e.g. v_pos_loc,
-  // which is just the bounding cube faces. A ray can hide local side +Z and go through the top (+y) of a voxel inside.
+#endif
 
-
-  frag_colour.rgb = texel.rgb;// * 0.33 + nearest * 0.66 * ( 1.0 - clamp(abs(t_end) * 0.25, 0.0, 1.0 ) );
+  frag_colour.rgb = rgb;
   //frag_colour.rgb = vox_n;
   frag_colour.a   = 1.0;
 }

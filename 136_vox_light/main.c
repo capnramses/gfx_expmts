@@ -185,7 +185,7 @@ int main( int argc, char** argv ) {
   shader_t shader = (shader_t){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
 
-  vec3 cam_pos    = (vec3){ 0, 0, 5 };
+  vec3 cam_pos    = (vec3){ 0, 0, 3 };
   float cam_speed = 10.0f;
   float cam_dist = 5.0f, cam_height = 1.1f;
   bool space_lock = false, show_bounding_cube = false, palette_swap_lock = false, f2_lock = false, f3_lock = false;
@@ -285,7 +285,7 @@ int main( int argc, char** argv ) {
     glEnable( GL_DEPTH_TEST );
     glDepthMask( GL_TRUE );
 
-    glClearColor( 0.6f, 0.6f, 0.8f, 1.0f );
+    glClearColor( 0.3f, 0.3f, 0.4f, 1.0f );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     mat4 P = perspective( 66.6f, aspect, 0.0001f, 100.0f );
@@ -306,7 +306,7 @@ int main( int argc, char** argv ) {
     const vec3 grid_min = (vec3){ -1, -1, -1 };      // In local grid coord space.
     {                                                // Draw first voxel cube.
       mat4 S      = scale_mat4( (vec3){ 1, 1, 1 } ); //((vec3){.5,.5,.5});
-      mat4 T      = translate_mat4( (vec3){ sinf( curr_s * .5 ), 0, 3 + sinf( curr_s * 2.5 ) } );
+      mat4 T      = identity_mat4();//translate_mat4( (vec3){ sinf( curr_s * .5 ), 0, 4 + sinf( curr_s * 2.5 ) } );
       mat4 R      = rot_y_deg_mat4( curr_s * 50.0 );
       mat4 M      = mul_mat4_mat4( T, mul_mat4_mat4( R, S ) ); // Local grid coord space->world coords.
       mat4 M_inv  = inverse_mat4( M );                         // World coords->local grid coord space.
