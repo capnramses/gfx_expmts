@@ -162,9 +162,9 @@ void main() {
   fullbrights[16*9+8] = 1; // Test concept with rubies on sword.
 
   Light lights[3] = Light[3](
-    Light( vec3( 5.0, 5.0, 10.0 ), vec3( 0.6, 0.1, 0.15 ), vec3( 0.8 ) ),
-    Light( vec3( -7.0, 6.0, 9.0 ), vec3( 0.15, 0.5, 0.1 ), vec3( 0.9 ) ),
-    Light( vec3( 0.5, 0.0, 12.0 ), vec3( 0.1, 0.05, 0.6 ), vec3( 0.7 ) )
+    Light( vec3( 5.0, 5.0, 10.0 ), vec3( 0.6, 0.2, 0.35 ), vec3( 0.8 ) ),
+    Light( vec3( -7.0, 6.0, 9.0 ), vec3( 0.35, 0.5, 0.2 ), vec3( 0.9 ) ),
+    Light( vec3( 0.5, 0.0, 12.0 ), vec3( 0.3, 0.25, 0.6 ), vec3( 0.7 ) )
   );
 
   vec3 k_ambient = vec3( 0.05 );
