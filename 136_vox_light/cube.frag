@@ -116,16 +116,22 @@ float inBox( vec3 p, vec3 lo, vec3 hi ) {
     return 0.0;
 }
 
-vec3 lighting( in vec3 p_loc, in vec3 n_loc, in vec3 k_diffuse ) {
 
-  vec3 i_ambient = vec3( 0.1 );
+struct Light
+{
+  vec3 pos_wor;
+  vec3 diffuse;
+  vec3 ambient;
+};
 
-  vec3 l_pos_wor = vec3( 0.0, 5.0, 10.0 );
-  vec3 l_pos_loc = ( u_M_inv * vec4( l_pos_wor, 1.0 ) ).xyz;
-  vec3 l_diffuse = vec3( 0.8 );
+vec3 lighting( in vec3 p_loc, in vec3 n_loc, in vec3 k_diffuse, vec3 k_ambient, in Light l ) {
+
+  vec3 i_ambient = l.ambient * k_ambient;
+
+  vec3 l_pos_loc = ( u_M_inv * vec4( l.pos_wor, 1.0 ) ).xyz;
   vec3 dist_p_to_l_pos_loc = l_pos_loc - p_loc;
 	vec3 dir_p_to_l_pos_loc = normalize( dist_p_to_l_pos_loc );
-  vec3 i_diffuse = l_diffuse * k_diffuse * max( dot( dir_p_to_l_pos_loc, n_loc ), 0.0 );
+  vec3 i_diffuse = l.diffuse * k_diffuse * max( dot( dir_p_to_l_pos_loc, n_loc ), 0.0 );
 
   return i_diffuse + i_ambient;
 }
@@ -154,7 +160,19 @@ void main() {
   vec4 texel = texelFetch( u_pal_tex, pal_idx_of_nearest, 0 ); // Note had to convert uvec to int type (uint not okay).
 
   fullbrights[16*9+8] = 1; // Test concept with rubies on sword.
-  vec3 lit_rgb = lighting( ray_o_loc + ray_d_loc * t_end, vox_n, texel.rgb );
+
+  Light lights[3] = Light[3](
+    Light( vec3( 5.0, 5.0, 10.0 ), vec3( 0.6, 0.1, 0.15 ), vec3( 0.8 ) ),
+    Light( vec3( -7.0, 6.0, 9.0 ), vec3( 0.15, 0.5, 0.1 ), vec3( 0.9 ) ),
+    Light( vec3( 0.5, 0.0, 12.0 ), vec3( 0.1, 0.05, 0.6 ), vec3( 0.7 ) )
+  );
+
+  vec3 k_ambient = vec3( 0.05 );
+  vec3 lit_rgb = vec3( 0.0 );
+  
+  for ( int i = 0; i < 3; i++ ) {
+    lit_rgb += lighting( ray_o_loc + ray_d_loc * t_end, vox_n, texel.rgb, k_ambient, lights[i] );
+  }
 
   vec3 rgb = lit_rgb * ( 1 - fullbrights[pal_idx_of_nearest] ) + texel.rgb * ( fullbrights[pal_idx_of_nearest] );
 
