@@ -10,6 +10,7 @@ NOTES
 #version 410 core
 
 in vec3 v_pos_loc;
+in vec3 v_n_loc;
 in vec3 v_ray_o_loc;
 in vec3 v_ray_dist_3d_loc;
 
@@ -23,7 +24,7 @@ out vec4 frag_colour;
 
 const int MAX_STEPS = 128;
 
-int find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in vec3 grid_min, in vec3 grid_max, out float t_end ) {
+int find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in vec3 grid_min, in vec3 grid_max, out float t_end, out vec3 vox_n ) {
   vec3 voxels_per_unit = float( n_cells ) / ( grid_max - grid_min );
   vec3 entry_pos       = ( ( ro + rd * t_entry ) - grid_min ) * voxels_per_unit; // BUGFIX: +0.001 was introducing an artifact (line on corners).
 
@@ -36,6 +37,8 @@ int find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in v
 
   /* Initialize the time along the ray when each axis crosses its next cell boundary */
   vec3 t = ( pos - entry_pos + max( step, 0 ) ) / rd;
+
+  vox_n = v_n_loc; // TODO(Anton) Encode the normal in the box vertex.
 
   int axis = 0;
   for ( int steps = 0; steps < MAX_STEPS; ++steps ) {
@@ -62,16 +65,19 @@ int find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in v
       if ( pos.x < 0 || pos.x >= n_cells ) break;
       t.x += t_delta.x;
       axis = 0;
+      vox_n = vec3( 1.0, 0.0, 0.0 ) * -step; // The *step is to get -1 on the reverse sides.
     } else if ( t.y <= t.x && t.y <= t.z ) {
       pos.y += step.y; // j
       if ( pos.y < 0 || pos.y >= n_cells ) break;
       t.y += t_delta.y;
       axis = 1;
+      vox_n = vec3( 0.0, 1.0, 0.0 ) * -step;
     } else {
       pos.z += step.z; // k
       if ( pos.z < 0 || pos.z >= n_cells ) break;
       t.z += t_delta.z;
       axis = 2;
+      vox_n = vec3( 0.0, 0.0, 1.0 ) * -step;
     }
 
   }
@@ -120,17 +126,23 @@ void main() {
   vec3 ray_d_loc       = normalize( ray_dist_3d_loc );
   float t_end      = 0.0;
 
-  int pal_idx_of_nearest = find_nearest( ray_o_loc, ray_d_loc, t_entry, u_n_cells, grid_min_loc, grid_max_loc, t_end );
+  vec3 vox_n = vec3( 0.0 );
+  int pal_idx_of_nearest = find_nearest( ray_o_loc, ray_d_loc, t_entry, u_n_cells, grid_min_loc, grid_max_loc, t_end, vox_n );
   int vis = pal_idx_of_nearest + abs( u_show_bounding_cube );
+  
   if ( 0 == vis ) { discard; }
 
   vec4 texel = texelFetch( u_pal_tex, pal_idx_of_nearest, 0 ); // Note had to convert uvec to int type (uint not okay).
+
+  if ( 0 == pal_idx_of_nearest && u_show_bounding_cube > 0 ) {
+    texel.rgb = inside * vec3( 0.2,0.2,0.2 ) + (1.0 - inside) * vec3( 0.2,0.5,0.2 );
+  }
   
   // TODO - note that normal will depend on which face of the _interior voxel_ is intersected, not on e.g. v_pos_loc,
-  // which is just the bounding cube faces. A ray can hide local side +Z and go through the top (+y) of a voxel inside. 
+  // which is just the bounding cube faces. A ray can hide local side +Z and go through the top (+y) of a voxel inside.
 
 
   frag_colour.rgb = texel.rgb;// * 0.33 + nearest * 0.66 * ( 1.0 - clamp(abs(t_end) * 0.25, 0.0, 1.0 ) );
-  //frag_colour.rgb = normal_loc;
+  //frag_colour.rgb = vox_n;
   frag_colour.a   = 1.0;
 }

@@ -8,7 +8,7 @@
 static void _glfw_error_callback( int error, const char* description ) { fprintf( stderr, "GLFW ERROR: code %i msg: %s.\n", error, description ); }
 
 gfx_t gfx_start( int w, int h, const char* title_str ) {
-  gfx_t gfx = ( gfx_t ){ .started = false };
+  gfx_t gfx = (gfx_t){ .started = false };
 
   printf( "Starting GLFW %s.\n", glfwGetVersionString() );
 
@@ -50,10 +50,10 @@ void gfx_stop( void ) { glfwTerminate(); }
 
 void gfx_texture_update( uint32_t w, uint32_t h, uint32_t d, uint32_t n, bool integer, const uint8_t* pixels_ptr, texture_t* tex_ptr ) {
   assert( tex_ptr && tex_ptr->texture > 0 );
-  tex_ptr->w = w;
-  tex_ptr->h = h;
-  tex_ptr->d = d;
-  tex_ptr->n = n;
+  tex_ptr->w            = w;
+  tex_ptr->h            = h;
+  tex_ptr->d            = d;
+  tex_ptr->n            = n;
   GLint internal_format = integer ? GL_R8UI : 4 == n ? GL_RGBA : 3 == n ? GL_RGB : 2 == n ? GL_RG : GL_RED;
   GLenum format         = integer ? GL_RED_INTEGER : 4 == n ? GL_RGBA : 3 == n ? GL_RGB : 2 == n ? GL_RG : GL_RED;
   if ( 3 == n || 1 == n ) { glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ); }
@@ -76,26 +76,95 @@ void gfx_texture_update( uint32_t w, uint32_t h, uint32_t d, uint32_t n, bool in
 }
 
 texture_t gfx_texture_create( uint32_t w, uint32_t h, uint32_t d, uint32_t n, bool integer, const uint8_t* pixels_ptr ) {
-  texture_t tex         = ( texture_t ){ .texture = 0 };
+  texture_t tex = (texture_t){ .texture = 0 };
   glGenTextures( 1, &tex.texture );
   gfx_texture_update( w, h, d, n, integer, pixels_ptr, &tex );
   return tex;
 }
 
+/** Triangulated unit cube vertices with flat shaded normals.
+ *  {x,y,z,nx,ny,nz,s,t}.
+ *  Use matching index array `_unit_cube_indices` for elements. */
+static float _unit_cube_vertices[] = {
+  1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,       // 0
+  -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,      // 1
+  -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,     // 2
+  1.0f, -1.0f, 1.0f, 0.0f, -0.0f, 1.0f, 0.0f, 1.0f,     // 3
+  1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,    // 4
+  1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,     // 5
+  -1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f,    // 6
+  -1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,   // 7
+  -1.0f, -1.0f, -1.0f, -1.0f, -0.0f, -0.0f, 0.0f, 0.0f, // 8
+  -1.0f, -1.0f, 1.0f, -1.0f, -0.0f, -0.0f, 1.0f, 0.0f,  // 9
+  -1.0f, 1.0f, 1.0f, -1.0f, -0.0f, -0.0f, 1.0f, 1.0f,   // 10
+  -1.0f, 1.0f, -1.0f, -1.0f, -0.0f, 0.0f, 0.0f, 1.0f,   // 11
+  -1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,    // 12
+  1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,     // 13
+  1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,    // 14
+  -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,   // 15
+  1.0f, 1.0f, -1.0f, 1.0f, -0.0f, 0.0f, 0.0f, 0.0f,     // 16
+  1.0f, 1.0f, 1.0f, 1.0f, -0.0f, 0.0f, 1.0f, 0.0f,      // 17
+  1.0f, -1.0f, 1.0f, 1.0f, -0.0f, 0.0f, 1.0f, 1.0f,     // 18
+  1.0f, -1.0f, -1.0f, 1.0f, -0.0f, 0.0f, 0.0f, 1.0f,    // 19
+  -1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,     // 20
+  -1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,      // 21
+  1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,       // 22
+  1.0f, 1.0f, -1.0f, 0.0f, 1.0f, -0.0f, 0.0f, 1.0f      // 23
+};
+
 mesh_t gfx_mesh_cube_create( void ) {
-  mesh_t m       = ( mesh_t ){ .n_points = 36 };
-  float points[] = { -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f,
-    -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f,
-    -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f,
-    -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f };
+  mesh_t m = (mesh_t){ .n_points = 36 };
+  // { 3d point, 3d normal }
+  float points[] = {
+    -1.0f, 1.0f, -1.0f, 0, 0, -1,  // front face
+    -1.0f, -1.0f, -1.0f, 0, 0, -1, // front face
+    1.0f, -1.0f, -1.0f, 0, 0, -1,  // front face
+    1.0f, -1.0f, -1.0f, 0, 0, -1,  // front face
+    1.0f, 1.0f, -1.0f, 0, 0, -1,   // front face
+    -1.0f, 1.0f, -1.0f, 0, 0, -1,  // front face
+    -1.0f, -1.0f, 1.0f, -1, 0, 0,  // left face
+    -1.0f, -1.0f, -1.0f, -1, 0, 0, // left face
+    -1.0f, 1.0f, -1.0f, -1, 0, 0,  // left face
+    -1.0f, 1.0f, -1.0f, -1, 0, 0,  // left face
+    -1.0f, 1.0f, 1.0f, -1, 0, 0,   // left face
+    -1.0f, -1.0f, 1.0f, -1, 0, 0,  // left face
+    1.0f, -1.0f, -1.0f, 1, 0, 0,   // right face
+    1.0f, -1.0f, 1.0f, 1, 0, 0,    // right face
+    1.0f, 1.0f, 1.0f, 1, 0, 0,     // right face
+    1.0f, 1.0f, 1.0f, 1, 0, 0,     // right face
+    1.0f, 1.0f, -1.0f, 1, 0, 0,    // right face
+    1.0f, -1.0f, -1.0f, 1, 0, 0,   // right face
+    -1.0f, -1.0f, 1.0f, 0, 0, 1,   // back face
+    -1.0f, 1.0f, 1.0f, 0, 0, 1,    // back face
+    1.0f, 1.0f, 1.0f, 0, 0, 1,     // back face
+    1.0f, 1.0f, 1.0f, 0, 0, 1,     // back face
+    1.0f, -1.0f, 1.0f, 0, 0, 1,    // back face
+    -1.0f, -1.0f, 1.0f, 0, 0, 1,   // back face
+    -1.0f, 1.0f, -1.0f, 0, 1, 0,   // top face
+    1.0f, 1.0f, -1.0f, 0, 1, 0,    // top face
+    1.0f, 1.0f, 1.0f, 0, 1, 0,     // top face
+    1.0f, 1.0f, 1.0f, 0, 1, 0,     // top face
+    -1.0f, 1.0f, 1.0f, 0, 1, 0,    // top face
+    -1.0f, 1.0f, -1.0f, 0, 1, 0,   // top face
+    -1.0f, -1.0f, -1.0f, 0, -1, 0, // bottom face
+    -1.0f, -1.0f, 1.0f, 0, -1, 0,  // bottom face
+    1.0f, -1.0f, -1.0f, 0, -1, 0,  // bottom face
+    1.0f, -1.0f, -1.0f, 0, -1, 0,  // bottom face
+    -1.0f, -1.0f, 1.0f, 0, -1, 0,  // bottom face
+    1.0f, -1.0f, 1.0f, 0, -1, 0    // bottom face
+  };
   glGenVertexArrays( 1, &m.vao );
   glGenBuffers( 1, &m.vbo );
   glBindVertexArray( m.vao );
   glBindBuffer( GL_ARRAY_BUFFER, m.vbo );
-  glBufferData( GL_ARRAY_BUFFER, 3 * m.n_points * sizeof( float ), &points, GL_STATIC_DRAW );
+  glBufferData( GL_ARRAY_BUFFER, 6 * m.n_points * sizeof( float ), &points, GL_STATIC_DRAW );
   glEnableVertexAttribArray( 0 );
-  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, NULL );
+  glEnableVertexAttribArray( 1 );
+  GLintptr vertex_position_offset = 0 * sizeof( float );
+  GLintptr vertex_normal_offset   = 3 * sizeof( float );
+  GLsizei vertex_stride_sz        = 6 * sizeof( float );
+  glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, vertex_stride_sz, (GLvoid*)vertex_position_offset );
+  glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, vertex_stride_sz, (GLvoid*)vertex_normal_offset );
   glBindVertexArray( 0 );
   return m;
 }
@@ -132,6 +201,8 @@ bool gfx_shader_create_from_file( const char* vs_path, const char* fs_path, shad
   sp.program = glCreateProgram();
   glAttachShader( sp.program, shaders[0] );
   glAttachShader( sp.program, shaders[1] );
+  glBindAttribLocation( sp.program, 0, "a_vp" );
+  glBindAttribLocation( sp.program, 1, "a_vn" );
   glLinkProgram( sp.program );
   glDeleteShader( shaders[0] );
   glDeleteShader( shaders[1] );

@@ -115,6 +115,7 @@ int main( int argc, char** argv ) {
   }
   bool created_voxels = false;
 
+  // NOTE(Anton) This custom filename thing is kinda dumb - I could just use a .bmp for these.
   uint8_t* my_pal_ptr    = _pal_tex_from_file( "my.pal" );
   uint8_t* reds_pal_ptr  = _pal_tex_from_file( "reds.pal" );
   uint8_t* doom_pal_ptr  = _pal_tex_from_file( "doom.pal" );
