@@ -1,6 +1,6 @@
 /*
- * Voxel Raycast with Grid Rotation/Scale/Translate into World, Normals Derivation, and Lighting
- * Anton Gerdelan, 22 Dec 2025.
+ * Voxel Raycast with Grid Rotation/Scale/Translate into World, Normals Derivation, and Lighting.
+ * Anton Gerdelan, 23 Dec 2025.
  *
  * RUN
  * =================================
@@ -30,7 +30,7 @@
  * SORTA - better camera controls
  * DONE  - correct render if ray starts inside the bounding cube (needed inside detect & flip cull & change t origin + near clip for regular cam change.)
  * DONE  - support scale/translate matrix so >1 voxel mesh can exist in scene.
- * DOING - think about lighting and shading. - the axis should inform which normal to use for shading.
+ * DONE - think about lighting and shading. - the axis should inform which normal to use for shading.
  * DONE  - support voxel bounding box rotation. does this break the "uniform grid" idea?
  * TODO  - write voxel depth into depth map, not cube sides. and preview depth in a subwindow (otherwise intersections/z fight occur on bounding cube sides).
  * TODO  - mouse click to add/remove voxels.
