@@ -176,7 +176,7 @@ void main() {
 
 #ifdef DEBUG_DDA
   if ( 0 == pal_idx_of_nearest && u_show_bounding_cube > 0 ) {
-    rgb = inside * vec3( 0.2,0.2,0.2 ) + (1.0 - inside) * vec3( 0.2,0.5,0.2 );
+    rgb = inside * vec3( 0.2,0.2,0.5 ) + (1.0 - inside) * vec3( 0.2,0.5,0.2 );
   }
 #endif
 

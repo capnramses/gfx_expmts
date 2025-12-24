@@ -318,7 +318,7 @@ int main( int argc, char** argv ) {
     glEnable( GL_DEPTH_TEST );
     glDepthMask( GL_TRUE );
 
-    glClearColor( 0.3f, 0.3f, 0.4f, 1.0f );
+    glClearColor( 0.3f, 0.3f, 0.3f, 1.0f );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     mat4 P = perspective( 66.6f, aspect, 0.0001f, 100.0f );
