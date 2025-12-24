@@ -24,6 +24,8 @@ uniform mat4 u_P, u_V, u_M, u_M_inv;
 uniform int u_n_cells;
 uniform int u_show_bounding_cube;
 
+uniform int u_fullbrights[256];
+
 out vec4 frag_colour;
 
 const int MAX_STEPS = 128;
@@ -136,8 +138,6 @@ vec3 lighting( in vec3 p_loc, in vec3 n_loc, in vec3 k_diffuse, vec3 k_ambient, 
   return i_diffuse + i_ambient;
 }
 
-int fullbrights[256];
-
 void main() {
   const vec3 grid_max_loc = vec3( 1.0 );
   const vec3 grid_min_loc = vec3( -1.0 );
@@ -159,12 +159,10 @@ void main() {
 
   vec4 texel = texelFetch( u_pal_tex, pal_idx_of_nearest, 0 ); // Note had to convert uvec to int type (uint not okay).
 
-  fullbrights[16*9+8] = 1; // Test concept with rubies on sword.
-
   Light lights[3] = Light[3](
-    Light( vec3( 5.0, 5.0, 10.0 ), vec3( 0.6, 0.2, 0.35 ), vec3( 0.8 ) ),
+    Light( vec3( 5.0, 5.0, 10.0 ), vec3( 0.9, 0.2, 0.35 ), vec3( 0.8 ) ),
     Light( vec3( -7.0, 6.0, 9.0 ), vec3( 0.35, 0.5, 0.2 ), vec3( 0.9 ) ),
-    Light( vec3( 0.5, 0.0, 12.0 ), vec3( 0.3, 0.25, 0.6 ), vec3( 0.7 ) )
+    Light( vec3( 0.5, 0.0, 12.0 ), vec3( 0.3, 0.25, 0.9 ), vec3( 0.7 ) )
   );
 
   vec3 k_ambient = vec3( 0.05 );
@@ -174,7 +172,7 @@ void main() {
     lit_rgb += lighting( ray_o_loc + ray_d_loc * t_end, vox_n, texel.rgb, k_ambient, lights[i] );
   }
 
-  vec3 rgb = lit_rgb * ( 1 - fullbrights[pal_idx_of_nearest] ) + texel.rgb * ( fullbrights[pal_idx_of_nearest] );
+  vec3 rgb = lit_rgb * ( 1 - u_fullbrights[pal_idx_of_nearest] ) + texel.rgb * ( u_fullbrights[pal_idx_of_nearest] );
 
 #ifdef DEBUG_DDA
   if ( 0 == pal_idx_of_nearest && u_show_bounding_cube > 0 ) {
@@ -185,4 +183,7 @@ void main() {
   frag_colour.rgb = rgb;
   //frag_colour.rgb = vox_n;
   frag_colour.a   = 1.0;
+
+  // todo array of fullbrights as part of paalette material uniform?
+  // todo gamma correct
 }
