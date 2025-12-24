@@ -25,15 +25,15 @@
  * TODO
  * =================================
  *
- * DONE  - save button -> vox format
- * DONE  - load vox format
- * SORTA - better camera controls
- * DONE  - correct render if ray starts inside the bounding cube (needed inside detect & flip cull & change t origin + near clip for regular cam change.)
- * DONE  - support scale/translate matrix so >1 voxel mesh can exist in scene.
+ * DONE - save button -> vox format
+ * DONE - load vox format
+ * DONE - better camera controls
+ * DONE - correct render if ray starts inside the bounding cube (needed inside detect & flip cull & change t origin + near clip for regular cam change.)
+ * DONE - support scale/translate matrix so >1 voxel mesh can exist in scene.
  * DONE - think about lighting and shading. - the axis should inform which normal to use for shading.
- * DONE  - support voxel bounding box rotation. does this break the "uniform grid" idea?
- * TODO  - write voxel depth into depth map, not cube sides. and preview depth in a subwindow (otherwise intersections/z fight occur on bounding cube sides).
- * TODO  - mouse click to add/remove voxels.
+ * DONE - support voxel bounding box rotation. does this break the "uniform grid" idea?
+ * TODO - write voxel depth into depth map, not cube sides. and preview depth in a subwindow (otherwise intersections/z fight occur on bounding cube sides).
+ * TODO - mouse click to add/remove voxels.
  * TODO - read MagicaVoxel format https://github.com/ephtracy/voxel-model/blob/master/MagicaVoxel-file-format-vox.txt
  *
  */
@@ -191,18 +191,20 @@ int main( int argc, char** argv ) {
 
   texture_t voxels_tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, true, img_ptr );
 
-  shader_t shader = (shader_t){ .program = 0 };
+  shader_t shader = ( shader_t ){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
 
-  vec3 cam_pos    = (vec3){ 0, 0, 3 };
-  float cam_speed = 10.0f;
-  float cam_dist = 5.0f, cam_height = 1.1f;
+  vec3 cam_pos        = ( vec3 ){ 0, 0, 3 };
+  vec3 cam_dir        = ( vec3 ){ 0, 0, -1 };
+  float cam_y_rot_deg = 0.0f;
+  float cam_speed     = 10.0f;
+  float cam_rot_speed = 100.0f; // deg/s
   bool space_lock = false, show_bounding_cube = false, palette_swap_lock = false, f2_lock = false, f3_lock = false;
 
   glfwSwapInterval( 0 );
 
-  int fullbrights[256] = { 0 };
-  fullbrights[16*9+8] = 1; // Test concept with rubies on sword.
+  int fullbrights[256]    = { 0 };
+  fullbrights[16 * 9 + 8] = 1; // Test concept with rubies on sword.
 
   double prev_s         = glfwGetTime();
   double update_timer_s = 0.0;
@@ -219,11 +221,30 @@ int main( int argc, char** argv ) {
       glfwSetWindowTitle( gfx.window_ptr, title_str );
     }
     glfwPollEvents();
+    vec3 cam_mov_push = ( vec3 ){ 0.0f };
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_ESCAPE ) ) { glfwSetWindowShouldClose( gfx.window_ptr, 1 ); }
-    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_W ) ) { cam_dist -= cam_speed * elapsed_s; }
-    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_S ) ) { cam_dist += cam_speed * elapsed_s; }
-    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_Q ) ) { cam_height -= cam_speed * elapsed_s; }
-    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_E ) ) { cam_height += cam_speed * elapsed_s; }
+
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_LEFT ) ) { cam_y_rot_deg += cam_rot_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_RIGHT ) ) { cam_y_rot_deg -= cam_rot_speed * elapsed_s; }
+
+    mat4 cam_R          = rot_y_deg_mat4( cam_y_rot_deg );
+    mat4 cam_iR         = rot_y_deg_mat4( -cam_y_rot_deg );
+    vec3 forward_mv_dir = vec3_from_vec4( mul_mat4_vec4( cam_R, ( vec4 ){ 0, 0, -1, 0 } ) );
+    vec3 right_mv_dir   = vec3_from_vec4( mul_mat4_vec4( cam_R, ( vec4 ){ 1, 0, 0, 0 } ) );
+    vec3 up_mv_dir      = { 0, 1, 0 };
+
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_A ) ) { cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( right_mv_dir, -cam_speed * elapsed_s ) ); }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_D ) ) { cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( right_mv_dir, cam_speed * elapsed_s ) ); }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_Q ) ) { cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( up_mv_dir, -cam_speed * elapsed_s ) ); }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_E ) ) { cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( up_mv_dir, cam_speed * elapsed_s ) ); }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_W ) ) { cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( forward_mv_dir, cam_speed * elapsed_s ) ); }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_S ) ) { cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( forward_mv_dir, -cam_speed * elapsed_s ) ); }
+
+    cam_pos     = add_vec3_vec3( cam_pos, cam_mov_push );
+    mat4 cam_T  = translate_mat4( cam_pos );
+    mat4 cam_iT = translate_mat4( ( vec3 ){ -cam_pos.x, -cam_pos.y, -cam_pos.z } );
+    mat4 V      = mul_mat4_mat4( cam_iR, cam_iT );
+
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_SPACE ) ) {
       if ( !space_lock ) {
         show_bounding_cube = !show_bounding_cube;
@@ -301,7 +322,6 @@ int main( int argc, char** argv ) {
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     mat4 P = perspective( 66.6f, aspect, 0.0001f, 100.0f );
-    mat4 V = look_at( cam_pos, (vec3){ 0 }, (vec3){ 0, 1, 0 } );
 
     glEnable( GL_CULL_FACE );
     glFrontFace( GL_CW ); // NB Cube mesh used is inside-out.
@@ -315,11 +335,11 @@ int main( int argc, char** argv ) {
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_pal_tex" ), 1 );
     glProgramUniform1iv( shader.program, glGetUniformLocation( shader.program, "u_fullbrights" ), 256, fullbrights );
 
-    const vec3 grid_max = (vec3){ 1, 1, 1 };         // In local grid coord space.
-    const vec3 grid_min = (vec3){ -1, -1, -1 };      // In local grid coord space.
-    {                                                // Draw first voxel cube.
-      mat4 S      = scale_mat4( (vec3){ 1, 1, 1 } ); //((vec3){.5,.5,.5});
-      mat4 T      = identity_mat4();//translate_mat4( (vec3){ sinf( curr_s * .5 ), 0, 4 + sinf( curr_s * 2.5 ) } );
+    const vec3 grid_max = ( vec3 ){ 1, 1, 1 };         // In local grid coord space.
+    const vec3 grid_min = ( vec3 ){ -1, -1, -1 };      // In local grid coord space.
+    {                                                  // Draw first voxel cube.
+      mat4 S      = scale_mat4( ( vec3 ){ 1, 1, 1 } ); //((vec3){.5,.5,.5});
+      mat4 T      = identity_mat4();                   // translate_mat4( (vec3){ sinf( curr_s * .5 ), 0, 4 + sinf( curr_s * 2.5 ) } );
       mat4 R      = rot_y_deg_mat4( curr_s * 50.0 );
       mat4 M      = mul_mat4_mat4( T, mul_mat4_mat4( R, S ) ); // Local grid coord space->world coords.
       mat4 M_inv  = inverse_mat4( M );                         // World coords->local grid coord space.
@@ -339,7 +359,7 @@ int main( int argc, char** argv ) {
     } /////////////////////////////////////////////////////
 
     { // Draw second voxel cube.
-      mat4 T      = translate_mat4( (vec3){ 2.1, 0, 0 } );
+      mat4 T      = translate_mat4( ( vec3 ){ 2.1, 0, 0 } );
       mat4 M      = T;
       mat4 M_inv  = inverse_mat4( M );
       vec4 cp_loc = mul_mat4_vec4( M_inv, vec4_from_vec3f( cam_pos, 1.0f ) );
