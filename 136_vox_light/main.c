@@ -34,6 +34,7 @@
  * DONE  - support voxel bounding box rotation. does this break the "uniform grid" idea?
  * TODO  - write voxel depth into depth map, not cube sides. and preview depth in a subwindow (otherwise intersections/z fight occur on bounding cube sides).
  * TODO  - mouse click to add/remove voxels.
+ * TODO - read MagicaVoxel format https://github.com/ephtracy/voxel-model/blob/master/MagicaVoxel-file-format-vox.txt
  *
  */
 
