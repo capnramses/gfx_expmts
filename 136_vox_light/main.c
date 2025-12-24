@@ -37,6 +37,14 @@
  *
  */
 
+// Use discrete GPU by default. not sure if it works on other OS. if in C++ must be in extern "C" { } block
+#ifdef _WIN32
+// http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf
+__declspec( dllexport ) unsigned long int NvOptimusEnablement = 0x00000001;
+// https://gpuopen.com/amdpowerxpressrequesthighperformance/
+__declspec( dllexport ) int AmdPowerXpressRequestHighPerformance = 1;
+#endif
+
 #define APG_IMPLEMENTATION
 #define APG_NO_BACKTRACES
 #include "apg.h"
