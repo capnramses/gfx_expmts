@@ -1,0 +1,246 @@
+/*
+ * Voxel Renderer for Magicavoxel .vox files.
+ * Anton Gerdelan, 29 Dec 2025.
+ *
+ * RUN
+ * =================================
+
+ ./a.out -v myfile.vox
+
+ * KEYS
+ * =================================
+ *
+ * P        switch between colour palettes.
+ * F2       save model as model.vox (uncompressed 8-bit raw voxel data).
+ * F3       load model from model.vox.
+ * space    show bounding box
+ * WASDQE   move camera
+ * Esc      quit
+ *
+ * TODO
+ * =================================
+ *
+ * DONE - save button -> vox format
+ * DONE - load vox format
+ * DONE - better camera controls
+ * DONE - correct render if ray starts inside the bounding cube (needed inside detect & flip cull & change t origin + near clip for regular cam change.)
+ * DONE - support scale/translate matrix so >1 voxel mesh can exist in scene.
+ * DONE - think about lighting and shading. - the axis should inform which normal to use for shading.
+ * DONE - support voxel bounding box rotation. does this break the "uniform grid" idea?
+ * DONE - write voxel depth into depth map, not cube sides. and preview depth in a subwindow (otherwise intersections/z fight occur on bounding cube sides).
+ * DONE - read MagicaVoxel format https://github.com/ephtracy/voxel-model/blob/master/MagicaVoxel-file-format-vox.txt
+ * DONE - fix coords (x mirrored.).
+ * TODO - scale non-square models.
+ * TODO - mouse click to add/remove voxels.
+ *
+ */
+
+// Use discrete GPU by default. not sure if it works on other OS. if in C++ must be in extern "C" { } block
+#ifdef _WIN32
+// http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf
+__declspec( dllexport ) unsigned long int NvOptimusEnablement = 0x00000001;
+// https://gpuopen.com/amdpowerxpressrequesthighperformance/
+__declspec( dllexport ) int AmdPowerXpressRequestHighPerformance = 1;
+#endif
+
+#define APG_IMPLEMENTATION
+#define APG_NO_BACKTRACES
+#include "apg.h"
+#include "apg_bmp.h"
+#include "apg_maths.h"
+#include "gfx.h"
+#include "vox_fmt.h"
+#include <limits.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <time.h>
+
+int arg_pos( const char* str, int argc, char** argv ) {
+  for ( int i = 1; i < argc; i++ ) {
+    if ( 0 == strcmp( str, argv[i] ) ) { return i; }
+  }
+  return -1;
+}
+
+typedef struct magvoxel_t {
+  uint8_t x, y, z, colour_idx;
+} magvoxel_t;
+
+int main( int argc, char** argv ) {
+  gfx_t gfx = gfx_start( 800, 600, "3D Texture Demo" );
+  if ( !gfx.started ) { return 1; }
+
+  size_t grid_w = 32, grid_h = 32, grid_d = 32;
+  size_t grid_n_chans = 1;
+  bool created_voxels = false;
+  uint8_t* img_ptr    = NULL;
+  mesh_t cube         = gfx_mesh_cube_create();
+
+  ////////////////////////////////////////////////////////////////////////////////////////////
+  // Load Magicavoxel VOX model //////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////
+  apg_file_t vox      = (apg_file_t){ .sz = 0 };
+  vox_info_t vox_info = (vox_info_t){ .dims_xyz_ptr = NULL };
+  texture_t vox_pal;
+  int i_vox = arg_pos( "-v", argc, argv );
+  if ( i_vox > 0 && i_vox < argc - 1 ) {
+    if ( !vox_fmt_read_file( argv[i_vox + 1], &vox, &vox_info ) ) {
+      fprintf( stderr, "ERROR: Failed to read vox file `%s`.\n", argv[i_vox + 1] );
+      if ( vox.data_ptr != NULL ) {
+        free( vox.data_ptr );
+        vox = (apg_file_t){ .sz = 0 };
+      }
+      return 1;
+    }
+    grid_w  = vox_info.dims_xyz_ptr[0];
+    grid_h  = vox_info.dims_xyz_ptr[2]; // Convert to my preferred coords.
+    grid_d  = vox_info.dims_xyz_ptr[1];
+    img_ptr = calloc( 1, grid_w * grid_h * grid_d * grid_n_chans );
+    if ( !img_ptr ) {
+      fprintf( stderr, "ERROR: allocating memory.\n" );
+      free( vox.data_ptr );
+      return 1;
+    }
+    for ( int i = 0; i < *vox_info.n_voxels; i++ ) {
+      magvoxel_t* v_ptr               = (magvoxel_t*)&vox_info.voxels_ptr[i * 4];
+      uint32_t x                      = v_ptr->x;
+      uint32_t y                      = ( grid_h - 1 ) - v_ptr->z; // Convert to my preferred coords.
+      uint32_t z                      = ( grid_d - 1 ) - v_ptr->y;
+      int idx                         = z * grid_w * grid_h + y * grid_w + x;
+      img_ptr[idx * grid_n_chans + 0] = v_ptr->colour_idx;
+    }
+    vox_pal = gfx_texture_create( 256, 0, 0, 4, false, vox_info.rgba_ptr );
+
+    created_voxels = true;
+  }
+  ////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////
+
+  texture_t voxels_tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n_chans, true, img_ptr );
+
+  shader_t shader = (shader_t){ .program = 0 };
+  if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
+
+  vec3 cam_pos        = (vec3){ 0, 0, 3 };
+  vec3 cam_dir        = (vec3){ 0, 0, -1 };
+  float cam_y_rot_deg = 0.0f;
+  float cam_speed     = 10.0f;
+  float cam_rot_speed = 100.0f; // deg/s
+
+  glfwSwapInterval( 0 );
+
+  int fullbrights[256]    = { 0 };
+  fullbrights[16 * 9 + 8] = 1; // Test concept with rubies on sword.
+
+  double prev_s         = glfwGetTime();
+  double update_timer_s = 0.0;
+  while ( !glfwWindowShouldClose( gfx.window_ptr ) ) {
+    double curr_s    = glfwGetTime();
+    double elapsed_s = curr_s - prev_s;
+    prev_s           = curr_s;
+    update_timer_s += elapsed_s;
+    if ( update_timer_s > 0.2 ) {
+      update_timer_s = 0.0;
+      double fps     = 1.0 / elapsed_s;
+      char title_str[512];
+      sprintf( title_str, "amanatides-woo @ %.2f FPS", fps );
+      glfwSetWindowTitle( gfx.window_ptr, title_str );
+    }
+    glfwPollEvents();
+    vec3 cam_mov_push = (vec3){ 0.0f };
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_ESCAPE ) ) { glfwSetWindowShouldClose( gfx.window_ptr, 1 ); }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_LEFT ) ) { cam_y_rot_deg += cam_rot_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_RIGHT ) ) { cam_y_rot_deg -= cam_rot_speed * elapsed_s; }
+    mat4 cam_R          = rot_y_deg_mat4( cam_y_rot_deg );
+    mat4 cam_iR         = rot_y_deg_mat4( -cam_y_rot_deg );
+    vec3 forward_mv_dir = vec3_from_vec4( mul_mat4_vec4( cam_R, (vec4){ 0, 0, -1, 0 } ) );
+    vec3 right_mv_dir   = vec3_from_vec4( mul_mat4_vec4( cam_R, (vec4){ 1, 0, 0, 0 } ) );
+    vec3 up_mv_dir      = { 0, 1, 0 };
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_A ) ) {
+      cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( right_mv_dir, -cam_speed * elapsed_s ) );
+    }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_D ) ) {
+      cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( right_mv_dir, cam_speed * elapsed_s ) );
+    }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_Q ) ) {
+      cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( up_mv_dir, -cam_speed * elapsed_s ) );
+    }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_E ) ) {
+      cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( up_mv_dir, cam_speed * elapsed_s ) );
+    }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_W ) ) {
+      cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( forward_mv_dir, cam_speed * elapsed_s ) );
+    }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_S ) ) {
+      cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( forward_mv_dir, -cam_speed * elapsed_s ) );
+    }
+    cam_pos     = add_vec3_vec3( cam_pos, cam_mov_push );
+    mat4 cam_T  = translate_mat4( cam_pos );
+    mat4 cam_iT = translate_mat4( (vec3){ -cam_pos.x, -cam_pos.y, -cam_pos.z } );
+    mat4 V      = mul_mat4_mat4( cam_iR, cam_iT );
+
+    uint32_t win_w, win_h, fb_w, fb_h;
+    glfwGetWindowSize( gfx.window_ptr, &win_w, &win_h );
+    glfwGetFramebufferSize( gfx.window_ptr, &fb_w, &fb_h );
+    float aspect = (float)fb_w / (float)fb_h;
+    glViewport( 0, 0, win_w, win_h );
+
+    glDepthFunc( GL_LESS );
+    glEnable( GL_DEPTH_TEST );
+    glDepthMask( GL_TRUE );
+
+    glClearColor( 0.2f, 0.2f, 0.3f, 1.0f );
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+    // NB near clip needs to be like 0.001 otherwise transtion from outside<->inside can cull the whole voxel sprite, making it flicker briefly.
+    mat4 P = perspective( 66.6f, aspect, 0.0001f, 1000.0f );
+
+    glEnable( GL_CULL_FACE );
+    glFrontFace( GL_CW ); // NB Cube mesh used is inside-out.
+
+    glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_P" ), 1, GL_FALSE, P.m );
+    glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_V" ), 1, GL_FALSE, V.m );
+    glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_cam_pos_wor" ), 1, &cam_pos.x );
+    glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), grid_w );
+    glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
+    glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_pal_tex" ), 1 );
+    glProgramUniform1iv( shader.program, glGetUniformLocation( shader.program, "u_fullbrights" ), 256, fullbrights );
+
+    const vec3 grid_max = (vec3){ 1, 1, 1 };    // In local grid coord space.
+    const vec3 grid_min = (vec3){ -1, -1, -1 }; // In local grid coord space.                               // Draw first voxel cube.
+
+    {
+      mat4 S      = scale_mat4( (vec3){ 1, 1, 1 } );           //((vec3){.5,.5,.5});
+      mat4 T      = identity_mat4();                           // translate_mat4( (vec3){ sinf( curr_s * .5 ), 0, 4 + sinf( curr_s * 2.5 ) } );
+      mat4 R      = identity_mat4();                           // rot_x_deg_mat4( 90 );
+      mat4 M      = mul_mat4_mat4( T, mul_mat4_mat4( R, S ) ); // Local grid coord space->world coords.
+      mat4 M_inv  = inverse_mat4( M );                         // World coords->local grid coord space.
+      vec4 cp_loc = mul_mat4_vec4( M_inv, vec4_from_vec3f( cam_pos, 1.0f ) );
+      // Still want to render when inside bounding cube area, so flip to rendering inside out. Can't do both at once or it will look wonky.
+      if ( cp_loc.x < grid_max.x && cp_loc.x > grid_min.x && cp_loc.y < grid_max.y && cp_loc.y > grid_min.y && cp_loc.z < grid_max.z && cp_loc.z > grid_min.z ) {
+        glCullFace( GL_FRONT );
+      } else {
+        glCullFace( GL_BACK );
+      }
+
+      glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
+      glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M_inv" ), 1, GL_FALSE, M_inv.m );
+
+      const texture_t* textures[] = { &voxels_tex, &vox_pal };
+      gfx_draw( shader, cube, textures, 2 );
+    } /////////////////////////////////////////////////////
+
+    glfwSwapBuffers( gfx.window_ptr );
+  }
+
+  gfx_stop();
+  free( img_ptr );
+  if ( vox.data_ptr ) { free( vox.data_ptr ); }
+
+  printf( "Normal exit.\n" );
+
+  return 0;
+}

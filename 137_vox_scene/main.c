@@ -32,7 +32,7 @@
  * DONE - support scale/translate matrix so >1 voxel mesh can exist in scene.
  * DONE - think about lighting and shading. - the axis should inform which normal to use for shading.
  * DONE - support voxel bounding box rotation. does this break the "uniform grid" idea?
- * TODO - write voxel depth into depth map, not cube sides. and preview depth in a subwindow (otherwise intersections/z fight occur on bounding cube sides).
+ * DONE - write voxel depth into depth map, not cube sides. and preview depth in a subwindow (otherwise intersections/z fight occur on bounding cube sides).
  * TODO - mouse click to add/remove voxels.
  * TODO - read MagicaVoxel format https://github.com/ephtracy/voxel-model/blob/master/MagicaVoxel-file-format-vox.txt
  *
@@ -150,15 +150,13 @@ int main( int argc, char** argv ) {
       }
       printf( "loaded image `%s` %ix%i@x%i\n", img_fn, w, h, n );
       assert( w == h && h == grid_dims );
-      //      memcpy( &img_ptr[z_layer * grid_w * grid_h * grid_n], fimg_ptr, w * h * n );
 
       for ( int y = 0; y < h; y++ ) {
         for ( int x = 0; x < w; x++ ) {
           int ii = ( y * w + x ) * n;
           uint8_t rgb_ptr[3];
           memcpy( rgb_ptr, &fimg_ptr[ii], 3 );
-          uint8_t idx = closest_pal_idx( blood_pal_ptr, rgb_ptr );
-          //  printf("ii=%i idx=%i\n",ii, idx);
+          uint8_t idx                                         = closest_pal_idx( blood_pal_ptr, rgb_ptr );
           img_ptr[z_layer * grid_w * grid_h + y * grid_w + x] = idx;
         }
       }
@@ -181,8 +179,6 @@ int main( int argc, char** argv ) {
             rgb[1]                    = rand() % 255 + 1;
             rgb[2]                    = rand() % 255 + 1;
             img_ptr[idx * grid_n + 0] = closest_pal_idx( blood_pal_ptr, rgb );
-            //   img_ptr[idx * grid_n + 1] = rand() % 255 + 1;
-            //  img_ptr[idx * grid_n + 2] = rand() % 255 + 1;
           }
         }
       }
@@ -190,10 +186,7 @@ int main( int argc, char** argv ) {
   }
 
   texture_t voxels_tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, true, img_ptr );
-
-  // texture_t cobbles_vox_tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, true, cobbles_vox_img_ptr );
-
-  shader_t shader = (shader_t){ .program = 0 };
+  shader_t shader      = (shader_t){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
 
   vec3 cam_pos        = (vec3){ 0, 0, 3 };
@@ -204,9 +197,6 @@ int main( int argc, char** argv ) {
   bool space_lock = false, show_bounding_cube = false, palette_swap_lock = false, f2_lock = false, f3_lock = false;
 
   glfwSwapInterval( 0 );
-
-  int fullbrights[256]    = { 0 };
-  fullbrights[16 * 9 + 8] = 1; // Test concept with rubies on sword.
 
   double prev_s         = glfwGetTime();
   double update_timer_s = 0.0;
@@ -347,7 +337,6 @@ int main( int argc, char** argv ) {
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_show_bounding_cube" ), (int)show_bounding_cube );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_pal_tex" ), 1 );
-    glProgramUniform1iv( shader.program, glGetUniformLocation( shader.program, "u_fullbrights" ), 256, fullbrights );
 
     const vec3 grid_max = (vec3){ 1, 1, 1 };    // In local grid coord space.
     const vec3 grid_min = (vec3){ -1, -1, -1 }; // In local grid coord space.                               // Draw first voxel cube.
@@ -382,9 +371,8 @@ int main( int argc, char** argv ) {
     { // Wall tiles
       for ( int z = 0; z < 8; z++ ) {
         for ( int y = 0; y < 8; y++ ) {
-
-          if ( z == 4 && y <= 1) { continue; }
-          if ( y == 7 && z % 2 == 1 ) { continue;}
+          if ( z == 4 && y <= 1 ) { continue; }
+          if ( y == 7 && z % 2 == 1 ) { continue; }
 
           int xx      = -4 * 2;
           int yy      = ( 0 + y ) * 2;
@@ -411,7 +399,7 @@ int main( int argc, char** argv ) {
       }
       for ( int x = 0; x < 8; x++ ) {
         for ( int y = 0; y < 8; y++ ) {
-          if ( y == 7 && x % 2 == 1 ) { continue;}
+          if ( y == 7 && x % 2 == 1 ) { continue; }
           int xx      = ( -4 + x ) * 2;
           int yy      = ( 0 + y ) * 2;
           int zz      = -4 * 2;
@@ -437,7 +425,7 @@ int main( int argc, char** argv ) {
       }
       for ( int x = 0; x < 8; x++ ) {
         for ( int y = 0; y < 8; y++ ) {
-          if ( y == 7 && x % 2 == 1 ) { continue;}
+          if ( y == 7 && x % 2 == 1 ) { continue; }
           int xx      = ( -4 + x ) * 2;
           int yy      = ( 0 + y ) * 2;
           int zz      = 4 * 2;
@@ -483,23 +471,6 @@ int main( int argc, char** argv ) {
       const texture_t* textures[] = { &voxels_tex, &palettes[palette_idx] };
       gfx_draw( shader, cube, textures, 2 );
     } /////////////////////////////////////////////////////
-
-    { // Draw second voxel cube.
-      mat4 T      = translate_mat4( (vec3){ 2.1, 0, 0 } );
-      mat4 M      = T;
-      mat4 M_inv  = inverse_mat4( M );
-      vec4 cp_loc = mul_mat4_vec4( M_inv, vec4_from_vec3f( cam_pos, 1.0f ) );
-
-      // Still want to render when inside bounding cube area, so flip to rendering inside out. Can't do both at once or it will look wonky.
-      if ( cp_loc.x < grid_max.x && cp_loc.x > grid_min.x && cp_loc.y < grid_max.y && cp_loc.y > grid_min.y && cp_loc.z < grid_max.z && cp_loc.z > grid_min.z ) {
-        glCullFace( GL_FRONT );
-      } else {
-        glCullFace( GL_BACK );
-      }
-      glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
-      glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M_inv" ), 1, GL_FALSE, M_inv.m );
-      //    gfx_draw( cube, tex, shader );
-    }
 
     glfwSwapBuffers( gfx.window_ptr );
   }

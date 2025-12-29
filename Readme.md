@@ -156,6 +156,8 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 134     | `imgvox`                    | Load pixel image into slice of voxel chunk.                                    | working             |
 | 135     | `palette`                   | As above but using 1-byte voxels, and palette-matching voxel colours.          | working             |
 | 136     | `vox_light`                 | As above but with normals and lighting.                                        | working             |
+| 137     | `vox_scene`                 | A scene containing many voxel sprites.                                         | working             |
+| 138     | `vox_magica_load`           | Load and render Magicavoxel vox format models.                                 | working             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                                 | proposed            |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                                | proposed            |
