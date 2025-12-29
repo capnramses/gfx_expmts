@@ -49,6 +49,7 @@ __declspec( dllexport ) int AmdPowerXpressRequestHighPerformance = 1;
 #include "apg_bmp.h"
 #include "apg_maths.h"
 #include "gfx.h"
+#include "ray.h"
 #include "vox_fmt.h"
 #include <limits.h>
 #include <math.h>
@@ -135,6 +136,7 @@ int main( int argc, char** argv ) {
   int fullbrights[256]    = { 0 };
   fullbrights[16 * 9 + 8] = 1; // Test concept with rubies on sword.
 
+  bool lmb_lock         = false;
   double prev_s         = glfwGetTime();
   double update_timer_s = 0.0;
   while ( !glfwWindowShouldClose( gfx.window_ptr ) ) {
@@ -177,15 +179,33 @@ int main( int argc, char** argv ) {
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_S ) ) {
       cam_mov_push = add_vec3_vec3( cam_mov_push, mul_vec3_f( forward_mv_dir, -cam_speed * elapsed_s ) );
     }
-    cam_pos     = add_vec3_vec3( cam_pos, cam_mov_push );
-    mat4 cam_T  = translate_mat4( cam_pos );
-    mat4 cam_iT = translate_mat4( (vec3){ -cam_pos.x, -cam_pos.y, -cam_pos.z } );
-    mat4 V      = mul_mat4_mat4( cam_iR, cam_iT );
+    cam_pos      = add_vec3_vec3( cam_pos, cam_mov_push );
+    mat4 cam_T   = translate_mat4( cam_pos );
+    mat4 cam_iT  = translate_mat4( (vec3){ -cam_pos.x, -cam_pos.y, -cam_pos.z } );
+    mat4 V       = mul_mat4_mat4( cam_iR, cam_iT );
+    int lmb_down = glfwGetMouseButton( gfx.window_ptr, 0 );
 
     uint32_t win_w, win_h, fb_w, fb_h;
     glfwGetWindowSize( gfx.window_ptr, &win_w, &win_h );
     glfwGetFramebufferSize( gfx.window_ptr, &fb_w, &fb_h );
     float aspect = (float)fb_w / (float)fb_h;
+    // NB near clip needs to be like 0.001 otherwise transtion from outside<->inside can cull the whole voxel sprite, making it flicker briefly.
+    mat4 P     = perspective( 66.6f, aspect, 0.0001f, 1000.0f );
+    mat4 P_inv = inverse_mat4( P );
+    mat4 V_inv = inverse_mat4( V );
+
+    vec3 m_ray_wor    = (vec3){ 0.0f };
+    bool mouse_ray_on = false;
+    if ( !lmb_lock && lmb_down ) {
+      double xpos, ypos;
+      glfwGetCursorPos( gfx.window_ptr, &xpos, &ypos );
+      m_ray_wor = ray_wor_from_mouse( xpos, ypos, win_w, win_h, P_inv, V_inv );
+      print_vec3( m_ray_wor );
+      mouse_ray_on = true;
+      lmb_lock     = true;
+    }
+    if ( !lmb_down ) { lmb_lock = false; }
+
     glViewport( 0, 0, win_w, win_h );
 
     glDepthFunc( GL_LESS );
@@ -194,9 +214,6 @@ int main( int argc, char** argv ) {
 
     glClearColor( 0.2f, 0.2f, 0.3f, 1.0f );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-    // NB near clip needs to be like 0.001 otherwise transtion from outside<->inside can cull the whole voxel sprite, making it flicker briefly.
-    mat4 P = perspective( 66.6f, aspect, 0.0001f, 1000.0f );
 
     glEnable( GL_CULL_FACE );
     glFrontFace( GL_CW ); // NB Cube mesh used is inside-out.
@@ -213,17 +230,44 @@ int main( int argc, char** argv ) {
     const vec3 grid_min = (vec3){ -1, -1, -1 }; // In local grid coord space.                               // Draw first voxel cube.
 
     {
-      mat4 S      = scale_mat4( (vec3){ grid_w / 32.0f, grid_h / 32.0f, grid_d / 32.0f } );           //((vec3){.5,.5,.5});
-      mat4 T      = identity_mat4();                           // translate_mat4( (vec3){ sinf( curr_s * .5 ), 0, 4 + sinf( curr_s * 2.5 ) } );
-      mat4 R      = identity_mat4();                           // rot_x_deg_mat4( 90 );
-      mat4 M      = mul_mat4_mat4( T, mul_mat4_mat4( R, S ) ); // Local grid coord space->world coords.
-      mat4 M_inv  = inverse_mat4( M );                         // World coords->local grid coord space.
-      vec4 cp_loc = mul_mat4_vec4( M_inv, vec4_from_vec3f( cam_pos, 1.0f ) );
+      vec3 scale_vec = (vec3){ grid_w / 32.0f, grid_h / 32.0f, grid_d / 32.0f };
+      mat4 S         = scale_mat4( scale_vec );                   //((vec3){.5,.5,.5});
+      mat4 T         = identity_mat4();                           // translate_mat4( (vec3){ sinf( curr_s * .5 ), 0, 4 + sinf( curr_s * 2.5 ) } );
+      mat4 R         = identity_mat4();                           // rot_x_deg_mat4( 90 );
+      mat4 M         = mul_mat4_mat4( T, mul_mat4_mat4( R, S ) ); // Local grid coord space->world coords.
+      mat4 M_inv     = inverse_mat4( M );                         // World coords->local grid coord space.
+      vec4 cp_loc    = mul_mat4_vec4( M_inv, vec4_from_vec3f( cam_pos, 1.0f ) );
       // Still want to render when inside bounding cube area, so flip to rendering inside out. Can't do both at once or it will look wonky.
       if ( cp_loc.x < grid_max.x && cp_loc.x > grid_min.x && cp_loc.y < grid_max.y && cp_loc.y > grid_min.y && cp_loc.z < grid_max.z && cp_loc.z > grid_min.z ) {
         glCullFace( GL_FRONT );
       } else {
         glCullFace( GL_BACK );
+      }
+
+      if ( mouse_ray_on ) {
+        vec4 pos = mul_mat4_vec4( M, (vec4){ 0.0f } );
+        vec4 u   = mul_mat4_vec4( R, (vec4){ 1.0f, 0.0f, 0.0f, 0.0f } );
+        vec4 v   = mul_mat4_vec4( R, (vec4){ 0.0f, 1.0f, 0.0f, 0.0f } );
+        vec4 w   = mul_mat4_vec4( R, (vec4){ 0.0f, 0.0f, 1.0f, 0.0f } );
+
+        float t      = 0.0f;
+        int face_num = 0;
+        bool hit     = ray_obb(
+          (obb_t){
+                .centre        = vec3_from_vec4( pos ),                                            //
+                .half_lengths  = { scale_vec.x, scale_vec.y, scale_vec.z },                        //
+                .norm_side_dir = { vec3_from_vec4( u ), vec3_from_vec4( v ), vec3_from_vec4( w ) } //
+          },
+          cam_pos, m_ray_wor, &t, &face_num );
+        if ( hit ) {
+          // 1. detect bounding box hit
+          vec3 hit_pos = add_vec3_vec3( cam_pos, mul_vec3_f( m_ray_wor, t ) );
+          printf( "HIT: t=%f face_num=%i pos=(%.2f,%.2f,%.2f)\n", t, face_num, hit_pos.x, hit_pos.y, hit_pos.z );
+
+          // 2. ray_voxel_grid find voxel hit
+
+          // 3. modify voxel texture and update.
+        }
       }
 
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
