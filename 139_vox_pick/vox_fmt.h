@@ -10,6 +10,7 @@
 #include "apg.h"
 
 typedef struct vox_info_t {
+  uint32_t* n_models;
   uint32_t* dims_xyz_ptr;
   uint32_t* n_voxels;
   uint8_t* voxels_ptr; // n_voxels * 4 bytes (x,y,z,colour_index).

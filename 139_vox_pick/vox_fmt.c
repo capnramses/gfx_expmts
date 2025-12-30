@@ -2,7 +2,7 @@
 https://github.com/ephtracy/voxel-model/blob/master/MagicaVoxel-file-format-vox.txt
 */
 
-//#define VOX_FMT_MAIN
+// #define VOX_FMT_MAIN
 
 #include "vox_fmt.h"
 #include <stdio.h>
@@ -45,27 +45,31 @@ bool vox_fmt_read_file( const char* filename, apg_file_t* r_ptr, vox_info_t* inf
     if ( 150 != *(uint32_t*)&b_ptr[4] ) { return false; } // Expect version 150.
   }
   info_ptr->rgba_ptr = (uint8_t*)default_palette;
-  { // Chunks
-    const size_t c_hdr_sz = 16;
+  {                             // Chunks
+    const size_t c_hdr_sz = 12; // { chunkid, content_sz, children_sz }.
     size_t c_byte         = 8;
     if ( c_byte + c_hdr_sz > r_ptr->sz ) { return false; }
     uint32_t chunk_idx = 0;
     while ( c_byte < r_ptr->sz ) {
       chunk_hdr_t* c_ptr = (chunk_hdr_t*)&b_ptr[c_byte];
       printf( "chunk id %c%c%c%c content_sz=%u child_sz=%u\n", c_ptr->id[0], c_ptr->id[1], c_ptr->id[2], c_ptr->id[3], c_ptr->content_sz, c_ptr->children_chunks_sz );
-      c_byte += 12;
+      c_byte += c_hdr_sz;
       if ( c_byte + c_ptr->content_sz > r_ptr->sz ) {
         fprintf( stderr, "ERROR: chunk %i content_sz %u + current location %lu > file size %lu\n", chunk_idx, c_ptr->content_sz, c_byte, r_ptr->sz );
         return false;
       }
-      uint8_t size_mem[4] = { 'S', 'I', 'Z', 'E' }, xyzi_mem[4] = { 'X', 'Y', 'Z', 'I' }, rgba_mem[4] = { 'R', 'G', 'B', 'A' };
-      if ( 0 == memcmp( size_mem, c_ptr->id, 4 ) ) {
-        info_ptr->dims_xyz_ptr = (uint32_t*)&b_ptr[c_byte];
-      } else if ( 0 == memcmp( xyzi_mem, c_ptr->id, 4 ) ) {
-        info_ptr->n_voxels   = (uint32_t*)&b_ptr[c_byte];
-        info_ptr->voxels_ptr = &b_ptr[c_byte + 4];
-      } else if ( 0 == memcmp( rgba_mem, c_ptr->id, 4 ) ) {
-        info_ptr->rgba_ptr = &b_ptr[c_byte];
+      uint8_t pack_mem[4] = { 'P', 'A', 'C', 'K' }, size_mem[4] = { 'S', 'I', 'Z', 'E' }, xyzi_mem[4] = { 'X', 'Y', 'Z', 'I' }, rgba_mem[4] = { 'R', 'G', 'B', 'A' };
+      if ( 0 == memcmp( pack_mem, c_ptr->id, 4 ) ) {        // PACK
+        info_ptr->n_models = (uint32_t*)&b_ptr[c_byte];     //
+      } else if ( 0 == memcmp( size_mem, c_ptr->id, 4 ) ) { // SIZE
+        info_ptr->dims_xyz_ptr = (uint32_t*)&b_ptr[c_byte]; //
+      } else if ( 0 == memcmp( xyzi_mem, c_ptr->id, 4 ) ) { // XYZI
+        info_ptr->n_voxels   = (uint32_t*)&b_ptr[c_byte];   //
+        info_ptr->voxels_ptr = &b_ptr[c_byte + 4];          //
+      } else if ( 0 == memcmp( rgba_mem, c_ptr->id, 4 ) ) { // RGBA
+        info_ptr->rgba_ptr = &b_ptr[c_byte];                //
+      } else {                                              // MATT
+        fprintf( stderr, "WARNING: unhandled chunk, id=`%c%c%c%c`\n", c_ptr->id[0], c_ptr->id[1], c_ptr->id[2], c_ptr->id[3] );
       }
       c_byte += c_ptr->content_sz;
 

@@ -74,11 +74,11 @@ int main( int argc, char** argv ) {
   gfx_t gfx = gfx_start( 800, 600, "3D Texture Demo" );
   if ( !gfx.started ) { return 1; }
 
-  size_t grid_w = 32, grid_h = 32, grid_d = 32;
-  size_t grid_n_chans = 1;
-  bool created_voxels = false;
-  uint8_t* img_ptr    = NULL;
-  mesh_t cube         = gfx_mesh_cube_create();
+  uint32_t grid_w = 32, grid_h = 32, grid_d = 32;
+  uint32_t grid_n_chans = 1;
+  bool created_voxels   = false;
+  uint8_t* img_ptr      = NULL;
+  mesh_t cube           = gfx_mesh_cube_create();
 
   ////////////////////////////////////////////////////////////////////////////////////////////
   // Load Magicavoxel VOX model //////////////////////////////////////////////////////////////
@@ -99,14 +99,14 @@ int main( int argc, char** argv ) {
     grid_w = vox_info.dims_xyz_ptr[0];
     grid_h = vox_info.dims_xyz_ptr[2]; // Convert to my preferred coords.
     grid_d = vox_info.dims_xyz_ptr[1];
-    printf( "grid w/h/d=%lu/%lu/%lu\n", grid_w, grid_h, grid_d );
+    printf( "grid w/h/d=%u/%u/%u\n", grid_w, grid_h, grid_d );
     img_ptr = calloc( 1, grid_w * grid_h * grid_d * grid_n_chans );
     if ( !img_ptr ) {
       fprintf( stderr, "ERROR: allocating memory.\n" );
       free( vox.data_ptr );
       return 1;
     }
-    for ( int i = 0; i < *vox_info.n_voxels; i++ ) {
+    for ( uint32_t i = 0; i < *vox_info.n_voxels; i++ ) {
       magvoxel_t* v_ptr               = (magvoxel_t*)&vox_info.voxels_ptr[i * 4];
       uint32_t x                      = v_ptr->x;
       uint32_t y                      = ( grid_h - 1 ) - v_ptr->z; // Convert to my preferred coords.
@@ -133,9 +133,6 @@ int main( int argc, char** argv ) {
   float cam_rot_speed = 100.0f; // deg/s
 
   glfwSwapInterval( 0 );
-
-  int fullbrights[256]    = { 0 };
-  fullbrights[16 * 9 + 8] = 1; // Test concept with rubies on sword.
 
   bool lmb_lock         = false;
   double prev_s         = glfwGetTime();
@@ -225,7 +222,6 @@ int main( int argc, char** argv ) {
     glProgramUniform3i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), grid_w, grid_h, grid_d );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_pal_tex" ), 1 );
-    glProgramUniform1iv( shader.program, glGetUniformLocation( shader.program, "u_fullbrights" ), 256, fullbrights );
 
     const vec3 grid_max = (vec3){ 1, 1, 1 };    // In local grid coord space.
     const vec3 grid_min = (vec3){ -1, -1, -1 }; // In local grid coord space.                               // Draw first voxel cube.

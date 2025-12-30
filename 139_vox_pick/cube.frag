@@ -162,15 +162,15 @@ void main() {
   }
 
   vec4 texel = texelFetch( u_pal_tex, pal_idx_of_nearest, 0 ); // Note had to convert uvec to int type (uint not okay).
-  //texel.rgb = pow( texel.rgb, vec3( 2.2 ) );
+  texel.rgb = pow( texel.rgb, vec3( 2.2 ) );
 
   Light lights[3] = Light[3](
-    Light( vec3( 2.0, 6.0, 20.0 ), vec3( 0.8, 0.8, 0.8 ), vec3( 0.8 ) ),
-    Light( vec3( -2.0, 5.0, -20.0 ), vec3( 0.7, 0.7, 0.7 ), vec3( 0.9 ) ),
-    Light( vec3( -1, 20.0, 1.0 ), vec3( 0.75, 0.75, 0.75 ), vec3( 0.7 ) )
+    Light( vec3( 2.0, 6.0, 20.0 ), vec3( 0.5, 0.6, 0.5 ), vec3( 0.7 ) ),
+    Light( vec3( -2.0, 5.0, -20.0 ), vec3( 0.4, 0.4, 0.4 ), vec3( 0.5 ) ),
+    Light( vec3( -1, 20.0, 1.0 ), vec3( 0.45, 0.45, 0.45 ), vec3( 0.5 ) )
   );
 
-  vec3 k_ambient = vec3( 0.05 );
+  vec3 k_ambient = vec3( 0.1 );
   vec3 lit_rgb = vec3( 0.0 );
   
   vec4 p_wor = u_M * vec4( ray_o_loc + ray_d_loc * t_end, 1.0 );
@@ -180,6 +180,7 @@ void main() {
   }
 
   vec3 rgb = lit_rgb * texel.rgb;
+  rgb = clamp( rgb, vec3( 0.05 ), vec3( 1.0 ) );
 
   float original_depth = gl_FragDepth;
   vec4 p_clip = u_P * u_V * p_wor;
