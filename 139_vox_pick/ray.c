@@ -1,10 +1,12 @@
 #include "ray.h"
+#include "apg_maths.h"
 
 // bool ray_aabb() { return false; }
 
 // bool ray_obb() { return false; }
 
-bool ray_voxel_grid() {
+bool ray_voxel_grid( vec3 ro, vec3 rd, float t_entry, vec3 grid_whd, vec3 grid_min, vec3 grid_max, float* t_end_ptr, vec3* vox_n_ptr ) {
+  vec3 voxels_per_unit = div_vec3_vec3( grid_whd, sub_vec3_vec3( grid_max, grid_min ) );
   // 0. local coords
 
   // 1. inside/outside check

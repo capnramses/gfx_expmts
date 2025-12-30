@@ -20,7 +20,7 @@ uniform sampler1D u_pal_tex;
 
 uniform mat4 u_P, u_V, u_M, u_M_inv;
 
-uniform int u_n_cells;
+uniform ivec3 u_n_cells;
 
 out vec4 frag_colour;
 
@@ -30,8 +30,9 @@ out vec4 frag_colour;
 
 const int MAX_STEPS = 512;
 
-int find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in vec3 grid_min, in vec3 grid_max, out float t_end, out vec3 vox_n ) {
-  vec3 voxels_per_unit = float( n_cells ) / ( grid_max - grid_min );
+int find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in ivec3 n_cells, in vec3 grid_min, in vec3 grid_max, out float t_end, out vec3 vox_n ) {
+  int vvv = n_cells.x;
+  vec3 voxels_per_unit = float( vvv ) / ( grid_max - grid_min );
   vec3 entry_pos       = ( ( ro + rd * t_entry ) - grid_min ) * voxels_per_unit; // BUGFIX: +0.001 was introducing an artifact (line on corners).
 
   /* Get our traversal constants */
@@ -39,7 +40,7 @@ int find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in v
   vec3 t_delta = abs( 1.0 / rd );
 
   /* IMPORTANT: Safety clamp the entry point inside the grid */
-  ivec3 pos = clamp( ivec3( floor( entry_pos ) ), ivec3( 0 ), ivec3( n_cells - 1 ) ); // BUGFIX: upper bound from n_cells to n_cells-1.
+  ivec3 pos = clamp( ivec3( floor( entry_pos ) ), ivec3( 0 ), ivec3( vvv - 1 ) ); // BUGFIX: upper bound from n_cells to n_cells-1.
 
   /* Initialize the time along the ray when each axis crosses its next cell boundary */
   vec3 t = ( pos - entry_pos + max( step, 0 ) ) / rd;
@@ -49,7 +50,7 @@ int find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in v
   int axis = 0;
   for ( int steps = 0; steps < MAX_STEPS; ++steps ) {
     /* Fetch the cell at our current position */
-    vec3 rst = vec3( pos ) / float( n_cells - 1 ); // BUGFIX: off by 1 was creating extra row on the bottom.
+    vec3 rst = vec3( pos ) / float( vvv - 1 ); // BUGFIX: off by 1 was creating extra row on the bottom.
     rst = clamp( rst, vec3(0.0), vec3(1.0) );
     uvec4 itexel = texture( u_vol_tex, vec3( rst.x, 1.0 - rst.y, rst.z ) );
 
@@ -68,19 +69,19 @@ int find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in v
     /* Step on the axis where `tmax` is the smallest */
     if ( t.x <= t.y && t.x <= t.z ) {
       pos.x += step.x; // i
-      if ( pos.x < 0 || pos.x >= n_cells ) break;
+      if ( pos.x < 0 || pos.x >= vvv ) break;
       t.x += t_delta.x;
       axis = 0;
       vox_n = vec3( 1.0, 0.0, 0.0 ) * -step; // The *step is to get -1 on the reverse sides.
     } else if ( t.y <= t.x && t.y <= t.z ) {
       pos.y += step.y; // j
-      if ( pos.y < 0 || pos.y >= n_cells ) break;
+      if ( pos.y < 0 || pos.y >= vvv ) break;
       t.y += t_delta.y;
       axis = 1;
       vox_n = vec3( 0.0, 1.0, 0.0 ) * -step;
     } else {
       pos.z += step.z; // k
-      if ( pos.z < 0 || pos.z >= n_cells ) break;
+      if ( pos.z < 0 || pos.z >= vvv ) break;
       t.z += t_delta.z;
       axis = 2;
       vox_n = vec3( 0.0, 0.0, 1.0 ) * -step;

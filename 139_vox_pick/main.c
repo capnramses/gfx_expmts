@@ -96,9 +96,10 @@ int main( int argc, char** argv ) {
       }
       return 1;
     }
-    grid_w  = vox_info.dims_xyz_ptr[0];
-    grid_h  = vox_info.dims_xyz_ptr[2]; // Convert to my preferred coords.
-    grid_d  = vox_info.dims_xyz_ptr[1];
+    grid_w = vox_info.dims_xyz_ptr[0];
+    grid_h = vox_info.dims_xyz_ptr[2]; // Convert to my preferred coords.
+    grid_d = vox_info.dims_xyz_ptr[1];
+    printf( "grid w/h/d=%lu/%lu/%lu\n", grid_w, grid_h, grid_d );
     img_ptr = calloc( 1, grid_w * grid_h * grid_d * grid_n_chans );
     if ( !img_ptr ) {
       fprintf( stderr, "ERROR: allocating memory.\n" );
@@ -221,7 +222,7 @@ int main( int argc, char** argv ) {
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_P" ), 1, GL_FALSE, P.m );
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_V" ), 1, GL_FALSE, V.m );
     glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_cam_pos_wor" ), 1, &cam_pos.x );
-    glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), grid_w );
+    glProgramUniform3i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), grid_w, grid_h, grid_d );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_pal_tex" ), 1 );
     glProgramUniform1iv( shader.program, glGetUniformLocation( shader.program, "u_fullbrights" ), 256, fullbrights );
