@@ -34,11 +34,11 @@ TODO
  * DONE - scale non-square models.
  * DONE - fix scaling of non-square models
  * DONE - fix palette in magicavoxel models ( color [0-254] mapped to palette index [1-255] ) .: PI 0 means air, but other PI -1 to get colour.
- * TODO - use slabs for entry/exit and more exact voxel traverse from RTCD -> can prob tidy inside/outside code with this too.
- * TODO - mouse click to add/remove voxels.
+ * DONE - use slabs for entry/exit and more exact voxel traverse from RTCD -> can prob tidy inside/outside code with this too.
+ * DONE - mouse click to add/remove voxels.
  * TODO - dither for alpha voxels.
  * TODO - vox_fmt support animation frames/models.
-
+ * TODO - figure out slight offset in bounds during C-side grid pick. maybe needs epsilon offset or so along t entry or a <= should be a < or so.
  */
 
 // Use discrete GPU by default. not sure if it works on other OS. if in C++ must be in extern "C" { } block
@@ -76,6 +76,59 @@ typedef struct magvoxel_t {
   uint8_t x, y, z, colour_idx;
 } magvoxel_t;
 
+uint8_t* img_ptr = NULL;
+
+texture_t voxels_tex;
+
+/* for reference - monument 10 palette colours:
+80= green
+96= orange
+120=light brown
+121=dark brown
+160=teal
+161=l blue
+162=mid brown
+255=black
+all others=grey (usually 122)
+*/
+
+bool visit_cell_cb( int i, int j, int k, void* user_ptr ) {
+ // printf( "visit %i/%i/%i\n", i, j, k );
+  // assert( i >= 0 && j >= 0 && k >= 0 );
+  vox_info_t vi = *( (vox_info_t*)user_ptr );
+
+  uint32_t w = vi.dims_xyz_ptr[0];
+  uint32_t h = vi.dims_xyz_ptr[2]; // Convert to my preferred coords.
+  uint32_t d = vi.dims_xyz_ptr[1];
+  //printf( "w/h/d %u/%u/%u\n", w, h, d );
+
+  i                = APG_CLAMP( i, 0, w - 1 ); // TODO off by 1 error here with 0-72 shown.
+  j                = APG_CLAMP( j, 0, h - 1 );
+  k                = APG_CLAMP( k, 0, d - 1 );
+  uint32_t vox_idx = ( k * w * h ) + ( ((h-1)-j) * w ) + i;
+  uint32_t tot     = w * h * d;
+
+  // model cubes are multiple voxels big...confusingly
+  // x seems to go == to top bound which is wrong.
+  // y seems to go == to top bound which is wrong.
+  // z seems to go == to top bound which is wrong.
+
+ // printf( "vox_idx=%u / %u = %f\n", vox_idx, tot, (float)vox_idx / tot );
+
+  uint8_t pal_idx  = img_ptr[vox_idx];
+   // uint8_t pal_idx = 1;
+   if ( 0 != pal_idx ) {
+   //  printf( "found vox_idx=%u pal-1=%u at ijk=%i,%i,%i\n", vox_idx, (uint32_t)pal_idx - 1, i, j, k );
+
+    img_ptr[vox_idx] = 97;
+    gfx_texture_update(w,h,d,1,true,img_ptr,&voxels_tex);
+
+     return false;
+   }
+
+  return true;
+}
+
 int main( int argc, char** argv ) {
   gfx_t gfx = gfx_start( 800, 600, "3D Texture Demo" );
   if ( !gfx.started ) { return 1; }
@@ -83,7 +136,7 @@ int main( int argc, char** argv ) {
   uint32_t grid_w = 32, grid_h = 32, grid_d = 32;
   uint32_t grid_n_chans = 1;
   bool created_voxels   = false;
-  uint8_t* img_ptr      = NULL;
+  img_ptr               = NULL;
   mesh_t cube           = gfx_mesh_cube_create();
 
   // Load Magicavoxel VOX model
@@ -104,10 +157,7 @@ int main( int argc, char** argv ) {
     printf( "n_models=%u (animation frames).\n", *vox_info.n_models );
 
     // Test loaded palette.
-    if ( vox_info.rgba_ptr ) {
-      apg_bmp_write( "voxpal.bmp", vox_info.rgba_ptr, 16, 16, 4 );
-    }
-
+    if ( vox_info.rgba_ptr ) { apg_bmp_write( "voxpal.bmp", vox_info.rgba_ptr, 16, 16, 4 ); }
 
     grid_w = vox_info.dims_xyz_ptr[0];
     grid_h = vox_info.dims_xyz_ptr[2]; // Convert to my preferred coords.
@@ -133,13 +183,12 @@ int main( int argc, char** argv ) {
   }
   ////////////////////////////////////////////////////////////////////////////////////////////
 
-  texture_t voxels_tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n_chans, true, img_ptr );
+  voxels_tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n_chans, true, img_ptr );
 
   shader_t shader = (shader_t){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
 
   vec3 cam_pos        = (vec3){ 0, 0, 3 };
-  vec3 cam_dir        = (vec3){ 0, 0, -1 };
   float cam_y_rot_deg = 0.0f;
   float cam_speed     = 10.0f;
   float cam_rot_speed = 100.0f; // deg/s
@@ -210,9 +259,9 @@ int main( int argc, char** argv ) {
       double xpos, ypos;
       glfwGetCursorPos( gfx.window_ptr, &xpos, &ypos );
       m_ray_wor = ray_wor_from_mouse( xpos, ypos, win_w, win_h, P_inv, V_inv );
-      print_vec3( m_ray_wor );
+    //  print_vec3( m_ray_wor );
       mouse_ray_on = true;
-      lmb_lock     = true;
+    //  lmb_lock     = true;
     }
     if ( !lmb_down ) { lmb_lock = false; }
 
@@ -262,21 +311,26 @@ int main( int argc, char** argv ) {
         vec4 v   = mul_mat4_vec4( R, (vec4){ 0.0f, 1.0f, 0.0f, 0.0f } );
         vec4 w   = mul_mat4_vec4( R, (vec4){ 0.0f, 0.0f, 1.0f, 0.0f } );
 
-        float t      = 0.0f;
+        float t = 0.0f, t2 = 0.0f;
         int face_num = 0;
-        bool hit     = ray_obb(
+        bool hit     = ray_obb2(
           (obb_t){
                 .centre        = vec3_from_vec4( pos ),                                            //
                 .half_lengths  = { scale_vec.x, scale_vec.y, scale_vec.z },                        //
                 .norm_side_dir = { vec3_from_vec4( u ), vec3_from_vec4( v ), vec3_from_vec4( w ) } //
           },
-          cam_pos, m_ray_wor, &t, &face_num );
+          cam_pos, m_ray_wor, &t, &face_num, &t2 );
         if ( hit ) {
           // 1. detect bounding box hit
           vec3 hit_pos = add_vec3_vec3( cam_pos, mul_vec3_f( m_ray_wor, t ) );
-          printf( "HIT: t=%f face_num=%i pos=(%.2f,%.2f,%.2f)\n", t, face_num, hit_pos.x, hit_pos.y, hit_pos.z );
+   //       printf( "HIT: t=%f t2=%f face_num=%i pos=(%.2f,%.2f,%.2f)\n", t, t2, face_num, hit_pos.x, hit_pos.y, hit_pos.z );
 
-          // 2. ray_voxel_grid find voxel hit
+          // 2. ray_voxel_grid find voxel hit. -grid min so that i,j.k start at 0,0,0 and only go positive.
+          vec3 entry_xyz = sub_vec3_vec3( add_vec3_vec3( cam_pos, mul_vec3_f( m_ray_wor, t ) ), grid_min );
+          vec3 exit_xyz  = sub_vec3_vec3( add_vec3_vec3( cam_pos, mul_vec3_f( m_ray_wor, t2 ) ), grid_min );
+       //   print_vec3( entry_xyz );
+       //   print_vec3( exit_xyz );
+          ray_uniform_3d_grid( entry_xyz, exit_xyz, cell_side, visit_cell_cb, &vox_info );
 
           // 3. modify voxel texture and update.
         }
