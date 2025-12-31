@@ -58,8 +58,10 @@ bool vox_fmt_read_file( const char* filename, apg_file_t* r_ptr, vox_info_t* inf
         fprintf( stderr, "ERROR: chunk %i content_sz %u + current location %lu > file size %lu\n", chunk_idx, c_ptr->content_sz, c_byte, r_ptr->sz );
         return false;
       }
-      uint8_t pack_mem[4] = { 'P', 'A', 'C', 'K' }, size_mem[4] = { 'S', 'I', 'Z', 'E' }, xyzi_mem[4] = { 'X', 'Y', 'Z', 'I' }, rgba_mem[4] = { 'R', 'G', 'B', 'A' };
-      if ( 0 == memcmp( pack_mem, c_ptr->id, 4 ) ) {        // PACK
+      uint8_t main_mem[4] = { 'M', 'A', 'I', 'N' }, pack_mem[4] = { 'P', 'A', 'C', 'K' }, size_mem[4] = { 'S', 'I', 'Z', 'E' },
+              xyzi_mem[4] = { 'X', 'Y', 'Z', 'I' }, rgba_mem[4] = { 'R', 'G', 'B', 'A' };
+      if ( 0 == memcmp( main_mem, c_ptr->id, 4 ) ) {        // MAIN
+      } else if ( 0 == memcmp( pack_mem, c_ptr->id, 4 ) ) { // PACK
         info_ptr->n_models = (uint32_t*)&b_ptr[c_byte];     //
       } else if ( 0 == memcmp( size_mem, c_ptr->id, 4 ) ) { // SIZE
         info_ptr->dims_xyz_ptr = (uint32_t*)&b_ptr[c_byte]; //

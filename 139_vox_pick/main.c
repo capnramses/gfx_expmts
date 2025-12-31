@@ -1,25 +1,26 @@
 /*
- * Voxel Renderer for Magicavoxel .vox files.
- * Anton Gerdelan, 29 Dec 2025.
- *
- * RUN
- * =================================
+===============================================================================
+ Voxel Renderer for Magicavoxel .vox files.
+ Anton Gerdelan, 30 Dec 2025.
+===============================================================================
 
- ./a.out -v myfile.vox
+RUN
+=================================
 
- * KEYS
- * =================================
- *
- * P        switch between colour palettes.
- * F2       save model as model.vox (uncompressed 8-bit raw voxel data).
- * F3       load model from model.vox.
- * space    show bounding box
- * WASDQE   move camera
- * Esc      quit
- *
- * TODO
- * =================================
- *
+./a.out -v myfile.vox
+
+
+KEYS
+=================================
+
+WASDQE         move camera
+cursor keys    rotate camera
+Esc            quit
+
+
+TODO
+=================================
+
  * DONE - save button -> vox format
  * DONE - load vox format
  * DONE - better camera controls
@@ -31,8 +32,13 @@
  * DONE - read MagicaVoxel format https://github.com/ephtracy/voxel-model/blob/master/MagicaVoxel-file-format-vox.txt
  * DONE - fix coords (x mirrored.).
  * DONE - scale non-square models.
+ * DONE - fix scaling of non-square models
+ * TODO - fix palette in magicavoxel models
+ * TODO - use slabs for entry/exit and more exact voxel traverse from RTCD -> can prob tidy inside/outside code with this too.
  * TODO - mouse click to add/remove voxels.
- *
+ * TODO - dither for alpha voxels.
+ * TODO - propagate bug fixes back 
+
  */
 
 // Use discrete GPU by default. not sure if it works on other OS. if in C++ must be in extern "C" { } block
@@ -80,8 +86,7 @@ int main( int argc, char** argv ) {
   uint8_t* img_ptr      = NULL;
   mesh_t cube           = gfx_mesh_cube_create();
 
-  ////////////////////////////////////////////////////////////////////////////////////////////
-  // Load Magicavoxel VOX model //////////////////////////////////////////////////////////////
+  // Load Magicavoxel VOX model
   ////////////////////////////////////////////////////////////////////////////////////////////
   apg_file_t vox      = (apg_file_t){ .sz = 0 };
   vox_info_t vox_info = (vox_info_t){ .dims_xyz_ptr = NULL };
@@ -96,6 +101,13 @@ int main( int argc, char** argv ) {
       }
       return 1;
     }
+
+    // Test loaded palette.
+    if ( vox_info.rgba_ptr ) {
+      apg_bmp_write( "voxpal.bmp", vox_info.rgba_ptr, 16, 16, 4 );
+    }
+
+
     grid_w = vox_info.dims_xyz_ptr[0];
     grid_h = vox_info.dims_xyz_ptr[2]; // Convert to my preferred coords.
     grid_d = vox_info.dims_xyz_ptr[1];
@@ -118,7 +130,6 @@ int main( int argc, char** argv ) {
 
     created_voxels = true;
   }
-  ////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////
 
   texture_t voxels_tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n_chans, true, img_ptr );
@@ -223,17 +234,20 @@ int main( int argc, char** argv ) {
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_pal_tex" ), 1 );
 
-    const vec3 grid_max = (vec3){ 1, 1, 1 };    // In local grid coord space.
-    const vec3 grid_min = (vec3){ -1, -1, -1 }; // In local grid coord space.                               // Draw first voxel cube.
+    { /////////////////////////////////////////////////////
+      // TODO(Anton) try local scale==1 voxel per world unit (integer size) - probably avoid fp precision issues tiling larger scenes.
+      const float cell_side   = 1.0 / 16.0; // TODO uniform.
+      const float cube_length = 2.0;
+      vec3 scale_vec          = (vec3){ ( grid_w * cell_side ) / cube_length, ( grid_h * cell_side ) / cube_length, ( grid_d * cell_side ) / cube_length };
 
-    {
-      vec3 scale_vec = (vec3){ grid_w / 32.0f, grid_h / 32.0f, grid_d / 32.0f };
-      mat4 S         = scale_mat4( scale_vec );                   //((vec3){.5,.5,.5});
-      mat4 T         = identity_mat4();                           // translate_mat4( (vec3){ sinf( curr_s * .5 ), 0, 4 + sinf( curr_s * 2.5 ) } );
-      mat4 R         = identity_mat4();                           // rot_x_deg_mat4( 90 );
-      mat4 M         = mul_mat4_mat4( T, mul_mat4_mat4( R, S ) ); // Local grid coord space->world coords.
-      mat4 M_inv     = inverse_mat4( M );                         // World coords->local grid coord space.
-      vec4 cp_loc    = mul_mat4_vec4( M_inv, vec4_from_vec3f( cam_pos, 1.0f ) );
+      vec3 grid_max = mul_vec3_vec3( (vec3){ 1, 1, 1 }, scale_vec );    // In local grid coord space.
+      vec3 grid_min = mul_vec3_vec3( (vec3){ -1, -1, -1 }, scale_vec ); // In local grid coord space.                               // Draw first voxel cube.
+      mat4 S        = identity_mat4(); // Do not scale the box to fit voxel grid dims using the world matrix! It should be scaled in local space.
+      mat4 T        = identity_mat4(); // translate_mat4( (vec3){ sinf( curr_s * .5 ), 0, 4 + sinf( curr_s * 2.5 ) } );
+      mat4 R        = identity_mat4(); // rot_x_deg_mat4( 90 );
+      mat4 M        = mul_mat4_mat4( T, mul_mat4_mat4( R, S ) ); // Local grid coord space->world coords.
+      mat4 M_inv    = inverse_mat4( M );                         // World coords->local grid coord space.
+      vec4 cp_loc   = mul_mat4_vec4( M_inv, vec4_from_vec3f( cam_pos, 1.0f ) );
       // Still want to render when inside bounding cube area, so flip to rendering inside out. Can't do both at once or it will look wonky.
       if ( cp_loc.x < grid_max.x && cp_loc.x > grid_min.x && cp_loc.y < grid_max.y && cp_loc.y > grid_min.y && cp_loc.z < grid_max.z && cp_loc.z > grid_min.z ) {
         glCullFace( GL_FRONT );
@@ -267,6 +281,7 @@ int main( int argc, char** argv ) {
         }
       }
 
+      glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_shape" ), 1, &scale_vec.x );
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M_inv" ), 1, GL_FALSE, M_inv.m );
 
