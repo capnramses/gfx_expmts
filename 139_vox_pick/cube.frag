@@ -208,7 +208,7 @@ void main() {
   vec3 vox_n = vec3( 0.0 );
   vec3 entry_pos       = ( ray_o_loc + ray_d_loc * t_entry ) - grid_min_loc; // BUGFIX: +0.001 was introducing an artifact (line on corners).
   int pal_idx_of_nearest = find_nearest( entry_pos, ray_d_loc, t_entry, u_n_cells, t_end, vox_n );
-  int vis = pal_idx_of_nearest ;
+  int vis = pal_idx_of_nearest;
   
   // Note that even conditional use of discard will mean that the FS will turn off early depth tests. 
   if ( 0 == vis ) {
@@ -216,7 +216,7 @@ void main() {
     discard; // faster without.
   }
 
-  // NOTE(Anton) off-by-one error for palette index for Magicavoxel models. Not sure if my bug (e.g. fetch at cell border) or an unexpected convention where first index=1 instead of 0.
+  // NOTE(Anton) off-by-one for palette index for Magicavoxel models. PI 0 means air still, but -1 from others to get correct colour. *shrug*.
   vec4 texel = texelFetch( u_pal_tex, pal_idx_of_nearest - 1, 0 ); // Note had to convert uvec to int type (uint not okay).
   texel = vec4( pow( texel.rgb, vec3( 2.2 ) ), texel.a );
 

@@ -33,7 +33,7 @@ TODO
  * DONE - fix coords (x mirrored.).
  * DONE - scale non-square models.
  * DONE - fix scaling of non-square models
- * DONE - fix palette in magicavoxel models
+ * DONE - fix palette in magicavoxel models ( color [0-254] mapped to palette index [1-255] ) .: PI 0 means air, but other PI -1 to get colour.
  * TODO - use slabs for entry/exit and more exact voxel traverse from RTCD -> can prob tidy inside/outside code with this too.
  * TODO - mouse click to add/remove voxels.
  * TODO - dither for alpha voxels.
