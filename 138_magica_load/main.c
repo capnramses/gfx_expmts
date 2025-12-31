@@ -33,11 +33,10 @@ TODO
  * DONE - fix coords (x mirrored.).
  * DONE - scale non-square models.
  * DONE - fix scaling of non-square models
- * TODO - fix palette in magicavoxel models
+ * DONE - fix palette in magicavoxel models
  * TODO - use slabs for entry/exit and more exact voxel traverse from RTCD -> can prob tidy inside/outside code with this too.
  * TODO - mouse click to add/remove voxels.
  * TODO - dither for alpha voxels.
- * TODO - propagate bug fixes back 
 
  */
 
