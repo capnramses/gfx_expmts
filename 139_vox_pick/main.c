@@ -37,6 +37,7 @@ TODO
  * TODO - use slabs for entry/exit and more exact voxel traverse from RTCD -> can prob tidy inside/outside code with this too.
  * TODO - mouse click to add/remove voxels.
  * TODO - dither for alpha voxels.
+ * TODO - vox_fmt support animation frames/models.
 
  */
 
@@ -100,6 +101,7 @@ int main( int argc, char** argv ) {
       }
       return 1;
     }
+    printf( "n_models=%u (animation frames).\n", *vox_info.n_models );
 
     // Test loaded palette.
     if ( vox_info.rgba_ptr ) {
