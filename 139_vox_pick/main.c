@@ -142,7 +142,17 @@ bool visit_cell_cb( int i, int j, int k, int face, void* user_ptr ) {
       uint32_t vox_idx2 = ( kk * w * h ) + ( ( ( h - 1 ) - jj ) * w ) + ii;
       img_ptr[vox_idx2] = pal_idx;
     }
-    if ( ET_DELETE == edit_type ) { img_ptr[vox_idx] = 0; }
+    if ( ET_DELETE == edit_type ) {
+      // img_ptr[vox_idx] = 0;
+      vec3 extras[7] = { { -1, 0, 0 }, { 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, -1 }, { 0, 0, 1 } };
+      for ( int it = 0; it < 7; it++ ) {
+        int ii            = APG_CLAMP( i + extras[it].x, 0, w - 1 );
+        int jj            = APG_CLAMP( j + extras[it].y, 0, h - 1 );
+        int kk            = APG_CLAMP( k + extras[it].z, 0, d - 1 );
+        uint32_t vox_idx2 = ( kk * w * h ) + ( ( ( h - 1 ) - jj ) * w ) + ii;
+        img_ptr[vox_idx2] = 0;
+      }
+    }
     if ( ET_PAINT == edit_type ) { img_ptr[vox_idx] = 97; }
 
     gfx_texture_update( w, h, d, 1, true, img_ptr, &voxels_tex );
