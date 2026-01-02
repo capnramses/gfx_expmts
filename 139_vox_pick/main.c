@@ -91,21 +91,27 @@ texture_t voxels_tex;
 255=black
 all others=grey (usually 122)
 */
+#define ET_NONE 0
+#define ET_CREATE 1
+#define ET_DELETE 2
+#define ET_PAINT 3
 
-bool visit_cell_cb( int i, int j, int k, void* user_ptr ) {
- // printf( "visit %i/%i/%i\n", i, j, k );
+static int edit_type = ET_NONE;
+
+bool visit_cell_cb( int i, int j, int k, int face, void* user_ptr ) {
+  // printf( "visit %i/%i/%i\n", i, j, k );
   // assert( i >= 0 && j >= 0 && k >= 0 );
   vox_info_t vi = *( (vox_info_t*)user_ptr );
 
   uint32_t w = vi.dims_xyz_ptr[0];
   uint32_t h = vi.dims_xyz_ptr[2]; // Convert to my preferred coords.
   uint32_t d = vi.dims_xyz_ptr[1];
-  //printf( "w/h/d %u/%u/%u\n", w, h, d );
+  // printf( "w/h/d %u/%u/%u\n", w, h, d );
 
   i                = APG_CLAMP( i, 0, w - 1 ); // TODO off by 1 error here with 0-72 shown.
   j                = APG_CLAMP( j, 0, h - 1 );
   k                = APG_CLAMP( k, 0, d - 1 );
-  uint32_t vox_idx = ( k * w * h ) + ( ((h-1)-j) * w ) + i;
+  uint32_t vox_idx = ( k * w * h ) + ( ( ( h - 1 ) - j ) * w ) + i;
   uint32_t tot     = w * h * d;
 
   // model cubes are multiple voxels big...confusingly
@@ -113,18 +119,36 @@ bool visit_cell_cb( int i, int j, int k, void* user_ptr ) {
   // y seems to go == to top bound which is wrong.
   // z seems to go == to top bound which is wrong.
 
- // printf( "vox_idx=%u / %u = %f\n", vox_idx, tot, (float)vox_idx / tot );
+  // printf( "vox_idx=%u / %u = %f\n", vox_idx, tot, (float)vox_idx / tot );
 
-  uint8_t pal_idx  = img_ptr[vox_idx];
-   // uint8_t pal_idx = 1;
-   if ( 0 != pal_idx ) {
-   //  printf( "found vox_idx=%u pal-1=%u at ijk=%i,%i,%i\n", vox_idx, (uint32_t)pal_idx - 1, i, j, k );
+  uint8_t pal_idx = img_ptr[vox_idx];
+  // uint8_t pal_idx = 1;
+  if ( 0 != pal_idx ) {
+    //  printf( "found vox_idx=%u pal-1=%u at ijk=%i,%i,%i\n", vox_idx, (uint32_t)pal_idx - 1, i, j, k );
 
-    img_ptr[vox_idx] = 97;
-    gfx_texture_update(w,h,d,1,true,img_ptr,&voxels_tex);
+    if ( ET_CREATE == edit_type ) {
+      int ii = i, jj = j, kk = k;
+      switch ( face ) {
+      case 1: ii--; break;
+      case -1: ii++; break;
+      case 2: jj++; break;
+      case -2: jj--; break;
+      case 3: kk--; break;
+      case -3: kk++; break;
+      }
+      ii                = APG_CLAMP( ii, 0, w - 1 );
+      jj                = APG_CLAMP( jj, 0, h - 1 );
+      kk                = APG_CLAMP( kk, 0, d - 1 );
+      uint32_t vox_idx2 = ( kk * w * h ) + ( ( ( h - 1 ) - jj ) * w ) + ii;
+      img_ptr[vox_idx2] = pal_idx;
+    }
+    if ( ET_DELETE == edit_type ) { img_ptr[vox_idx] = 0; }
+    if ( ET_PAINT == edit_type ) { img_ptr[vox_idx] = 97; }
 
-     return false;
-   }
+    gfx_texture_update( w, h, d, 1, true, img_ptr, &voxels_tex );
+
+    return false;
+  }
 
   return true;
 }
@@ -154,7 +178,7 @@ int main( int argc, char** argv ) {
       }
       return 1;
     }
-    printf( "n_models=%u (animation frames).\n", *vox_info.n_models );
+    if ( vox_info.n_models ) { printf( "n_models=%u (animation frames).\n", *vox_info.n_models ); }
 
     // Test loaded palette.
     if ( vox_info.rgba_ptr ) { apg_bmp_write( "voxpal.bmp", vox_info.rgba_ptr, 16, 16, 4 ); }
@@ -195,7 +219,7 @@ int main( int argc, char** argv ) {
 
   glfwSwapInterval( 0 );
 
-  bool lmb_lock         = false;
+  bool lmb_lock = false, rmb_lock = false;
   double prev_s         = glfwGetTime();
   double update_timer_s = 0.0;
   while ( !glfwWindowShouldClose( gfx.window_ptr ) ) {
@@ -243,6 +267,21 @@ int main( int argc, char** argv ) {
     mat4 cam_iT  = translate_mat4( (vec3){ -cam_pos.x, -cam_pos.y, -cam_pos.z } );
     mat4 V       = mul_mat4_mat4( cam_iR, cam_iT );
     int lmb_down = glfwGetMouseButton( gfx.window_ptr, 0 );
+    int rmb_down = glfwGetMouseButton( gfx.window_ptr, 1 );
+    int mmb_down = glfwGetMouseButton( gfx.window_ptr, 2 );
+
+    edit_type = ET_NONE;
+    if ( lmb_down && !lmb_lock ) {
+      edit_type = ET_CREATE;
+      lmb_lock  = true;
+    }
+    if ( rmb_down && !rmb_lock ) {
+      edit_type = ET_DELETE;
+      rmb_lock  = true;
+    }
+    if ( mmb_down ) { edit_type = ET_PAINT; }
+    if ( !lmb_down ) { lmb_lock = false; }
+    if ( !rmb_down ) { rmb_lock = false; }
 
     uint32_t win_w, win_h, fb_w, fb_h;
     glfwGetWindowSize( gfx.window_ptr, &win_w, &win_h );
@@ -253,17 +292,12 @@ int main( int argc, char** argv ) {
     mat4 P_inv = inverse_mat4( P );
     mat4 V_inv = inverse_mat4( V );
 
-    vec3 m_ray_wor    = (vec3){ 0.0f };
-    bool mouse_ray_on = false;
-    if ( !lmb_lock && lmb_down ) {
+    vec3 m_ray_wor = (vec3){ 0.0f };
+    if ( edit_type != ET_NONE ) {
       double xpos, ypos;
       glfwGetCursorPos( gfx.window_ptr, &xpos, &ypos );
       m_ray_wor = ray_wor_from_mouse( xpos, ypos, win_w, win_h, P_inv, V_inv );
-    //  print_vec3( m_ray_wor );
-      mouse_ray_on = true;
-    //  lmb_lock     = true;
     }
-    if ( !lmb_down ) { lmb_lock = false; }
 
     glViewport( 0, 0, win_w, win_h );
 
@@ -305,7 +339,7 @@ int main( int argc, char** argv ) {
         glCullFace( GL_BACK );
       }
 
-      if ( mouse_ray_on ) {
+      if ( edit_type != ET_NONE ) {
         vec4 pos = mul_mat4_vec4( M, (vec4){ 0.0f } );
         vec4 u   = mul_mat4_vec4( R, (vec4){ 1.0f, 0.0f, 0.0f, 0.0f } );
         vec4 v   = mul_mat4_vec4( R, (vec4){ 0.0f, 1.0f, 0.0f, 0.0f } );
@@ -323,13 +357,13 @@ int main( int argc, char** argv ) {
         if ( hit ) {
           // 1. detect bounding box hit
           vec3 hit_pos = add_vec3_vec3( cam_pos, mul_vec3_f( m_ray_wor, t ) );
-   //       printf( "HIT: t=%f t2=%f face_num=%i pos=(%.2f,%.2f,%.2f)\n", t, t2, face_num, hit_pos.x, hit_pos.y, hit_pos.z );
+          //       printf( "HIT: t=%f t2=%f face_num=%i pos=(%.2f,%.2f,%.2f)\n", t, t2, face_num, hit_pos.x, hit_pos.y, hit_pos.z );
 
           // 2. ray_voxel_grid find voxel hit. -grid min so that i,j.k start at 0,0,0 and only go positive.
           vec3 entry_xyz = sub_vec3_vec3( add_vec3_vec3( cam_pos, mul_vec3_f( m_ray_wor, t ) ), grid_min );
           vec3 exit_xyz  = sub_vec3_vec3( add_vec3_vec3( cam_pos, mul_vec3_f( m_ray_wor, t2 ) ), grid_min );
-       //   print_vec3( entry_xyz );
-       //   print_vec3( exit_xyz );
+          //   print_vec3( entry_xyz );
+          //   print_vec3( exit_xyz );
           ray_uniform_3d_grid( entry_xyz, exit_xyz, cell_side, visit_cell_cb, &vox_info );
 
           // 3. modify voxel texture and update.

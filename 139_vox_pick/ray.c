@@ -7,7 +7,7 @@
 
 // bool ray_obb() { return false; }
 
-void ray_uniform_3d_grid( vec3 entry_xyz, vec3 exit_xyz, const float cell_side, bool ( *visit_cell_cb )( int i, int j, int k, void* user_ptr ), void* data_ptr ) {
+void ray_uniform_3d_grid( vec3 entry_xyz, vec3 exit_xyz, const float cell_side, bool ( *visit_cell_cb )( int i, int j, int k, int face, void* user_ptr ), void* data_ptr ) {
   // Current grid cell (starts at entry point).
   int i = (int)floorf( entry_xyz.x / cell_side );
   int j = (int)floorf( entry_xyz.y / cell_side );
@@ -37,21 +37,25 @@ void ray_uniform_3d_grid( vec3 entry_xyz, vec3 exit_xyz, const float cell_side, 
   float delta_y = cell_side / fabs( exit_xyz.y - entry_xyz.y );
   float delta_z = cell_side / fabs( exit_xyz.z - entry_xyz.z );
 
+  int face = 0;
   // Main loop. Visit cells until last cell on segment reached, or supplied visit_cell_cb function returns false.
   for ( ;; ) {
-    if ( !visit_cell_cb( i, j, k, data_ptr ) ) { return; }
+    if ( !visit_cell_cb( i, j, k, face, data_ptr ) ) { return; }
     if ( t_x < t_y && t_x < t_z ) {
       if ( i == i_end ) { break; }
       t_x += delta_x;
       i += step_dir_i;
+      face = step_dir_i;
     } else if ( t_y < t_x && t_y < t_z ) {
       if ( j == j_end ) { break; }
       t_y += delta_y;
       j += step_dir_j;
+      face = -step_dir_j * 2;
     } else {
       if ( k == k_end ) { break; }
       t_z += delta_z;
       k += step_dir_k;
+      face = step_dir_k * 3;
     }
   } // endfor
 }

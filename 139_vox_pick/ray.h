@@ -24,7 +24,7 @@
  * @param data_ptr
  * The address of any additional data to pass to visit_cell_cb(). May be NULL.
  */
-void ray_uniform_3d_grid( vec3 entry_xyz, vec3 exit_xyz, const float cell_side, bool ( *visit_cell_cb )( int i, int j, int k, void* data_ptr ), void* data_ptr );
+void ray_uniform_3d_grid( vec3 entry_xyz, vec3 exit_xyz, const float cell_side, bool ( *visit_cell_cb )( int i, int j, int k, int face, void* data_ptr ), void* data_ptr );
 
 vec3 ray_wor_from_mouse( float mouse_x, float mouse_y, int w, int h, mat4 inv_P, mat4 inv_V );
 
