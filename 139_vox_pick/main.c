@@ -99,10 +99,13 @@ all others=grey (usually 122)
 static int edit_type = ET_NONE;
 
 bool visit_cell_cb( int i, int j, int k, int face, void* user_ptr ) {
+  if ( !user_ptr ) { return false; } // Returning false indicates grid search should also halt.
+
   // printf( "visit %i/%i/%i\n", i, j, k );
   // assert( i >= 0 && j >= 0 && k >= 0 );
   vox_info_t vi = *( (vox_info_t*)user_ptr );
-
+  
+  if ( !vi.dims_xyz_ptr ) { return false; }
   uint32_t w = vi.dims_xyz_ptr[0];
   uint32_t h = vi.dims_xyz_ptr[2]; // Convert to my preferred coords.
   uint32_t d = vi.dims_xyz_ptr[1];
@@ -157,7 +160,7 @@ bool visit_cell_cb( int i, int j, int k, int face, void* user_ptr ) {
 
     gfx_texture_update( w, h, d, 1, true, img_ptr, &voxels_tex );
 
-    return false;
+    return false; // Returning false indicates grid search should also halt.
   }
 
   return true;

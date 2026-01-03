@@ -15,6 +15,7 @@ typedef struct vox_info_t {
   uint32_t* n_voxels;
   uint8_t* voxels_ptr; // n_voxels * 4 bytes (x,y,z,colour_index).
   uint8_t* rgba_ptr;   // Palette. 256 * 4 bytes (r,g,b,a).
+  bool loaded;
 } vox_info_t;
 
 bool vox_fmt_read_file( const char* filename, apg_file_t* r_ptr, vox_info_t* info_ptr );

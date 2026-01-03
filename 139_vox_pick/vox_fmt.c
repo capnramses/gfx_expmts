@@ -36,6 +36,9 @@ typedef struct chunk_hdr_t {
 } chunk_hdr_t;
 
 bool vox_fmt_read_file( const char* filename, apg_file_t* r_ptr, vox_info_t* info_ptr ) {
+  if ( !filename || !r_ptr || !info_ptr ) { return false; }
+  info_ptr->loaded = false;
+
   if ( !apg_read_entire_file( filename, r_ptr ) ) { return false; }
   uint8_t* b_ptr = (uint8_t*)r_ptr->data_ptr;
   { // HDR check
@@ -82,6 +85,7 @@ bool vox_fmt_read_file( const char* filename, apg_file_t* r_ptr, vox_info_t* inf
       if ( c_byte + c_ptr->children_chunks_sz > 0 ) { continue; }
     }
   }
+  info_ptr->loaded = true;
   return true;
 }
 
