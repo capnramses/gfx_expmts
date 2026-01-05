@@ -98,6 +98,9 @@ all others=grey (usually 122)
 
 static int edit_type = ET_NONE;
 
+// Count of voxels on each slice; horizontal xz, vertical xy, vertical yz.
+int *n_voxels_on_nz_slices_ptr = NULL, *n_voxels_on_ny_slices_ptr = NULL, *n_voxels_on_nx_slices_ptr = NULL;
+
 bool visit_cell_cb( int i, int j, int k, int face, void* user_ptr ) {
   if ( !user_ptr ) { return false; } // Returning false indicates grid search should also halt.
 
@@ -143,17 +146,40 @@ bool visit_cell_cb( int i, int j, int k, int face, void* user_ptr ) {
       jj                = APG_CLAMP( jj, 0, h - 1 );
       kk                = APG_CLAMP( kk, 0, d - 1 );
       uint32_t vox_idx2 = ( kk * w * h ) + ( ( ( h - 1 ) - jj ) * w ) + ii;
+      if ( 0 == img_ptr[vox_idx2] ) {
+        n_voxels_on_nx_slices_ptr[ii]++;
+        n_voxels_on_ny_slices_ptr[jj]++;
+        n_voxels_on_nz_slices_ptr[kk]++;
+      }
       img_ptr[vox_idx2] = pal_idx;
     }
     if ( ET_DELETE == edit_type ) {
       // img_ptr[vox_idx] = 0;
       vec3 extras[7] = { { -1, 0, 0 }, { 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, -1 }, { 0, 0, 1 } };
-      for ( int it = 0; it < 7; it++ ) {
+      for ( int it = 1; it < 2; it++ ) {
         int ii            = APG_CLAMP( i + extras[it].x, 0, w - 1 );
         int jj            = APG_CLAMP( j + extras[it].y, 0, h - 1 );
         int kk            = APG_CLAMP( k + extras[it].z, 0, d - 1 );
         uint32_t vox_idx2 = ( kk * w * h ) + ( ( ( h - 1 ) - jj ) * w ) + ii;
-        img_ptr[vox_idx2] = 0;
+
+        /////////////////////////////////////////////////////////////////////////////
+        // Check for axis slice-off
+        if ( img_ptr[vox_idx2] != 0 ) {
+          img_ptr[vox_idx2] = 0;
+
+          n_voxels_on_nx_slices_ptr[ii]--;
+          n_voxels_on_ny_slices_ptr[jj]--;
+          n_voxels_on_nz_slices_ptr[kk]--;
+
+          if ( n_voxels_on_nx_slices_ptr[ii] <= 0 ) { printf( "NX slice at W=%i now =%i\n", ii, n_voxels_on_nx_slices_ptr[ii] ); }
+          if ( n_voxels_on_ny_slices_ptr[jj] <= 0 ) { printf( "NY slice at H=%i now =%i\n", jj, n_voxels_on_ny_slices_ptr[jj] ); }
+          if ( n_voxels_on_nz_slices_ptr[kk] <= 0 ) { printf( "NZ slice at D=%i now =%i\n", kk, n_voxels_on_nz_slices_ptr[kk] ); }
+
+          n_voxels_on_nx_slices_ptr[ii] = APG_CLAMP( n_voxels_on_nx_slices_ptr[ii], 0, h * d - 1 );
+          n_voxels_on_ny_slices_ptr[jj] = APG_CLAMP( n_voxels_on_ny_slices_ptr[jj], 0, w * d - 1 );
+          n_voxels_on_nz_slices_ptr[kk] = APG_CLAMP( n_voxels_on_nz_slices_ptr[kk], 0, w * h - 1 );
+          // printf( "NX slice at W=%i now =%i\n", ii, n_voxels_on_nx_slices_ptr[ii] );
+        }
       }
     }
     if ( ET_PAINT == edit_type ) { img_ptr[vox_idx] = 97; }
@@ -204,7 +230,11 @@ int main( int argc, char** argv ) {
     grid_h = vox_info.dims_xyz_ptr[2]; // Convert to my preferred coords.
     grid_d = vox_info.dims_xyz_ptr[1];
     printf( "grid w/h/d=%u/%u/%u\n", grid_w, grid_h, grid_d );
-    img_ptr = calloc( 1, grid_w * grid_h * grid_d * grid_n_chans );
+    img_ptr                   = calloc( 1, grid_w * grid_h * grid_d * grid_n_chans );
+    n_voxels_on_nx_slices_ptr = calloc( 4, grid_h * grid_d ); // Vertical slices front-to-back slices. Slice normal z.
+    n_voxels_on_ny_slices_ptr = calloc( 4, grid_w * grid_d ); // Horizontal slices. Slice normal y.
+    n_voxels_on_nz_slices_ptr = calloc( 4, grid_w * grid_h ); // Vertical slices side-to-side slices. Slice normal x.
+
     if ( !img_ptr ) {
       fprintf( stderr, "ERROR: allocating memory.\n" );
       free( vox.data_ptr );
@@ -217,8 +247,14 @@ int main( int argc, char** argv ) {
       uint32_t z                      = ( grid_d - 1 ) - v_ptr->y;
       int idx                         = z * grid_w * grid_h + y * grid_w + x;
       img_ptr[idx * grid_n_chans + 0] = v_ptr->colour_idx;
+
+      n_voxels_on_nx_slices_ptr[x]++;
+      n_voxels_on_ny_slices_ptr[grid_h - 1 - y]++;
+      n_voxels_on_nz_slices_ptr[z]++;
     }
     vox_pal = gfx_texture_create( 256, 0, 0, 4, false, vox_info.rgba_ptr );
+
+    for ( int i = 0; i < grid_h; i++ ) { printf( "voxels on n_voxels_on_nx_slices_ptr slice %i=%i\n", i, n_voxels_on_nx_slices_ptr[i] ); }
 
     created_voxels = true;
   }
@@ -292,7 +328,7 @@ int main( int argc, char** argv ) {
       edit_type = ET_CREATE;
       lmb_lock  = true;
     }
-    if ( rmb_down && !rmb_lock ) {
+    if ( rmb_down /*&& !rmb_lock*/ ) {
       edit_type = ET_DELETE;
       rmb_lock  = true;
     }
