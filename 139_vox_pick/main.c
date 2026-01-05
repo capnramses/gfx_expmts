@@ -104,7 +104,7 @@ bool visit_cell_cb( int i, int j, int k, int face, void* user_ptr ) {
   // printf( "visit %i/%i/%i\n", i, j, k );
   // assert( i >= 0 && j >= 0 && k >= 0 );
   vox_info_t vi = *( (vox_info_t*)user_ptr );
-  
+
   if ( !vi.dims_xyz_ptr ) { return false; }
   uint32_t w = vi.dims_xyz_ptr[0];
   uint32_t h = vi.dims_xyz_ptr[2]; // Convert to my preferred coords.
@@ -167,6 +167,11 @@ bool visit_cell_cb( int i, int j, int k, int face, void* user_ptr ) {
 }
 
 int main( int argc, char** argv ) {
+  if ( argc < 2 ) {
+    printf( "Usage: ./a.out MY_FILE.vox\n" );
+    return 0;
+  }
+
   gfx_t gfx = gfx_start( 800, 600, "3D Texture Demo" );
   if ( !gfx.started ) { return 1; }
 
@@ -181,10 +186,9 @@ int main( int argc, char** argv ) {
   apg_file_t vox      = (apg_file_t){ .sz = 0 };
   vox_info_t vox_info = (vox_info_t){ .dims_xyz_ptr = NULL };
   texture_t vox_pal;
-  int i_vox = arg_pos( "-v", argc, argv );
-  if ( i_vox > 0 && i_vox < argc - 1 ) {
-    if ( !vox_fmt_read_file( argv[i_vox + 1], &vox, &vox_info ) ) {
-      fprintf( stderr, "ERROR: Failed to read vox file `%s`.\n", argv[i_vox + 1] );
+  {
+    if ( !vox_fmt_read_file( argv[1], &vox, &vox_info ) ) {
+      fprintf( stderr, "ERROR: Failed to read vox file `%s`.\n", argv[1] );
       if ( vox.data_ptr != NULL ) {
         free( vox.data_ptr );
         vox = (apg_file_t){ .sz = 0 };
