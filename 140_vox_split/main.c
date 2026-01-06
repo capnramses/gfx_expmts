@@ -101,6 +101,70 @@ static int edit_type = ET_NONE;
 // Count of voxels on each slice; horizontal xz, vertical xy, vertical yz.
 int *n_voxels_on_nz_slices_ptr = NULL, *n_voxels_on_ny_slices_ptr = NULL, *n_voxels_on_nx_slices_ptr = NULL;
 
+/* NOTE(Anton)
+  may not actually need to create 2 separate grid memories/textures.
+  could just offset and keep using the original memory/texture with an offset.
+
+*/
+bool split        = false;
+uint8_t *img_ptr2 = NULL, *img_ptr3 = NULL;
+texture_t voxels_tex2, voxels_tex3;
+uint32_t w2, h2, d2;
+uint32_t w3, h3, d3;
+
+static void _split_grid( int slice_facing, int at_offset, vox_info_t* vox_info_ptr ) {
+  if ( split ) { return; } // Just split once, for now.
+
+  uint32_t w = vox_info_ptr->dims_xyz_ptr[0], h = vox_info_ptr->dims_xyz_ptr[2], d = vox_info_ptr->dims_xyz_ptr[1];
+  w2 = w, h2 = h, d2 = d;
+  uint32_t s3x = 0, s3y = 0, s3z = 0;
+
+  switch ( slice_facing ) {
+  case 0:
+    printf( "split grid! NX slice at W=%i now =%i\n", at_offset, n_voxels_on_nx_slices_ptr[at_offset] );
+    w2  = at_offset;
+    s3x = w2 + 1;
+    break;
+  case 1:
+    printf( "split grid! NY slice at H=%i now =%i\n", at_offset, n_voxels_on_ny_slices_ptr[at_offset] );
+    h2  = at_offset;
+    s3y = h2 + 1;
+    break;
+  case 2:
+    printf( "split grid! NZ slice at D=%i now =%i\n", at_offset, n_voxels_on_nz_slices_ptr[at_offset] );
+    d2  = at_offset;
+    s3z = d2 + 1;
+    break;
+  default: assert( false ); break;
+  }
+  w3 = w, h3 = h, d3 = d;
+
+  // Inefficient method.
+  for ( uint32_t z = 0; z < d2; z++ ) {
+    for ( uint32_t y = 0; y < h2; y++ ) {
+      for ( uint32_t x = 0; x < w2; x++ ) {
+        uint32_t vox_idx   = ( z * w * h ) + ( ( ( h - 1 ) - y ) * w ) + x;
+        uint32_t vox2_idx  = ( z * w2 * h2 ) + ( ( ( h2 - 1 ) - y ) * w2 ) + x;
+        img_ptr2[vox2_idx] = img_ptr[vox_idx];
+      }
+    }
+  }
+  gfx_texture_update( w2, h2, d2, 1, true, img_ptr2, &voxels_tex2 );
+
+  for ( uint32_t z = s3z; z < d; z++ ) {
+    for ( uint32_t y = s3y; y < h; y++ ) {
+      for ( uint32_t x = s3x; x < w; x++ ) {
+        uint32_t vox_idx   = ( z * w * h ) + ( ( ( h - 1 ) - y ) * w ) + x;
+        uint32_t vox3_idx  = ( ( z - s3z ) * w3 * h3 ) + ( ( ( h3 - 1 ) - ( y - s3y ) ) * w3 ) + ( x - s3x );
+        img_ptr3[vox3_idx] = img_ptr[vox_idx];
+      }
+    }
+  }
+  gfx_texture_update( w3, h3, d3, 1, true, img_ptr3, &voxels_tex3 );
+
+  split = true;
+}
+
 bool visit_cell_cb( int i, int j, int k, int face, void* user_ptr ) {
   if ( !user_ptr ) { return false; } // Returning false indicates grid search should also halt.
 
@@ -171,9 +235,9 @@ bool visit_cell_cb( int i, int j, int k, int face, void* user_ptr ) {
           n_voxels_on_ny_slices_ptr[jj]--;
           n_voxels_on_nz_slices_ptr[kk]--;
 
-          if ( n_voxels_on_nx_slices_ptr[ii] <= 0 ) { printf( "NX slice at W=%i now =%i\n", ii, n_voxels_on_nx_slices_ptr[ii] ); }
-          if ( n_voxels_on_ny_slices_ptr[jj] <= 0 ) { printf( "NY slice at H=%i now =%i\n", jj, n_voxels_on_ny_slices_ptr[jj] ); }
-          if ( n_voxels_on_nz_slices_ptr[kk] <= 0 ) { printf( "NZ slice at D=%i now =%i\n", kk, n_voxels_on_nz_slices_ptr[kk] ); }
+          if ( n_voxels_on_nx_slices_ptr[ii] <= 0 ) { _split_grid( 0, ii, &vi ); }
+          if ( n_voxels_on_ny_slices_ptr[jj] <= 0 ) { _split_grid( 1, jj, &vi ); }
+          if ( n_voxels_on_nz_slices_ptr[kk] <= 0 ) { _split_grid( 2, kk, &vi ); }
 
           n_voxels_on_nx_slices_ptr[ii] = APG_CLAMP( n_voxels_on_nx_slices_ptr[ii], 0, h * d - 1 );
           n_voxels_on_ny_slices_ptr[jj] = APG_CLAMP( n_voxels_on_ny_slices_ptr[jj], 0, w * d - 1 );
@@ -235,6 +299,10 @@ int main( int argc, char** argv ) {
     n_voxels_on_ny_slices_ptr = calloc( 4, grid_w * grid_d ); // Horizontal slices. Slice normal y.
     n_voxels_on_nz_slices_ptr = calloc( 4, grid_w * grid_h ); // Vertical slices side-to-side slices. Slice normal x.
 
+    // For split meshes
+    img_ptr2 = calloc( 1, grid_w * grid_h * grid_d * grid_n_chans );
+    img_ptr3 = calloc( 1, grid_w * grid_h * grid_d * grid_n_chans );
+
     if ( !img_ptr ) {
       fprintf( stderr, "ERROR: allocating memory.\n" );
       free( vox.data_ptr );
@@ -260,7 +328,9 @@ int main( int argc, char** argv ) {
   }
   ////////////////////////////////////////////////////////////////////////////////////////////
 
-  voxels_tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n_chans, true, img_ptr );
+  voxels_tex  = gfx_texture_create( grid_w, grid_h, grid_d, grid_n_chans, true, img_ptr );
+  voxels_tex2 = gfx_texture_create( grid_w, grid_h, grid_d, grid_n_chans, true, img_ptr );
+  voxels_tex3 = gfx_texture_create( grid_w, grid_h, grid_d, grid_n_chans, true, img_ptr );
 
   shader_t shader = (shader_t){ .program = 0 };
   if ( !gfx_shader_create_from_file( "cube.vert", "cube.frag", &shader ) ) { return 1; }
@@ -367,15 +437,19 @@ int main( int argc, char** argv ) {
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_P" ), 1, GL_FALSE, P.m );
     glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_V" ), 1, GL_FALSE, V.m );
     glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_cam_pos_wor" ), 1, &cam_pos.x );
-    glProgramUniform3i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), grid_w, grid_h, grid_d );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_pal_tex" ), 1 );
 
+    // TODO put this into  a function and call it twice for the split sub-meshes.
+    // TODO try to reuse the original texture twice, with offsets, rather than create new ones.
     { /////////////////////////////////////////////////////
       // TODO(Anton) try local scale==1 voxel per world unit (integer size) - probably avoid fp precision issues tiling larger scenes.
       const float cell_side   = 1.0 / 16.0; // TODO uniform.
       const float cube_length = 2.0;
-      vec3 scale_vec          = (vec3){ ( grid_w * cell_side ) / cube_length, ( grid_h * cell_side ) / cube_length, ( grid_d * cell_side ) / cube_length };
+
+      vec3 scale_vec = (vec3){ ( grid_w * cell_side ) / cube_length, ( grid_h * cell_side ) / cube_length, ( grid_d * cell_side ) / cube_length };
+
+      if ( split ) { scale_vec = (vec3){ ( w2 * cell_side ) / cube_length, ( h2 * cell_side ) / cube_length, ( d2 * cell_side ) / cube_length }; }
 
       vec3 grid_max = mul_vec3_vec3( (vec3){ 1, 1, 1 }, scale_vec );    // In local grid coord space.
       vec3 grid_min = mul_vec3_vec3( (vec3){ -1, -1, -1 }, scale_vec ); // In local grid coord space.                               // Draw first voxel cube.
@@ -423,12 +497,20 @@ int main( int argc, char** argv ) {
         }
       }
 
-      glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_shape" ), 1, &scale_vec.x );
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M_inv" ), 1, GL_FALSE, M_inv.m );
 
-      const texture_t* textures[] = { &voxels_tex, &vox_pal };
-      gfx_draw( shader, cube, textures, 2 );
+      glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_shape" ), 1, &scale_vec.x );
+
+      if ( !split ) {
+        glProgramUniform3i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), grid_w, grid_h, grid_d );
+        const texture_t* textures[] = { &voxels_tex, &vox_pal };
+        gfx_draw( shader, cube, textures, 2 );
+      } else {
+        glProgramUniform3i( shader.program, glGetUniformLocation( shader.program, "u_n_cells" ), w2, h2, d2 );
+        const texture_t* textures[] = { &voxels_tex2, &vox_pal };
+        gfx_draw( shader, cube, textures, 2 );
+      }
     } /////////////////////////////////////////////////////
 
     glfwSwapBuffers( gfx.window_ptr );
