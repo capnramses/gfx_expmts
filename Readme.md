@@ -159,7 +159,8 @@ Some demos are WebGL so need to run in Browser and may require a local server. A
 | 137     | `vox_scene`                 | A scene containing many voxel sprites.                                         | working             |
 | 138     | `vox_magica_load`           | Load and render Magicavoxel vox format models.                                 | working             |
 | 139     | `vox_pick`                  | Mouse picking to paint/edit voxel mesh.                                        | working             |
-| 140     | `vox_split`                 | Voxel grids subdivide when cut along a plane.                                        | started             |
+| 140     | `vox_split`                 | Voxel grids subdivide when cut along a plane.                                  | working             |
+| 141     | `dda_branchless`            | Comparative impl of a 'branchless' voxel shader.                               | working             |
 | xxx     | `draco`                     | Example of mesh compression using Google Draco.                                | proposed            |
 | xxx     | `sw_texture`                | Basic Texture Mapping for software rasteriser.                                 | proposed            |
 | xxx     | `msdos_vga`                 | VGA graphics output for MS-DOS.                                                | proposed            |
