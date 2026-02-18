@@ -36,11 +36,70 @@
 #include <string.h>
 #include <time.h>
 
+typedef struct vox_info_t {
+  uint32_t* n_models_ptr;
+  uint32_t* dims_xyz_ptr;
+  uint32_t* n_voxels_ptr;
+  uint8_t* voxels_ptr; // n_voxels * 4 bytes (x,y,z,colour_index).
+  uint32_t* rgba_ptr;  // Palette. 256 * 4 bytes (r,g,b,a).
+  bool loaded;
+} vox_info_t;
+
+typedef struct chunk_hdr_t {
+  char id[4];
+  uint32_t content_sz;
+  uint32_t children_chunks_sz;
+} chunk_hdr_t;
+
 int arg_pos( const char* str, int argc, char** argv ) {
   for ( int i = 1; i < argc; i++ ) {
     if ( 0 == strcmp( str, argv[i] ) ) { return i; }
   }
   return -1;
+}
+
+bool vox_fmt_write_file( const char* filename, vox_info_t info ) {
+  bool success = false;
+
+  if ( !filename ) { return success; }
+  FILE* f_ptr = fopen( filename, "wb" );
+  if ( !f_ptr ) { return success; }
+
+  { // HDR
+    char mns[4]      = { 'V', 'O', 'X', ' ' };
+    uint32_t version = 200;
+    size_t n         = fwrite( mns, 1, 4, f_ptr );
+    n                = fwrite( &version, 4, 1, f_ptr );
+  }
+  { // Chunks
+    // Work out size info for, and hierarchy of, chunks.
+    uint32_t n_voxels          = *info.n_voxels_ptr;
+    chunk_hdr_t rgba_chunk_hdr = (chunk_hdr_t){ .id = { 'R', 'G', 'B', 'A' }, .content_sz = 4 * 256, .children_chunks_sz = 0 };
+    chunk_hdr_t xyzi_chunk_hdr = (chunk_hdr_t){ .id = { 'X', 'Y', 'Z', 'I' }, .content_sz = 4 + 4 * n_voxels, .children_chunks_sz = 0 };
+    chunk_hdr_t size_chunk_hdr = (chunk_hdr_t){ .id = { 'S', 'I', 'Z', 'E' }, .content_sz = 4 * 3, .children_chunks_sz = 0 };
+    chunk_hdr_t main_chunk_hdr =
+      (chunk_hdr_t){ .id = { 'M', 'A', 'I', 'N' }, .content_sz = 0, .children_chunks_sz = size_chunk_hdr.content_sz + xyzi_chunk_hdr.content_sz + rgba_chunk_hdr.content_sz };
+
+    // MAIN
+    size_t n = fwrite( &main_chunk_hdr, sizeof( chunk_hdr_t ), 1, f_ptr );
+
+    // SIZE
+    n = fwrite( &size_chunk_hdr, sizeof( chunk_hdr_t ), 1, f_ptr );
+    n = fwrite( info.dims_xyz_ptr, size_chunk_hdr.content_sz, 1, f_ptr );
+
+    // VOXELS
+    n = fwrite( &xyzi_chunk_hdr, sizeof( chunk_hdr_t ), 1, f_ptr );
+    n = fwrite( info.n_voxels_ptr, 4, 1, f_ptr );
+    n = fwrite( info.voxels_ptr, 4 * n_voxels, 1, f_ptr );
+
+    // PALETTE
+    n = fwrite( &rgba_chunk_hdr, sizeof( chunk_hdr_t ), 1, f_ptr );
+    n = fwrite( info.rgba_ptr, rgba_chunk_hdr.content_sz, 1, f_ptr );
+  }
+  success = true;
+_err_vox_fmt_write_file:
+  fclose( f_ptr );
+  return success;
 }
 
 int main( int argc, char** argv ) {
@@ -100,6 +159,65 @@ int main( int argc, char** argv ) {
     }
   }
 
+  uint32_t dims_xyz[3]          = { grid_w, grid_h, grid_d };
+  uint32_t n_models             = 1;
+  uint32_t palette_rgba[256]    = { 0x00000000, 0xffffffff };
+  uint8_t* paletised_voxels_ptr = calloc( grid_w * grid_h * grid_d * 4, sizeof( uint8_t ) );
+  int p_next                    = 2;
+
+  uint8_t test_rgba_array[4] = { 0x11, 0x22, 0x33, 0xFF };
+  uint32_t test_rgba;
+  memcpy( &test_rgba, test_rgba_array, 4 );
+  printf( "test_rgba=0x%x\n", test_rgba );
+
+  // Count non-air voxels, and add colours to palette.
+  uint32_t n_voxels = 0;
+  for ( int z = 0; z < grid_d; z++ ) {
+    for ( int y = 0; y < grid_h; y++ ) {
+      for ( int x = 0; x < grid_w; x++ ) {
+        int i = z * grid_h * grid_w + y * grid_w + x;
+        // z_layer * grid_w * grid_h * grid_n
+        assert( grid_n == 3 );
+        uint8_t rgba[4] = { img_ptr[i * grid_n + 0], img_ptr[i * grid_n + 1], img_ptr[i * grid_n + 2], 0xFF };
+
+        if ( 0 == rgba[0] && 0 == rgba[1] && 0 == rgba[2] ) { continue; }
+
+        int use_p = 0;
+        // Look through palette for exact colour match.
+        for ( int p = 0; p < 255; p++ ) {
+          if ( 0 == memcmp( &palette_rgba[p], rgba, 4 * sizeof( uint8_t ) ) ) {
+            use_p = p;
+            break;
+          }
+        }
+        // Then try to add colour to palette if there is space.
+        if ( !use_p && p_next < 255 ) {
+          memcpy( &palette_rgba[p_next], rgba, 4 * sizeof( uint8_t ) );
+          use_p = p_next++;
+        }
+        // Use another colour - could find closest match.
+        if ( !use_p ) { use_p = 1; }
+        paletised_voxels_ptr[n_voxels * 4 + 0] = (uint8_t)x;
+        paletised_voxels_ptr[n_voxels * 4 + 1] = (uint8_t)z;
+        paletised_voxels_ptr[n_voxels * 4 + 2] = grid_h - 1 - (uint8_t)y; // Gravity direction.
+        paletised_voxels_ptr[n_voxels * 4 + 3] = (uint8_t)( use_p + 1 );  // color [0-254] are mapped to palette index [1-255]
+        n_voxels++;
+      }
+    }
+  }
+  printf( "palette0=%x\n", palette_rgba[0] );
+  printf( "palette1=%x\n", palette_rgba[1] );
+
+  vox_info_t vox_info = (vox_info_t){
+    .dims_xyz_ptr = dims_xyz,            //
+    .loaded       = true,                //
+    .n_models_ptr = &n_models,           //
+    .n_voxels_ptr = &n_voxels,           //
+    .n_models_ptr = &n_models,           //
+    .rgba_ptr     = palette_rgba,        //
+    .voxels_ptr   = paletised_voxels_ptr //
+  }; //
+
   texture_t tex = gfx_texture_create( grid_w, grid_h, grid_d, grid_n, img_ptr );
 
   shader_t shader = (shader_t){ .program = 0 };
@@ -114,6 +232,7 @@ int main( int argc, char** argv ) {
 
   double prev_s         = glfwGetTime();
   double update_timer_s = 0.0;
+  bool f2_lock          = false;
   while ( !glfwWindowShouldClose( gfx.window_ptr ) ) {
     double curr_s    = glfwGetTime();
     double elapsed_s = curr_s - prev_s;
@@ -127,11 +246,26 @@ int main( int argc, char** argv ) {
       glfwSetWindowTitle( gfx.window_ptr, title_str );
     }
     glfwPollEvents();
+    bool f2_pressed = false;
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_ESCAPE ) ) { glfwSetWindowShouldClose( gfx.window_ptr, 1 ); }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_W ) ) { cam_dist -= cam_speed * elapsed_s; }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_S ) ) { cam_dist += cam_speed * elapsed_s; }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_Q ) ) { cam_height -= cam_speed * elapsed_s; }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_E ) ) { cam_height += cam_speed * elapsed_s; }
+    if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_F2 ) ) {
+      if ( !f2_lock ) {
+        f2_pressed = f2_lock = true;
+        const char* filename = "saved.vox";
+        bool ret             = vox_fmt_write_file( filename, vox_info );
+        if ( !ret ) {
+          fprintf( stderr, "ERROR: Writing file=%s\n", filename );
+          return 1;
+        }
+        printf( "Saved file=%s of %u voxels.\n", filename, *vox_info.n_voxels_ptr );
+      }
+    } else {
+      f2_lock = f2_pressed = false;
+    }
     if ( GLFW_PRESS == glfwGetKey( gfx.window_ptr, GLFW_KEY_SPACE ) ) {
       if ( !space_lock ) {
         show_bounding_cube = !show_bounding_cube;
@@ -220,7 +354,7 @@ int main( int argc, char** argv ) {
       glProgramUniformMatrix4fv( shader.program, glGetUniformLocation( shader.program, "u_M" ), 1, GL_FALSE, M.m );
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_max" ), 1, &grid_max.x );
       glProgramUniform3fv( shader.program, glGetUniformLocation( shader.program, "u_grid_min" ), 1, &grid_min.x );
-  //    gfx_draw( cube, tex, shader );
+      //    gfx_draw( cube, tex, shader );
     }
 
     glfwSwapBuffers( gfx.window_ptr );

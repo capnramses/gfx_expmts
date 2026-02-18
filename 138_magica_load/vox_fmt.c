@@ -42,7 +42,7 @@ bool vox_fmt_read_file( const char* filename, apg_file_t* r_ptr, vox_info_t* inf
     if ( r_ptr->sz < 8 ) { return false; }
     char mns[4] = { 'V', 'O', 'X', ' ' };
     if ( 0 != memcmp( mns, r_ptr->data_ptr, 4 ) ) { return false; }
-    if ( 150 != *(uint32_t*)&b_ptr[4] ) { return false; } // Expect version 150.
+    if ( 150 != *(uint32_t*)&b_ptr[4] && 200 != *(uint32_t*)&b_ptr[4] ) { return false; } // Expect version 150.
   }
   info_ptr->rgba_ptr = (uint8_t*)default_palette;
   {                             // Chunks
