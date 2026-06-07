@@ -57,7 +57,7 @@ int find_nearest( in vec3 ro, in vec3 rd, in float t_entry, in int n_cells, in v
     /* Fetch the cell at our current position */
     vec3 rst = vec3( pos ) / float( n_cells - 1 ); // BUGFIX: off by 1 was creating extra row on the bottom.
     rst = clamp( rst, vec3(0.0), vec3(1.0) );
-    uvec4 itexel = texture( u_vol_tex, vec3( rst.x, 1.0 - rst.y, rst.z ) );
+    uvec4 itexel = textureLod( u_vol_tex, vec3( rst.x, 1.0 - rst.y, rst.z ), 0.0 ); // BUG: Use texelFetch() or textureLod() here.
 
     /* Check if we hit a voxel which isn't 0 */
     if ( itexel.r > 0 ) {                         // Palette index 0 treated as air.
