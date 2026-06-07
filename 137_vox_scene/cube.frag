@@ -28,6 +28,8 @@ uniform int u_show_bounding_cube;
 
 uniform int u_fullbrights[256];
 
+uniform vec2 u_near_far;
+
 out vec4 frag_colour;
 
 //layout(early_fragment_tests) in; // More recent hardware can force early depth tests, using a special fragment shader layout qualifier: 
@@ -198,8 +200,8 @@ void main() {
   gl_FragDepth = p_clip.z / p_clip.w * 0.5 + 0.5; // Map from [-1,1] to [0,1].
 
   float depth = gl_FragDepth;
-  float zfar = 100.0;
-  float znear = 0.01;
+  float zfar = u_near_far.y;
+  float znear = u_near_far.x;
   float linear_depth = (2.0 * znear * zfar)/(zfar + znear - (depth * 2.0 - 1.0) * (zfar-znear)) / zfar;
 
 

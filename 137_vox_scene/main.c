@@ -106,6 +106,8 @@ int main( int argc, char** argv ) {
   gfx_t gfx = gfx_start( 800, 600, "3D Texture Demo" );
   if ( !gfx.started ) { return 1; }
 
+  float near_z = 0.1f, far_z = 20.0f;
+
   size_t grid_dims = 32;
   int n_idx        = arg_pos( "-d", argc, argv );
   if ( n_idx > 0 && n_idx < argc - 1 ) {
@@ -325,7 +327,7 @@ int main( int argc, char** argv ) {
     glClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    mat4 P = perspective( 66.6f, aspect, 0.01f, 100.0f );
+    mat4 P = perspective( 66.6f, aspect, near_z, far_z );
 
     glEnable( GL_CULL_FACE );
     glFrontFace( GL_CW ); // NB Cube mesh used is inside-out.
@@ -338,6 +340,7 @@ int main( int argc, char** argv ) {
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_pal_tex" ), 1 );
     glProgramUniform2f( shader.program, glGetUniformLocation( shader.program, "u_resolution" ), (float)fb_w, (float)fb_h );
+    glProgramUniform2f( shader.program, glGetUniformLocation( shader.program, "u_near_far" ), near_z, far_z );
 
     const vec3 grid_max = (vec3){ 1, 1, 1 };    // In local grid coord space.
     const vec3 grid_min = (vec3){ -1, -1, -1 }; // In local grid coord space.                               // Draw first voxel cube.
