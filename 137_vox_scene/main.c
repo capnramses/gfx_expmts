@@ -337,6 +337,7 @@ int main( int argc, char** argv ) {
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_show_bounding_cube" ), (int)show_bounding_cube );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_vol_tex" ), 0 );
     glProgramUniform1i( shader.program, glGetUniformLocation( shader.program, "u_pal_tex" ), 1 );
+    glProgramUniform2f( shader.program, glGetUniformLocation( shader.program, "u_resolution" ), (float)fb_w, (float)fb_h );
 
     const vec3 grid_max = (vec3){ 1, 1, 1 };    // In local grid coord space.
     const vec3 grid_min = (vec3){ -1, -1, -1 }; // In local grid coord space.                               // Draw first voxel cube.

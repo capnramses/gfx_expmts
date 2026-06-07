@@ -19,6 +19,7 @@ in vec3 v_ray_dist_3d_loc;
 
 uniform usampler3D u_vol_tex;
 uniform sampler1D u_pal_tex;
+uniform vec2 u_resolution;
 
 uniform mat4 u_P, u_V, u_M, u_M_inv;
 
@@ -194,7 +195,7 @@ void main() {
 
 
   vec4 p_clip = u_P * u_V * p_wor;
-  gl_FragDepth = p_clip.z / p_clip.w;
+  gl_FragDepth = p_clip.z / p_clip.w * 0.5 + 0.5; // Map from [-1,1] to [0,1].
 
   float depth = gl_FragDepth;
   float zfar = 100.0;
@@ -207,6 +208,8 @@ void main() {
   frag_colour.rgb = pow( rgb, vec3( 1.0 / 2.2 ) ); // gamma correct.
   frag_colour.a   = 1.0;
 
- // frag_colour.rgb = vec3( 1.0 - linear_depth );
+  if ( gl_FragCoord.x >= u_resolution.x * 0.5 ) {
+    frag_colour.rgb = vec3( 1.0 - linear_depth );
+  }
  // frag_colour.rgb = n_wor.xyz;
 }
